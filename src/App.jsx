@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -17,19 +18,17 @@ const App = () => {
   }, []);
 
   return (
-    <React.StrictMode>
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <Toaster />
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={hasApiKey ? <Navigate to="/chat" replace /> : <LandingPage />} />
-              <Route path="/chat" element={<ChatPage />} />
-            </Routes>
-          </BrowserRouter>
-        </TooltipProvider>
-      </QueryClientProvider>
-    </React.StrictMode>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={hasApiKey ? <Navigate to="/chat" replace /> : <LandingPage />} />
+            <Route path="/chat" element={<ChatPage />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
   );
 };
 
