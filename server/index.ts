@@ -17,10 +17,40 @@ export async function createServer() {
     trustProxy: true
   });
   
-  // Register CORS plugin
+  // Register CORS plugin with improved configuration
   await fastify.register(fastifyCors, {
-    origin: process.env.CORS_ORIGIN || true,
-    credentials: true
+    origin: (origin, cb) => {
+      // Allow requests with no origin (like mobile apps, curl requests)
+      if (!origin) {
+        return cb(null, true);
+      }
+
+      // Custom logic to handle multiple origins if needed
+      const allowedOrigins = [
+        'https://bookish-robot-r7779gg5695hpr95-8081.app.github.dev',
+        'https://bookish-robot-r7779gg5695hpr95-8082.app.github.dev'
+      ];
+
+      // If CORS_ORIGIN is set, add it to allowed origins
+      if (process.env.CORS_ORIGIN) {
+        allowedOrigins.push(process.env.CORS_ORIGIN);
+      }
+
+      // Check if origin is allowed
+      if (allowedOrigins.indexOf(origin) !== -1 || origin.endsWith('.app.github.dev')) {
+        return cb(null, true);
+      }
+
+      // Default to allow all in development
+      if (process.env.NODE_ENV === 'development') {
+        return cb(null, true);
+      }
+
+      return cb(new Error('Not allowed by CORS'), false);
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
   });
   
   // Register tRPC plugin

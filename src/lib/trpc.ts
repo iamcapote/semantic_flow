@@ -5,13 +5,17 @@ import type { AppRouter } from '../../server/src/routers/index';
 // Create the tRPC React hooks
 export const trpc = createTRPCReact<AppRouter>();
 
-// Get API URL - default to backend server port
+// Get API URL - using hardcoded value for now
 const getApiUrl = () => {
+  // In Codespaces, use localhost instead of external URL
   if (typeof window !== 'undefined') {
-    // Browser - get current host but change port to backend
-    return `${window.location.protocol}//${window.location.hostname}:3001/api/trpc`;
+    // Check if we're in Codespaces
+    if (window.location.hostname.includes('app.github.dev')) {
+      return 'http://localhost:3002/api/trpc';
+    }
+    return `${window.location.protocol}//${window.location.hostname.replace('8081', '3002')}/api/trpc`;
   }
-  return 'http://localhost:3001/api/trpc';
+  return 'http://localhost:3002/api/trpc';
 };
 
 // Create the tRPC client

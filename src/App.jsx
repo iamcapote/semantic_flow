@@ -4,12 +4,29 @@ import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { trpc, trpcClient } from "./lib/trpc";
+import { trpc } from "./lib/trpc";
+import { httpBatchLink } from '@trpc/client';
 import ChatPage from "./pages/ChatPage";
 import WorkflowBuilderPage from "./pages/WorkflowBuilderPage";
 import LandingPage from "./pages/LandingPage";
 
 const queryClient = new QueryClient();
+
+// Create TRPC client with correct API URL
+const trpcClient = trpc.createClient({
+  links: [
+    httpBatchLink({
+      url: typeof window !== 'undefined' && window.location.hostname.includes('app.github.dev')
+        ? 'http://localhost:3002/api/trpc'  // Use localhost in Codespaces
+        : typeof window !== 'undefined' 
+          ? `${window.location.protocol}//${window.location.hostname.replace('8081', '3002')}/api/trpc`
+          : 'http://localhost:3002/api/trpc',
+      headers: () => {
+        return {};
+      },
+    }),
+  ],
+});
 
 const App = () => {
   const [hasApiKey, setHasApiKey] = useState(false);

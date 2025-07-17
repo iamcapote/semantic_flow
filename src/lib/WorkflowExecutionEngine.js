@@ -1,13 +1,13 @@
-import { trpc } from '@/lib/trpc';
+import { trpcVanilla } from '@/lib/trpc-vanilla';
 
 class WorkflowExecutionEngine {
   constructor(userId, toast) {
     this.userId = userId;
     this.toast = toast;
-    this.trpcClient = trpc;
+    this.trpcClient = trpcVanilla;
   }
 
-  async executeWorkflow(workflow, onProgress = null) {
+  async executeWorkflow(workflow, onProgress) {
     if (!workflow.nodes || workflow.nodes.length === 0) {
       throw new Error('Workflow is empty');
     }
@@ -36,7 +36,7 @@ class WorkflowExecutionEngine {
       });
     });
 
-    if (onProgress) {
+    if (onProgress && typeof onProgress === 'function') {
       onProgress({ type: 'start', message: 'Starting workflow execution...' });
     }
 
@@ -53,7 +53,7 @@ class WorkflowExecutionEngine {
         nodeState.status = 'running';
         nodeState.startTime = Date.now();
 
-        if (onProgress) {
+        if (onProgress && typeof onProgress === 'function') {
           onProgress({
             type: 'node_start',
             nodeId: nodeId,
@@ -94,7 +94,7 @@ class WorkflowExecutionEngine {
           usage: result.usage
         });
 
-        if (onProgress) {
+        if (onProgress && typeof onProgress === 'function') {
           onProgress({
             type: 'node_complete',
             nodeId: nodeId,
@@ -108,7 +108,7 @@ class WorkflowExecutionEngine {
         nodeState.error = error.message;
         nodeState.endTime = Date.now();
 
-        if (onProgress) {
+        if (onProgress && typeof onProgress === 'function') {
           onProgress({
             type: 'node_error',
             nodeId: nodeId,
@@ -123,7 +123,7 @@ class WorkflowExecutionEngine {
       }
     }
 
-    if (onProgress) {
+    if (onProgress && typeof onProgress === 'function') {
       onProgress({
         type: 'complete',
         message: 'Workflow execution completed',
