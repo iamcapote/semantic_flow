@@ -58,7 +58,7 @@ export const providerRouter = router({
       return userProviders.map((p: any) => ({...p, models: (p.models as any).models, headers: p.headers as any}));
     }),
 
-  // Update provider configuration
+  // Update provider configuration (NO API KEYS - BYOK Model)
   updateConfig: publicProcedure
     .input(z.array(aiProviderSchema))
     .mutation(async ({ ctx, input }) => {
@@ -68,14 +68,17 @@ export const providerRouter = router({
           update: {
             name: p.name,
             baseURL: p.baseURL,
-            apiKey: p.apiKey,
             models: { models: p.models },
             isActive: p.isActive,
             headers: p.headers,
           },
           create: {
-            ...p,
+            userId: p.userId,
+            providerId: p.providerId,
+            name: p.name,
+            baseURL: p.baseURL,
             models: { models: p.models },
+            isActive: p.isActive,
             headers: p.headers,
           },
         });
@@ -84,23 +87,27 @@ export const providerRouter = router({
       return { success: true };
     }),
 
-  // Test a single node with specific provider
+  // Test a single node with specific provider (BYOK Model)
   testNode: publicProcedure
-    .input(testNodeSchema)
+    .input(testNodeSchema.extend({
+      apiKey: z.string(), // API key provided by client
+    }))
     .mutation(async ({ ctx, input }) => {
+      // Get provider configuration (without API key)
       const provider = await prisma.providerConfig.findFirst({
-        where: { providerId: input.providerId, userId: (ctx as any).userId }, // Assuming userId is in context
+        where: { providerId: input.providerId, userId: 'demo-user' }, // Use demo user for now
       });
       
-      if (!provider || !provider.apiKey) {
-        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Provider not configured or API key missing' });
+      if (!provider) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Provider not configured' });
       }
 
+      // Use API key from client request
       const response = await fetch(`${provider.baseURL}/chat/completions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${provider.apiKey}`,
+          'Authorization': `Bearer ${input.apiKey}`, // Use client-provided API key
           ...((provider.headers as any) || {}),
         },
         body: JSON.stringify({

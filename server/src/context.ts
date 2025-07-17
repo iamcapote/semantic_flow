@@ -4,7 +4,7 @@ import { prisma } from '../index';
 
 // Simulate a session object for demonstration purposes
 // In a real app, this would come from an auth library like Lucia, NextAuth, etc.
-interface UserSession {
+export interface UserSession {
   user: {
     id: string;
     // other user properties
@@ -12,13 +12,9 @@ interface UserSession {
 }
 
 const getUserFromHeader = (req: CreateFastifyContextOptions['req']): UserSession => {
-  // This is a placeholder for session logic.
-  // You might decode a JWT from the Authorization header, for example.
-  if (req.headers.authorization) {
-    // Dummy logic: if there's any authorization header, assume it's user '1'
-    return { user: { id: '1' } };
-  }
-  return { user: null };
+  // For demo purposes, we'll use a default user
+  // In production, this would validate JWT tokens, sessions, etc.
+  return { user: { id: 'demo-user' } };
 }
 
 export function createContext({ req, res }: CreateFastifyContextOptions) {

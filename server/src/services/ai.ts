@@ -8,14 +8,16 @@ import {
   CreateChatCompletionRequestSchema
 } from '../schemas/openai';
 
-export class OpenAIService {
-  private provider: AIProvider;
+export class AIService {
+  constructor(
+    private provider: {
+      baseURL: string;
+      headers?: Record<string, string>;
+    },
+    private apiKey: string // API key provided by client
+  ) {}
 
-  constructor(provider: AIProvider) {
-    this.provider = provider;
-  }
-
-  async callAPI(
+  async createChatCompletion(
     request: CreateChatCompletionRequest
   ): Promise<CreateChatCompletionResponse> {
     // Validate the request against the Zod schema
@@ -25,7 +27,7 @@ export class OpenAIService {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.provider.apiKey}`,
+        'Authorization': `Bearer ${this.apiKey}`, // Use client-provided API key
         ...this.provider.headers,
       },
       body: JSON.stringify(validatedRequest),
@@ -43,10 +45,10 @@ export class OpenAIService {
     return responseData as CreateChatCompletionResponse;
   }
 
-  async testConnection(): Promise<boolean> {
+  async testConnection(model: string = 'gpt-3.5-turbo'): Promise<boolean> {
     try {
-      const response = await this.callAPI({
-        model: this.provider.models[0] || 'gpt-3.5-turbo',
+      const response = await this.createChatCompletion({
+        model: model,
         messages: [{ role: 'user', content: 'Hello' }],
         max_tokens: 5,
       });

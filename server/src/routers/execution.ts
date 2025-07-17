@@ -16,7 +16,7 @@ export const executionRouter = router({
     .mutation(async ({ ctx, input }) => {
       // 1. Fetch workflow and check permissions
       const workflow = await ctx.prisma.workflow.findUnique({ where: { id: input.workflowId } });
-      if (!workflow || workflow.userId !== ctx.session.user.id) {
+      if (!workflow || workflow.userId !== ctx.session!.user!.id) {
         throw new TRPCError({ code: 'FORBIDDEN' });
       }
       
@@ -42,7 +42,7 @@ export const executionRouter = router({
       return observable<string>((emit) => {
         const run = async () => {
           const workflow = await ctx.prisma.workflow.findUnique({ where: { id: input.workflowId } });
-          if (!workflow || workflow.userId !== ctx.session.user.id) {
+          if (!workflow || workflow.userId !== ctx.session!.user!.id) {
             emit.error(new TRPCError({ code: 'FORBIDDEN' }));
             return;
           }

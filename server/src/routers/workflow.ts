@@ -70,7 +70,7 @@ export const workflowRouter = router({
         throw new TRPCError({ code: 'NOT_FOUND', message: 'Workflow not found' });
       }
 
-      if (!workflow.isPublic && workflow.userId !== ctx.session?.user.id) {
+      if (!workflow.isPublic && workflow.userId !== ctx.session?.user?.id) {
         throw new TRPCError({ code: 'FORBIDDEN', message: 'You do not have access to this workflow' });
       }
 
@@ -81,9 +81,14 @@ export const workflowRouter = router({
   create: protectedProcedure
     .input(CreateWorkflowInputSchema)
     .mutation(async ({ ctx, input }) => {
-      const userId = ctx.session.user.id;
+      const userId = ctx.session!.user!.id;
       const workflow = await ctx.prisma.workflow.create({
-        data: { ...input, userId, version: '1.0.0' },
+        data: { 
+          ...input, 
+          userId, 
+          version: '1.0.0',
+          content: input.content || {} // Ensure content is not undefined
+        },
         select: defaultWorkflowSelect,
       });
       return workflow;
@@ -93,7 +98,7 @@ export const workflowRouter = router({
   update: protectedProcedure
     .input(UpdateWorkflowInputSchema)
     .mutation(async ({ ctx, input }) => {
-      const userId = ctx.session.user.id;
+      const userId = ctx.session!.user!.id;
       const { id, data } = input;
 
       const existingWorkflow = await ctx.prisma.workflow.findUnique({ where: { id } });
@@ -113,7 +118,7 @@ export const workflowRouter = router({
   delete: protectedProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      const userId = ctx.session.user.id;
+      const userId = ctx.session!.user!.id;
       const { id } = input;
 
       const existingWorkflow = await ctx.prisma.workflow.findUnique({ where: { id } });
