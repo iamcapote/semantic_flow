@@ -4,65 +4,66 @@
  
 @layer base {
   :root {
-    --background: 0 0% 100%;
+    /* Ivory and sophisticated light greys for the "super AI hyper machine" aesthetic */
+    --background: 48 20% 98%; /* Warm ivory white */
     --foreground: 222.2 84% 4.9%;
 
-    --card: 0 0% 100%;
+    --card: 48 30% 96%; /* Slightly more saturated ivory for cards */
     --card-foreground: 222.2 84% 4.9%;
  
-    --popover: 0 0% 100%;
+    --popover: 48 20% 98%;
     --popover-foreground: 222.2 84% 4.9%;
  
     --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    --primary-foreground: 48 20% 98%;
  
-    --secondary: 210 40% 96.1%;
+    --secondary: 220 14% 89%; /* Elegant light grey */
     --secondary-foreground: 222.2 47.4% 11.2%;
  
-    --muted: 210 40% 96.1%;
+    --muted: 220 14% 92%; /* Lighter sophisticated grey */
     --muted-foreground: 215.4 16.3% 46.9%;
  
-    --accent: 210 40% 96.1%;
+    --accent: 224 20% 88%; /* Subtle blue-grey accent */
     --accent-foreground: 222.2 47.4% 11.2%;
  
     --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive-foreground: 48 20% 98%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
+    --border: 220 13% 85%; /* Refined border color */
+    --input: 220 13% 92%; /* Input background */
     --ring: 222.2 84% 4.9%;
  
-    --radius: 0.5rem;
+    --radius: 0.75rem; /* Slightly more rounded for modern look */
   }
  
   .dark {
-    --background: 222.2 84% 4.9%;
+    --background: 224 71% 4%; /* A deep, dark blue */
     --foreground: 210 40% 98%;
  
-    --card: 222.2 84% 4.9%;
+    --card: 222 47% 11%; /* Slightly lighter blue for cards */
     --card-foreground: 210 40% 98%;
  
-    --popover: 222.2 84% 4.9%;
+    --popover: 224 71% 4%;
     --popover-foreground: 210 40% 98%;
  
     --primary: 210 40% 98%;
     --primary-foreground: 222.2 47.4% 11.2%;
  
-    --secondary: 217.2 32.6% 17.5%;
+    --secondary: 217 33% 17%;
     --secondary-foreground: 210 40% 98%;
  
-    --muted: 217.2 32.6% 17.5%;
+    --muted: 217 33% 17%;
     --muted-foreground: 215 20.2% 65.1%;
  
-    --accent: 217.2 32.6% 17.5%;
+    --accent: 217 33% 17%;
     --accent-foreground: 210 40% 98%;
  
-    --destructive: 0 62.8% 30.6%;
+    --destructive: 0 63% 31%;
     --destructive-foreground: 210 40% 98%;
  
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
+    --border: 217 33% 17%;
+    --input: 217 33% 17%;
+    --ring: 215 28% 60%;
   }
 }
  
@@ -73,4 +74,75 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Custom animations for the landing page */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+.animation-delay-1000 {
+  animation-delay: 1s;
+}
+
+.animation-delay-2000 {
+  animation-delay: 2s;
+}
+
+.animation-delay-4000 {
+  animation-delay: 4s;
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* ReactFlow dark mode improvements */
+.react-flow {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.react-flow__viewport {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.dark .react-flow__node {
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  color: hsl(var(--foreground));
+}
+
+.dark .react-flow__handle {
+  background: hsl(var(--muted-foreground));
+}
+
+.dark .react-flow__edge-path {
+  stroke: hsl(var(--border));
+}
+
+.dark .react-flow__connectionline {
+  stroke: hsl(var(--muted-foreground));
+}
+
+.dark .react-flow__controls {
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+}
+
+.dark .react-flow__controls button {
+  background: transparent;
+  border-bottom: 1px solid hsl(var(--border));
+  color: hsl(var(--foreground));
+}
+
+.dark .react-flow__controls button:hover {
+  background: hsl(var(--accent));
+}
+
+.dark .react-flow__minimap {
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
 }

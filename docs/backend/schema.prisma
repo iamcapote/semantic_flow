@@ -1,0 +1,88 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Flow represents a complete workflow graph
+model Flow {
+  id         String   @id @default(uuid())
+  name       String
+  description String?
+  graph      Json     // Stores the full graph JSON
+  ownerId    String   // In a real app, this would be a foreign key to a User model
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  configs    Config[]
+  executions Execution[]
+
+  @@index([ownerId])
+}
+
+// Config represents model parameters and settings for executing a flow
+model Config {
+  id            String   @id @default(uuid())
+  name          String
+  flowId        String
+  flow          Flow     @relation(fields: [flowId], references: [id], onDelete: Cascade)
+  systemPrompt  String
+  temperature   Float
+  modelSlug     String   // e.g., "gpt-4o", "gpt-4o-mini"
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  executions    Execution[]
+
+  @@index([flowId])
+}
+
+// Execution represents a single run of a flow with a specific config
+model Execution {
+  id          String   @id @default(uuid())
+  flowId      String
+  flow        Flow     @relation(fields: [flowId], references: [id], onDelete: Cascade)
+  configId    String
+  config      Config   @relation(fields: [configId], references: [id], onDelete: Cascade)
+  status      String   // "running", "completed", "failed"
+  startedAt   DateTime @default(now())
+  completedAt DateTime?
+  result      Json?
+  error       String?
+  metrics     Json?    // Token usage, latency, etc.
+  traces      Json?    // Execution traces for debugging
+
+  @@index([flowId])
+  @@index([configId])
+}
+
+// NodeType represents the available node types in our ontology
+// This is used for validation and metadata, not for storing actual nodes
+model NodeType {
+  id          String   @id
+  name        String
+  description String?
+  category    String   // Cluster prefix (PROP, RSN, etc.)
+  schema      Json     // JSON Schema for node validation
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([category])
+}
+
+// For storing long-running execution traces and results in a Redis-like format
+// This is an optional model for caching and performance
+model ExecutionCache {
+  id          String   @id
+  executionId String
+  key         String
+  value       String   // Could be a JSON string or other serialized data
+  expiresAt   DateTime?
+
+  @@index([executionId])
+  @@index([key])
+}

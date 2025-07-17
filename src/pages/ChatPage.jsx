@@ -12,10 +12,10 @@ import { useNavigate } from 'react-router-dom';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 
 const ChatPage = () => {
-  const [apiKey, setApiKey] = useState(() => localStorage.getItem('openai_api_key') || '');
-  const [systemMessage, setSystemMessage] = useState(() => localStorage.getItem('system_message') || 'You are a helpful assistant.');
+  const [apiKey, setApiKey] = useState(() => sessionStorage.getItem('openai_api_key') || '');
+  const [systemMessage, setSystemMessage] = useState(() => sessionStorage.getItem('system_message') || 'You are a helpful assistant.');
   const [conversations, setConversations] = useState(() => {
-    const savedConversations = localStorage.getItem('conversations');
+    const savedConversations = sessionStorage.getItem('conversations');
     return savedConversations ? JSON.parse(savedConversations) : [{ id: Date.now(), title: 'New Chat', messages: [] }];
   });
   const [currentConversationIndex, setCurrentConversationIndex] = useState(0);
@@ -43,9 +43,9 @@ const ChatPage = () => {
   }, [conversations]);
 
   useEffect(() => {
-    localStorage.setItem('openai_api_key', apiKey);
-    localStorage.setItem('system_message', systemMessage);
-    localStorage.setItem('conversations', JSON.stringify(conversations));
+    sessionStorage.setItem('openai_api_key', apiKey);
+    sessionStorage.setItem('system_message', systemMessage);
+    sessionStorage.setItem('conversations', JSON.stringify(conversations));
   }, [apiKey, systemMessage, conversations]);
 
   const generateTitle = async (messages) => {

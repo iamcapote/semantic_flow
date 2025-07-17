@@ -1,0 +1,92 @@
+# GNU Affero General Public License v3.0 (AGPL-3.0)
+
+Copyright (C) 2025 Semantic Logic AI Workflow Builder
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as
+published by the Free Software Foundation, either version 3 of the
+License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+---
+
+## Attribution Requirement
+
+If you use this software, you must give appropriate credit, provide a link to the license, and indicate if changes were made. You may do so in any reasonable manner, but not in any way that suggests the licensor endorses you or your use.
+
+---
+
+## Intellectual Property Protection
+
+This license ensures that all modifications and derivative works remain open source and are distributed under the same license terms. It protects the intellectual property of the original authors while fostering collaboration and innovation.
+
+---
+
+For more information, visit <https://www.gnu.org/licenses/agpl-3.0.html>.
+
+---
+
+## Additional Licenses and Acknowledgments
+
+This project includes components from the following open source projects:
+
+### React Flow
+- License: MIT
+- Copyright (c) 2019-present xyflow
+- Used for the visual workflow canvas
+
+### shadcn/ui
+- License: MIT
+- Copyright (c) 2023 shadcn
+- Used for UI components
+
+### Tailwind CSS
+- License: MIT
+- Copyright (c) Tailwind Labs, Inc.
+- Used for styling
+
+### Radix UI
+- License: MIT
+- Copyright (c) 2022 WorkOS
+- Used for accessible UI primitives
+
+### tRPC
+- License: MIT
+- Copyright (c) 2020 Alex Johansson
+- Used for type-safe API communication
+
+### Prisma
+- License: Apache 2.0
+- Copyright (c) 2016-present Prisma Data, Inc.
+- Used for database ORM
+
+---
+
+## Security Notice
+
+This software implements a "Bring Your Own Key" (BYOK) security model. API keys are:
+- Never stored in the database
+- Only held in browser session storage
+- Cleared when the browser session ends
+- Never transmitted to our servers except for direct API calls to AI providers
+
+Users are responsible for:
+- Securing their own API keys
+- Complying with AI provider terms of service
+- Ensuring appropriate use of AI models
+- Maintaining data privacy and security standards
+
+---
+
+## Disclaimer
+
+This software is designed for research, educational, and professional use. Users are responsible for ensuring their use complies with applicable laws, regulations, and AI provider terms of service.
+
+The contributors make no warranties about the accuracy, reliability, or suitability of AI model outputs generated through this software.
