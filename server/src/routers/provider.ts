@@ -47,7 +47,6 @@ export const providerRouter = router({
         // Create default providers for the user
         const providersToCreate = defaultProviders.map(p => ({
           ...p,
-          apiKey: '',
           userId: input.userId,
           models: { models: p.models },
           headers: p.headers,
