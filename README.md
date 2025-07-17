@@ -21,14 +21,6 @@ The **Semantic Logic AI Workflow Builder** is a revolutionary visual tool that t
 - **Educators** teaching logic and critical thinking
 - **Anyone** who wants to make AI reasoning transparent and debuggable
 
-### 🚀 **What's New in v1.0**
-- **Multi-Provider AI Support**: OpenAI, OpenRouter, Venice AI with custom endpoints
-- **Default Model Selection**: Smart defaults with custom model override capability
-- **Real-Time Provider Testing**: Validate connections instantly
-- **Updated Model Support**: Latest models including GPT-4o, Claude-3.5-Sonnet, Gemini-2.0
-- **Improved UI/UX**: Responsive design, collapsible interfaces, dark mode enhancements
-- **Zero Attribution**: Clean canvas without unnecessary UI elements
-
 ---
 
 ## 🚀 Quick Start Guide

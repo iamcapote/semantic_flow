@@ -55,7 +55,7 @@ export const providerRouter = router({
         await prisma.providerConfig.createMany({ data: providersToCreate });
         userProviders = await prisma.providerConfig.findMany({ where: { userId: input.userId } });
       }
-      return userProviders.map(p => ({...p, models: (p.models as any).models, headers: p.headers as any}));
+      return userProviders.map((p: any) => ({...p, models: (p.models as any).models, headers: p.headers as any}));
     }),
 
   // Update provider configuration
@@ -120,8 +120,8 @@ export const providerRouter = router({
       const result = await response.json();
       return {
         nodeId: input.nodeId,
-        result: result.choices[0].message.content,
-        usage: result.usage,
+        result: (result as any).choices[0].message.content,
+        usage: (result as any).usage,
         model: input.model,
         provider: provider.name,
       };

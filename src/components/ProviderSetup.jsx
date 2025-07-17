@@ -10,10 +10,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TestTube2, Plus, Trash2, Eye, EyeOff, ArrowRight } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useToast } from "@/components/ui/use-toast";
+import { SecureKeyManager } from '@/lib/security';
 
 const ProviderSetup = ({ userId, onComplete }) => {
   const { toast } = useToast();
   const [providers, setProviders] = useState([]);
+  const [apiKeys, setApiKeys] = useState({});
   const [selectedProvider, setSelectedProvider] = useState('openai');
   const [showApiKeys, setShowApiKeys] = useState({});
   const [isValid, setIsValid] = useState(false);
@@ -25,8 +27,16 @@ const ProviderSetup = ({ userId, onComplete }) => {
   useEffect(() => {
     if (initialProviders) {
       setProviders(initialProviders);
-      // Check if at least one provider has an API key
-      const hasValidProvider = initialProviders.some(p => p.apiKey && p.apiKey.trim() !== '');
+      const initialApiKeys = {};
+      const hasValidProvider = initialProviders.some(p => {
+        const key = SecureKeyManager.getApiKey(p.providerId);
+        if (key) {
+          initialApiKeys[p.providerId] = key;
+          return true;
+        }
+        return false;
+      });
+      setApiKeys(initialApiKeys);
       setIsValid(hasValidProvider);
     }
   }, [initialProviders]);
@@ -36,25 +46,37 @@ const ProviderSetup = ({ userId, onComplete }) => {
       const updated = prev.map(p => 
         p.providerId === providerId ? { ...p, [field]: value } : p
       );
-      
-      // Check validity when API key changes
-      if (field === 'apiKey') {
-        const hasValidProvider = updated.some(p => p.apiKey && p.apiKey.trim() !== '');
-        setIsValid(hasValidProvider);
-      }
-      
       return updated;
     });
   };
 
+  const handleApiKeyChange = (providerId, value) => {
+    setApiKeys(prev => ({ ...prev, [providerId]: value }));
+    const hasValidProvider = providers.some(p => apiKeys[p.providerId] && apiKeys[p.providerId].trim() !== '');
+    setIsValid(hasValidProvider);
+  };
+
   const handleSaveAndContinue = async () => {
     try {
-      await updateConfigMutation.mutateAsync(providers);
+      // Store keys in session storage
+      Object.entries(apiKeys).forEach(([providerId, key]) => {
+        if (key && key.trim()) {
+          SecureKeyManager.storeApiKey(providerId, key);
+        }
+      });
+
+      // Prepare providers data for backend (without API keys)
+      const providersToSave = providers.map(p => {
+        const { apiKey, ...rest } = p;
+        return rest;
+      });
+
+      await updateConfigMutation.mutateAsync(providersToSave);
       
       // Store the active provider's API key in session storage for immediate use
-      const activeProvider = providers.find(p => p.isActive && p.apiKey);
-      if (activeProvider) {
-        sessionStorage.setItem('openai_api_key', activeProvider.apiKey);
+      const activeProvider = providers.find(p => p.isActive);
+      if (activeProvider && apiKeys[activeProvider.providerId]) {
+        sessionStorage.setItem('openai_api_key', apiKeys[activeProvider.providerId]);
       }
       
       toast({ title: "Success", description: "Provider settings saved." });
@@ -67,12 +89,18 @@ const ProviderSetup = ({ userId, onComplete }) => {
 
   const handleTestProvider = async (providerId, model) => {
     try {
+      const apiKey = apiKeys[providerId];
+      if (!apiKey) {
+        toast({ title: "API Key Missing", description: "Please enter an API key for this provider.", variant: "destructive" });
+        return;
+      }
       const result = await testNodeMutation.mutateAsync({
         nodeId: 'test-node',
         nodeType: 'Test',
         content: 'Hello, this is a test prompt to verify the connection.',
         providerId,
         model,
+        apiKey, // Pass key directly to test mutation
         parameters: { temperature: 0.7, max_tokens: 50, top_p: 1 },
       });
       toast({ 
@@ -97,6 +125,7 @@ const ProviderSetup = ({ userId, onComplete }) => {
       isActive: p.providerId === providerId
     })));
   };
+
 
   if (isLoading) {
     return (

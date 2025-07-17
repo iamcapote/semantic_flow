@@ -31,17 +31,22 @@ export const WorkflowContentSchema = z.object({
 });
 
 export const CreateWorkflowInputSchema = z.object({
-  title: z.string().min(1, "Title is required."),
+  title: z.string().min(1),
   description: z.string().optional(),
-  content: WorkflowContentSchema,
+  content: z.any(),
+  isPublic: z.boolean().default(false),
+  tags: z.array(z.string()).optional(),
 });
 
 export const UpdateWorkflowInputSchema = z.object({
   id: z.string(),
   data: z.object({
-    title: z.string().min(1, "Title is required.").optional(),
-    description: z.string().optional().nullable(),
-    content: WorkflowContentSchema.optional(),
+    title: z.string().min(1).optional(),
+    description: z.string().optional(),
+    content: z.any().optional(),
     isPublic: z.boolean().optional(),
+    tags: z.array(z.string()).optional(),
   }),
 });
+
+

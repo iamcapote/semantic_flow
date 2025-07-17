@@ -6,7 +6,6 @@ export const aiProviderSchema = z.object({
   providerId: z.string(), // e.g., 'openai', 'openrouter'
   name: z.string(),
   baseURL: z.string().url(),
-  apiKey: z.string(),
   models: z.array(z.string()),
   isActive: z.boolean().default(true),
   headers: z.record(z.string()).optional(),

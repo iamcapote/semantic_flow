@@ -1,172 +1,127 @@
-import { router, publicProcedure } from '../trpc';
+import { router, publicProcedure, protectedProcedure } from '../trpc';
 import { z } from 'zod';
+import { TRPCError } from '@trpc/server';
+import { Prisma } from '@prisma/client';
 import { CreateWorkflowInputSchema, UpdateWorkflowInputSchema } from '../schemas/workflow';
-import { createClient } from '@supabase/supabase-js';
 
-// Supabase client as fallback for direct database access
-let supabase: any = null;
-try {
-  if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_KEY) {
-    supabase = createClient(
-      process.env.SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_KEY
-    );
-  }
-} catch (error) {
-  console.warn('Supabase client initialization failed:', error);
-  supabase = null;
-}
+const defaultWorkflowSelect = Prisma.validator<Prisma.WorkflowSelect>()({
+  id: true,
+  title: true,
+  description: true,
+  content: true,
+  version: true,
+  isPublic: true,
+  createdAt: true,
+  updatedAt: true,
+  userId: true,
+  forkCount: true,
+  starCount: true,
+  tags: true,
+});
 
 export const workflowRouter = router({
-  list: publicProcedure.query(async ({ ctx }) => {
-    try {
-      // Try Prisma first, fallback to Supabase client
-      if (ctx && ctx.prisma) {
-        const userId = 'user_placeholder';
-        return ctx.prisma.workflow.findMany({
-          where: { userId: userId },
-          orderBy: { updatedAt: 'desc' },
-        });
-      } else if (supabase) {
-        // Fallback to Supabase client if available
-        const { data, error } = await supabase
-          .from('Workflow')
-          .select('*')
-          .order('updatedAt', { ascending: false });
-        
-        if (error) throw error;
-        return data || [];
-      } else {
-        // Return empty array if no database available
-        console.warn('No database connection available');
-        return [];
-      }
-    } catch (error) {
-      console.error('Error listing workflows:', error);
-      return [];
-    }
-  }),
+  // List all public workflows or user's own workflows
+  list: publicProcedure
+    .input(z.object({
+      userId: z.string().optional(),
+      cursor: z.string().nullish(),
+      limit: z.number().min(1).max(100).default(20),
+    }))
+    .query(async ({ ctx, input }) => {
+      const where: Prisma.WorkflowWhereInput = {
+        OR: [
+          { isPublic: true },
+          { userId: input.userId },
+        ],
+      };
 
-  create: publicProcedure
+      const workflows = await ctx.prisma.workflow.findMany({
+        where,
+        select: defaultWorkflowSelect,
+        take: input.limit + 1,
+        cursor: input.cursor ? { id: input.cursor } : undefined,
+        orderBy: {
+          createdAt: 'desc',
+        },
+      });
+
+      let nextCursor: typeof input.cursor | undefined = undefined;
+      if (workflows.length > input.limit) {
+        const nextItem = workflows.pop();
+        nextCursor = nextItem!.id;
+      }
+
+      return {
+        items: workflows,
+        nextCursor,
+      };
+    }),
+
+  // Get a single workflow by ID
+  get: publicProcedure
+    .input(z.object({ id: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const workflow = await ctx.prisma.workflow.findUnique({
+        where: { id: input.id },
+        select: defaultWorkflowSelect,
+      });
+
+      if (!workflow) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Workflow not found' });
+      }
+
+      if (!workflow.isPublic && workflow.userId !== ctx.session?.user.id) {
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'You do not have access to this workflow' });
+      }
+
+      return workflow;
+    }),
+
+  // Create a new workflow
+  create: protectedProcedure
     .input(CreateWorkflowInputSchema)
-    .mutation(async ({ input, ctx }) => {
-      try {
-        const userId = 'user_placeholder';
-        const { title, description, content } = input;
-        
-        if (ctx.prisma) {
-          return ctx.prisma.workflow.create({
-            data: {
-              title,
-              description,
-              content,
-              version: '1.0.0',
-              userId: userId,
-            },
-          });
-        } else if (supabase) {
-          // Fallback to Supabase client
-          const { data, error } = await supabase
-            .from('Workflow')
-            .insert({
-              title,
-              description,
-              content,
-              version: '1.0.0',
-              userId: userId,
-            })
-            .select()
-            .single();
-          
-          if (error) throw error;
-          return data;
-        }
-      } catch (error) {
-        console.error('Error creating workflow:', error);
-        throw new Error('Failed to create workflow');
-      }
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+      const workflow = await ctx.prisma.workflow.create({
+        data: { ...input, userId, version: '1.0.0' },
+        select: defaultWorkflowSelect,
+      });
+      return workflow;
     }),
 
-  get: publicProcedure.input(z.string()).query(async ({ input, ctx }) => {
-    try {
-      if (ctx.prisma) {
-        return ctx.prisma.workflow.findUnique({
-          where: { id: input },
-        });
-      } else {
-        const { data, error } = await supabase
-          .from('Workflow')
-          .select('*')
-          .eq('id', input)
-          .single();
-        
-        if (error && error.code !== 'PGRST116') throw error;
-        return data;
-      }
-    } catch (error) {
-      console.error('Error getting workflow:', error);
-      return null;
-    }
-  }),
-
-  update: publicProcedure
+  // Update a workflow
+  update: protectedProcedure
     .input(UpdateWorkflowInputSchema)
-    .mutation(async ({ input, ctx }) => {
-      try {
-        const { id, data } = input;
-        const { title, description, content, isPublic } = data;
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+      const { id, data } = input;
 
-        if (ctx.prisma) {
-          return ctx.prisma.workflow.update({
-            where: { id },
-            data: {
-              ...(title && { title }),
-              ...(description !== undefined && { description }),
-              ...(content && { content }),
-              ...(isPublic !== undefined && { isPublic }),
-            },
-          });
-        } else {
-          const updateData: any = {};
-          if (title) updateData.title = title;
-          if (description !== undefined) updateData.description = description;
-          if (content) updateData.content = content;
-          if (isPublic !== undefined) updateData.isPublic = isPublic;
-
-          const { data: updatedData, error } = await supabase
-            .from('Workflow')
-            .update(updateData)
-            .eq('id', id)
-            .select()
-            .single();
-          
-          if (error) throw error;
-          return updatedData;
-        }
-      } catch (error) {
-        console.error('Error updating workflow:', error);
-        throw new Error('Failed to update workflow');
+      const existingWorkflow = await ctx.prisma.workflow.findUnique({ where: { id } });
+      if (!existingWorkflow || existingWorkflow.userId !== userId) {
+        throw new TRPCError({ code: 'FORBIDDEN' });
       }
+
+      const updatedWorkflow = await ctx.prisma.workflow.update({
+        where: { id },
+        data,
+        select: defaultWorkflowSelect,
+      });
+      return updatedWorkflow;
     }),
 
-  delete: publicProcedure.input(z.string()).mutation(async ({ input, ctx }) => {
-    try {
-      if (ctx.prisma) {
-        await ctx.prisma.workflow.delete({
-          where: { id: input },
-        });
-      } else {
-        const { error } = await supabase
-          .from('Workflow')
-          .delete()
-          .eq('id', input);
-        
-        if (error) throw error;
+  // Delete a workflow
+  delete: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+      const { id } = input;
+
+      const existingWorkflow = await ctx.prisma.workflow.findUnique({ where: { id } });
+      if (!existingWorkflow || existingWorkflow.userId !== userId) {
+        throw new TRPCError({ code: 'FORBIDDEN' });
       }
-      return { id: input };
-    } catch (error) {
-      console.error('Error deleting workflow:', error);
-      throw new Error('Failed to delete workflow');
-    }
-  }),
+
+      await ctx.prisma.workflow.delete({ where: { id } });
+      return { success: true };
+    }),
 });

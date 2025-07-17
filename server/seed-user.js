@@ -1,25 +1,25 @@
 const { PrismaClient } = require('@prisma/client');
-
 const prisma = new PrismaClient();
 
-async function createDefaultUser() {
-  try {
-    const user = await prisma.user.upsert({
-      where: { id: 'user_placeholder' },
+async function main() {
+  console.log('Seeding initial user...');
+  const user = await prisma.user.upsert({
+      where: { email: 'dev@example.com' },
       update: {},
       create: {
-        id: 'user_placeholder',
-        email: 'placeholder@example.com',
-        name: 'Default User',
-      }
+        id: 'clerk-user-id-12345', // Example of a Clerk or other auth provider ID
+        email: 'dev@example.com',
+        name: 'Dev User',
+      },
     });
-    
-    console.log('✅ Default user created:', user);
-  } catch (error) {
-    console.error('Error creating user:', error);
-  } finally {
-    await prisma.$disconnect();
-  }
+  console.log({ user });
 }
 
-createDefaultUser();
+main()
+  .catch((e) => {
+    console.error(e);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });

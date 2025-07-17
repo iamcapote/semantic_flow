@@ -30,7 +30,6 @@ model ProviderConfig {
   providerId  String
   name         String
   baseURL      String
-  apiKey       String
   models       Json
   isActive     Boolean  @default(true)
   headers      Json?
