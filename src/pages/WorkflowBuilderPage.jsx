@@ -23,7 +23,7 @@ import WorkflowExecutionEngine from "../lib/WorkflowExecutionEngine";
 
 const WorkflowBuilderPage = () => {
   // tRPC queries
-  const { data: workflows, refetch: refetchWorkflows } = trpc.workflow.list.useQuery(undefined, {
+  const { data: workflows, refetch: refetchWorkflows } = trpc.workflow.list.useQuery({ userId: "demo-user" }, {
     enabled: true,
     retry: false,
     onError: (error) => {
