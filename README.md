@@ -5,7 +5,7 @@
 
 ![Project Status](https://img.shields.io/badge/Status-Production%20Ready-green)
 ![Version](https://img.shields.io/badge/Version-1.0.0-blue)
-![License](https://img.shields.io/badge/License-MIT-yellow)
+
 
 ---
 
