@@ -51,13 +51,15 @@ const ProviderSettings = ({ userId }) => {
     if (!hasChanges) return;
     
     try {
-      await updateConfigMutation.mutateAsync(providers);
+      await updateConfigMutation.mutateAsync({
+        userId,
+        configs: providers.map(({ userId, ...rest }) => rest)
+      });
       toast({ title: "Success", description: "Provider settings saved." });
       
-      // Update session storage with active provider
-      const activeProvider = providers.find(p => p.isActive && p.apiKey);
-      if (activeProvider) {
-        sessionStorage.setItem('openai_api_key', activeProvider.apiKey);
+      const activeProvider = providers.find(p => p.isActive);
+      if (activeProvider && activeProvider.apiKey) {
+        sessionStorage.setItem(`${activeProvider.providerId}_api_key`, activeProvider.apiKey);
       }
     } catch (error) {
       toast({ title: "Error", description: "Failed to save settings.", variant: "destructive" });
@@ -65,13 +67,21 @@ const ProviderSettings = ({ userId }) => {
   };
 
   const handleTestProvider = async (providerId, model) => {
+    const providerToTest = providers.find(p => p.providerId === providerId);
+    if (!providerToTest || !providerToTest.apiKey) {
+      toast({ title: "API Key Missing", description: "Please enter an API key for this provider before testing.", variant: "destructive" });
+      return;
+    }
+
     try {
       const result = await testNodeMutation.mutateAsync({
+        userId,
         nodeId: 'test-node',
         nodeType: 'Test',
         content: 'Hello! This is a test to verify the connection works.',
         providerId,
         model,
+        apiKey: providerToTest.apiKey,
         parameters: { temperature: 0.7, max_tokens: 50, top_p: 1 },
       });
       toast({ 

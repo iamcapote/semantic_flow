@@ -64,21 +64,26 @@ class WorkflowExecutionEngine {
         // Prepare input by combining node content with outputs from connected nodes
         const nodeInput = this.prepareNodeInput(node, nodeStates, workflow);
 
-        // Execute node using the active provider
-        const result = await this.trpcClient.provider.testNode.mutate({
-          nodeId: nodeId,
-          nodeType: node.data.type,
-          content: nodeInput,
-          providerId: activeProvider.providerId,
-          model: activeProvider.models[0], // Use first available model
-          parameters: {
-            temperature: 0.7,
-            max_tokens: 1000,
-            top_p: 1,
-          },
-        });
+    // Execute node using the active provider
+    const apiKey = sessionStorage.getItem(`${activeProvider.providerId}_api_key`);
+    if (!apiKey) {
+      throw new Error(`API key for ${activeProvider.name} not found. Please configure it in settings.`);
+    }
 
-        nodeState.status = 'completed';
+    const result = await this.trpcClient.provider.testNode.mutate({
+      userId: this.userId,
+      nodeId: nodeId,
+      nodeType: node.data.type,
+      content: nodeInput,
+      providerId: activeProvider.providerId,
+      model: activeProvider.models[0], // Use first available model
+      apiKey: apiKey,
+      parameters: {
+        temperature: 0.7,
+        max_tokens: 1000,
+        top_p: 1,
+      },
+    });        nodeState.status = 'completed';
         nodeState.output = result.result;
         nodeState.endTime = Date.now();
 

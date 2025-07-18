@@ -57,13 +57,16 @@ export const providerRouter = router({
       return userProviders.map((p: any) => ({...p, models: (p.models as any).models, headers: p.headers as any}));
     }),
 
-  // Update provider configuration (NO API KEYS - BYOK Model)
+          // Update provider configuration (NO API KEYS - BYOK Model)
   updateConfig: publicProcedure
-    .input(z.array(aiProviderSchema))
+    .input(z.object({
+      userId: z.string(),
+      configs: z.array(aiProviderSchema.omit({ userId: true })),
+    }))
     .mutation(async ({ ctx, input }) => {
-      const upserts = input.map(p => {
+      const upserts = input.configs.map(p => {
         return prisma.providerConfig.upsert({
-          where: { userId_providerId: { userId: p.userId, providerId: p.providerId } },
+          where: { userId_providerId: { userId: input.userId, providerId: p.providerId } },
           update: {
             name: p.name,
             baseURL: p.baseURL,
@@ -72,7 +75,7 @@ export const providerRouter = router({
             headers: p.headers,
           },
           create: {
-            userId: p.userId,
+            userId: input.userId,
             providerId: p.providerId,
             name: p.name,
             baseURL: p.baseURL,
@@ -89,12 +92,29 @@ export const providerRouter = router({
   // Test a single node with specific provider (BYOK Model)
   testNode: publicProcedure
     .input(testNodeSchema.extend({
+      userId: z.string(),
       apiKey: z.string(), // API key provided by client
     }))
     .mutation(async ({ ctx, input }) => {
       // Get provider configuration (without API key)
       const provider = await prisma.providerConfig.findFirst({
-        where: { providerId: input.providerId, userId: 'demo-user' }, // Use demo user for now
+        where: { providerId: input.providerId, userId: input.userId },
+      });
+      
+      if (!provider) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Provider not configured' });
+      }
+
+  // Test a single node with specific provider (BYOK Model)
+  testNode: publicProcedure
+    .input(testNodeSchema.extend({
+      userId: z.string(),
+      apiKey: z.string(), // API key provided by client
+    }))
+    .mutation(async ({ ctx, input }) => {
+      // Get provider configuration (without API key)
+      const provider = await prisma.providerConfig.findFirst({
+        where: { providerId: input.providerId, userId: input.userId },
       });
       
       if (!provider) {
