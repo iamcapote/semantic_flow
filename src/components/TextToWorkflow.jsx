@@ -1,15 +1,41 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Wand2, Loader2, ChevronDown, ChevronUp } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Wand2, Loader2, ChevronDown, ChevronUp, Settings } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
+import { trpcVanilla } from '@/lib/trpc-vanilla';
+import PromptingEngine from '@/lib/promptingEngine';
 
 const TextToWorkflow = ({ onWorkflowGenerated, apiKey }) => {
   const [textInput, setTextInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
+  const [selectedProvider, setSelectedProvider] = useState('openai');
+  const [selectedModel, setSelectedModel] = useState('gpt-4o');
+  const [availableProviders, setAvailableProviders] = useState([]);
+  const [promptingEngine] = useState(() => new PromptingEngine(trpcVanilla, "demo-user"));
+
+  // Load available providers on component mount
+  useEffect(() => {
+    const loadProviders = async () => {
+      try {
+        const providers = await promptingEngine.getAvailableProviders();
+        setAvailableProviders(providers);
+        if (providers.length > 0) {
+          const activeProvider = providers.find(p => p.isActive) || providers[0];
+          setSelectedProvider(activeProvider.providerId);
+          setSelectedModel(activeProvider.models[0]);
+        }
+      } catch (error) {
+        console.error('Failed to load providers:', error);
+      }
+    };
+    loadProviders();
+  }, [promptingEngine]);
 
   const handleGenerate = async () => {
     if (!textInput.trim()) {
@@ -21,10 +47,12 @@ const TextToWorkflow = ({ onWorkflowGenerated, apiKey }) => {
       return;
     }
     
-    if (!apiKey) {
+    // Get API key from session storage for selected provider
+    const providerApiKey = sessionStorage.getItem(`${selectedProvider}_api_key`) || apiKey;
+    if (!providerApiKey) {
       toast({
         title: "API Key Missing",
-        description: "Please set your OpenAI API key in the settings.",
+        description: `Please configure your ${selectedProvider} API key in settings.`,
         variant: "destructive",
       });
       return;
@@ -33,36 +61,32 @@ const TextToWorkflow = ({ onWorkflowGenerated, apiKey }) => {
     setIsLoading(true);
     
     try {
-      // This will be replaced by an API call to Engineer 2's backend
-      // For now, we simulate a response.
-      console.log("Simulating AI text-to-workflow conversion...");
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      const result = await promptingEngine.convertTextToWorkflow(
+        textInput,
+        providerApiKey,
+        selectedProvider,
+        selectedModel
+      );
 
-      // Simulated response structure
-      const simulatedResponse = {
-        nodes: [
-          { id: 'node-1', type: 'semantic', position: { x: 50, y: 50 }, data: { type: 'PROP-STM', label: 'Statement', content: 'Initial idea from text.', metadata: { cluster: 'PROP', tags: ['atomic'] } } },
-          { id: 'node-2', type: 'semantic', position: { x: 300, y: 100 }, data: { type: 'HEM-HYP', label: 'Hypothesis', content: 'A related hypothesis.', metadata: { cluster: 'HEM', tags: ['tentative'] } } },
-          { id: 'node-3', type: 'semantic', position: { x: 100, y: 200 }, data: { type: 'RSN-DED', label: 'Deduction', content: 'A deductive step.', metadata: { cluster: 'RSN', tags: ['validity'] } } },
-        ],
-        edges: [
-          { id: 'edge-1-2', source: 'node-1', target: 'node-2', data: { condition: 'implies' } },
-          { id: 'edge-1-3', source: 'node-1', target: 'node-3', data: { condition: 'supports' } },
-        ],
-      };
-
-      onWorkflowGenerated(simulatedResponse);
-      
-      toast({
-        title: "Workflow Generated",
-        description: "A preliminary workflow has been created from your text.",
-      });
+      if (result.success) {
+        onWorkflowGenerated(result.workflow);
+        
+        toast({
+          title: "Workflow Generated",
+          description: `Successfully converted text to workflow using ${result.metadata.generatedBy}`,
+        });
+        
+        // Clear input after successful generation
+        setTextInput('');
+      } else {
+        throw new Error(result.error);
+      }
 
     } catch (error) {
       console.error("Error generating workflow:", error);
       toast({
         title: "Generation Failed",
-        description: "Could not generate workflow from text.",
+        description: error.message || "Could not generate workflow from text.",
         variant: "destructive",
       });
     } finally {
@@ -91,29 +115,71 @@ const TextToWorkflow = ({ onWorkflowGenerated, apiKey }) => {
         </CollapsibleTrigger>
         
         <CollapsibleContent className="p-4 pt-0 space-y-4">
-          <p className="text-sm text-muted-foreground">
-            Convert text, research abstracts, or complex ideas into workflow nodes.
-          </p>
-          <Textarea
-            value={textInput}
-            onChange={(e) => setTextInput(e.target.value)}
-            placeholder="Paste your text here..."
-            className="min-h-[120px]"
-            disabled={isLoading}
-          />
-          <Button onClick={handleGenerate} disabled={isLoading} className="w-full">
-            {isLoading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Generating...
-              </>
-            ) : (
-              <>
-                <Wand2 className="mr-2 h-4 w-4" />
-                Generate Workflow
-              </>
-            )}
-          </Button>
+          <div className="space-y-4">
+            <div>
+              <Label className="text-sm font-medium">Input Text</Label>
+              <p className="text-sm text-muted-foreground mb-2">
+                Convert text, research abstracts, or complex ideas into workflow nodes.
+              </p>
+              <Textarea
+                value={textInput}
+                onChange={(e) => setTextInput(e.target.value)}
+                placeholder="Paste your text here..."
+                className="min-h-[120px]"
+                disabled={isLoading}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label className="text-sm font-medium">AI Provider</Label>
+                <Select value={selectedProvider} onValueChange={setSelectedProvider}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select provider" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableProviders.map(provider => (
+                      <SelectItem key={provider.providerId} value={provider.providerId}>
+                        {provider.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label className="text-sm font-medium">Model</Label>
+                <Select value={selectedModel} onValueChange={setSelectedModel}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select model" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableProviders
+                      .find(p => p.providerId === selectedProvider)?.models
+                      .map(model => (
+                        <SelectItem key={model} value={model}>
+                          {model}
+                        </SelectItem>
+                      )) || []}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <Button onClick={handleGenerate} disabled={isLoading || !textInput.trim()} className="w-full">
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Wand2 className="mr-2 h-4 w-4" />
+                  Generate Workflow
+                </>
+              )}
+            </Button>
+          </div>
         </CollapsibleContent>
       </Collapsible>
     </div>

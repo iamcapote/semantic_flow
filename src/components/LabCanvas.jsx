@@ -15,10 +15,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/use-toast";
 import SemanticNode from "./SemanticNode";
+import WorkflowExecutionModal from "./WorkflowExecutionModal";
 import { createNode, createEdge, generateId } from "@/lib/graphSchema";
 import { NODE_TYPES, CLUSTER_COLORS } from "@/lib/ontology";
 import { trpc } from "@/lib/trpc";
-import { Save, Download, Upload, Play, RotateCcw } from "lucide-react";
+import { Save, Download, Upload, Play, RotateCcw, FileJson, FileText, FileCode, FileX2 } from "lucide-react";
+import { exportWorkflow } from "@/lib/exportUtils";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 // Custom node types for React Flow
 const nodeTypes = {
@@ -206,6 +209,34 @@ const LabCanvas = ({
     setNodes([]);
     setEdges([]);
   }, [setNodes, setEdges]);
+
+  const handleExport = useCallback((format) => {
+    if (!workflow) return;
+    
+    try {
+      const exportData = exportWorkflow(workflow, format);
+      const blob = new Blob([exportData.content], { type: exportData.mimeType });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = exportData.filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      toast({
+        title: "Export Successful",
+        description: `Workflow exported as ${format.toUpperCase()}`,
+      });
+    } catch (error) {
+      toast({
+        title: "Export Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  }, [workflow, toast]);
   
   // Stats for the panel
   const stats = useMemo(() => {
@@ -254,22 +285,51 @@ const LabCanvas = ({
         
         {/* Top Panel - Controls */}
         <Panel position="top-right" className="flex gap-2">
-          <Button
-            onClick={onExecuteWorkflow}
-            disabled={isExecuting || nodes.length === 0}
-            className="bg-green-600 hover:bg-green-700 text-white"
-          >
-            <Play className="h-4 w-4 mr-1" />
-            {isExecuting ? 'Executing...' : 'Execute'}
-          </Button>
+          <WorkflowExecutionModal 
+            workflow={workflow} 
+            trigger={
+              <Button
+                disabled={isExecuting || nodes.length === 0}
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                <Play className="h-4 w-4 mr-1" />
+                {isExecuting ? 'Executing...' : 'Execute'}
+              </Button>
+            }
+          />
+          
           <Button onClick={onSaveWorkflow} variant="outline" className="bg-card border-border">
             <Save className="h-4 w-4 mr-1" />
             Save
           </Button>
-          <Button onClick={onExportWorkflow} variant="outline" className="bg-card border-border">
-            <Download className="h-4 w-4 mr-1" />
-            Export
-          </Button>
+          
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="bg-card border-border">
+                <Download className="h-4 w-4 mr-1" />
+                Export
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem onClick={() => handleExport('json')}>
+                <FileJson className="h-4 w-4 mr-2" />
+                Export as JSON
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport('markdown')}>
+                <FileText className="h-4 w-4 mr-2" />
+                Export as Markdown
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport('yaml')}>
+                <FileCode className="h-4 w-4 mr-2" />
+                Export as YAML
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport('xml')}>
+                <FileX2 className="h-4 w-4 mr-2" />
+                Export as XML
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          
           <Button onClick={onResetCanvas} variant="outline" className="bg-card border-border">
             <RotateCcw className="h-4 w-4 mr-1" />
             Reset

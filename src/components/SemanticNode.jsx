@@ -5,10 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Edit3, Save, X, Play, Pause, Info } from "lucide-react";
+import { Edit3, Save, X, Play, Pause, Info, Sparkles } from "lucide-react";
 import { NODE_TYPES, CLUSTER_COLORS } from "@/lib/ontology";
+import NodeEnhancementModal from './NodeEnhancementModal';
 
-const SemanticNode = ({ id, data, isConnectable, selected }) => {
+const SemanticNode = ({ id, data, isConnectable, selected, onNodeUpdate }) => {
   const [isEditing, setIsEditing] = useState(!!data.isNew); // Open editor for new nodes
   const [editContent, setEditContent] = useState(data.content || '');
   
@@ -21,6 +22,11 @@ const SemanticNode = ({ id, data, isConnectable, selected }) => {
     data.metadata.updatedAt = new Date().toISOString();
     delete data.isNew; // Remove new flag after first edit
     setIsEditing(false);
+    
+    // Call parent update if provided
+    if (onNodeUpdate) {
+      onNodeUpdate(id, { content: editContent });
+    }
   };
   
   const handleCancelEdit = () => {
@@ -31,6 +37,18 @@ const SemanticNode = ({ id, data, isConnectable, selected }) => {
   const handleExecute = () => {
     // Trigger node execution - this will be connected to the execution engine
     console.log(`Executing node ${id} of type ${data.type}`);
+  };
+
+  const handleNodeEnhancementUpdate = (updatedNode) => {
+    // Update local state
+    setEditContent(updatedNode.data.content);
+    data.content = updatedNode.data.content;
+    data.metadata.updatedAt = new Date().toISOString();
+    
+    // Call parent update if provided
+    if (onNodeUpdate) {
+      onNodeUpdate(id, { content: updatedNode.data.content });
+    }
   };
   
   return (
@@ -144,22 +162,38 @@ const SemanticNode = ({ id, data, isConnectable, selected }) => {
               className="min-h-[60px] text-sm bg-white dark:bg-gray-700 dark:text-gray-200"
               autoFocus
             />
-            <div className="flex justify-end gap-1">
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={handleCancelEdit}
-                className="h-6 px-2"
-              >
-                <X className="h-3 w-3" />
-              </Button>
-              <Button
-                size="sm"
-                onClick={handleSaveEdit}
-                className="h-6 px-2"
-              >
-                <Save className="h-3 w-3" />
-              </Button>
+            <div className="flex justify-between gap-2">
+              <div className="flex gap-1">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={handleCancelEdit}
+                  className="h-6 px-2"
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleSaveEdit}
+                  className="h-6 px-2"
+                >
+                  <Save className="h-3 w-3" />
+                </Button>
+              </div>
+              
+              <NodeEnhancementModal
+                node={{ id, data }}
+                onNodeUpdate={handleNodeEnhancementUpdate}
+                trigger={
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-6 px-2"
+                  >
+                    <Sparkles className="h-3 w-3" />
+                  </Button>
+                }
+              />
             </div>
           </div>
         ) : (
