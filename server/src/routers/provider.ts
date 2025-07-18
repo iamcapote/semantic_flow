@@ -105,22 +105,6 @@ export const providerRouter = router({
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'Provider not configured' });
       }
 
-  // Test a single node with specific provider (BYOK Model)
-  testNode: publicProcedure
-    .input(testNodeSchema.extend({
-      userId: z.string(),
-      apiKey: z.string(), // API key provided by client
-    }))
-    .mutation(async ({ ctx, input }) => {
-      // Get provider configuration (without API key)
-      const provider = await prisma.providerConfig.findFirst({
-        where: { providerId: input.providerId, userId: input.userId },
-      });
-      
-      if (!provider) {
-        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Provider not configured' });
-      }
-
       // Use API key from client request
       const response = await fetch(`${provider.baseURL}/chat/completions`, {
         method: 'POST',
