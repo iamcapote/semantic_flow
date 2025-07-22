@@ -9,7 +9,6 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Sparkles, Loader2, CheckCircle, ArrowRight, RotateCcw } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
-import { trpcVanilla } from '@/lib/trpc-vanilla';
 import PromptingEngine from '@/lib/promptingEngine';
 
 const NodeEnhancementModal = ({ node, onNodeUpdate, trigger }) => {
@@ -21,7 +20,7 @@ const NodeEnhancementModal = ({ node, onNodeUpdate, trigger }) => {
   const [temperature, setTemperature] = useState([0.7]);
   const [maxTokens, setMaxTokens] = useState([800]);
   const [availableProviders, setAvailableProviders] = useState([]);
-  const [promptingEngine] = useState(() => new PromptingEngine(trpcVanilla, "demo-user"));
+  const [promptingEngine] = useState(() => new PromptingEngine('demo-user'));
   const [enhancementResult, setEnhancementResult] = useState(null);
 
   const enhancementTypes = [

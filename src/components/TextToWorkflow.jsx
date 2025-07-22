@@ -7,7 +7,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Wand2, Loader2, ChevronDown, ChevronUp, Settings } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
-import { trpcVanilla } from '@/lib/trpc-vanilla';
 import PromptingEngine from '@/lib/promptingEngine';
 
 const TextToWorkflow = ({ onWorkflowGenerated, apiKey }) => {
@@ -17,7 +16,7 @@ const TextToWorkflow = ({ onWorkflowGenerated, apiKey }) => {
   const [selectedProvider, setSelectedProvider] = useState('openai');
   const [selectedModel, setSelectedModel] = useState('gpt-4o');
   const [availableProviders, setAvailableProviders] = useState([]);
-  const [promptingEngine] = useState(() => new PromptingEngine(trpcVanilla, "demo-user"));
+  const [promptingEngine] = useState(() => new PromptingEngine('demo-user'));
 
   // Load available providers on component mount
   useEffect(() => {

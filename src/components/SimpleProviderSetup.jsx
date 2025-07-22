@@ -7,7 +7,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ChevronDown, ChevronUp, Settings, TestTube2, CheckCircle, AlertCircle, ArrowRight, Eye, EyeOff, Plus } from "lucide-react";
-import { trpc } from "@/lib/trpc";
 import { useToast } from "@/components/ui/use-toast";
 
 const SimpleProviderSetup = ({ userId, onComplete }) => {
@@ -17,18 +16,9 @@ const SimpleProviderSetup = ({ userId, onComplete }) => {
   const [showApiKeys, setShowApiKeys] = useState({});
   const [customModels, setCustomModels] = useState({});
   const [isValid, setIsValid] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
-  const { data: initialProviders, isLoading, refetch } = trpc.provider.getConfig.useQuery(
-    { userId }, 
-    { 
-      enabled: false, // Disable automatic fetching to prevent infinite loops
-      refetchOnWindowFocus: false,
-      refetchOnReconnect: false,
-      retry: false
-    }
-  );
-  const updateConfigMutation = trpc.provider.updateConfig.useMutation();
-  const testNodeMutation = trpc.provider.testNode.useMutation();
+  const isLoading = false;
 
   // Default providers configuration with updated models
   const defaultProviders = [
@@ -108,11 +98,8 @@ const SimpleProviderSetup = ({ userId, onComplete }) => {
   };
 
   const handleSaveAndContinue = async () => {
+    setIsSaving(true);
     try {
-      // Try to save to backend if available
-      if (updateConfigMutation) {
-        await updateConfigMutation.mutateAsync(providers);
-      }
       
       // Always store the active provider's API key in session storage
       const activeProvider = providers.find(p => p.isActive && p.apiKey);
@@ -133,6 +120,8 @@ const SimpleProviderSetup = ({ userId, onComplete }) => {
       } else {
         toast({ title: "Error", description: "Failed to save settings.", variant: "destructive" });
       }
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -141,25 +130,7 @@ const SimpleProviderSetup = ({ userId, onComplete }) => {
     const testModel = model || provider?.defaultModel || provider?.models[0];
     
     try {
-      if (testNodeMutation) {
-        const result = await testNodeMutation.mutateAsync({
-          nodeId: 'test-node',
-          nodeType: 'Test',
-          content: 'Hello! This is a test to verify the connection works.',
-          providerId,
-          model: testModel,
-          parameters: { temperature: 0.7, max_tokens: 50, top_p: 1 },
-        });
-        toast({ 
-          title: "Test Successful", 
-          description: `${result.provider} is working correctly with ${testModel}!` 
-        });
-      } else {
-        toast({ 
-          title: "Test Feature", 
-          description: `Would test ${provider?.name} with model: ${testModel}` 
-        });
-      }
+      toast({ title: "Test Feature", description: `Would test ${provider?.name} with model: ${testModel}` });
     } catch (error) {
       toast({ title: "Test Failed", description: error.message, variant: "destructive" });
     }
@@ -338,7 +309,7 @@ const SimpleProviderSetup = ({ userId, onComplete }) => {
                         <Button
                           variant="outline"
                           onClick={() => handleTestProvider(provider.providerId)}
-                          disabled={testNodeMutation?.isLoading}
+                          disabled={isSaving}
                           className="bg-white/10 border-white/20 text-white hover:bg-white/20"
                         >
                           <TestTube2 className="h-4 w-4 mr-2" />
@@ -369,10 +340,10 @@ const SimpleProviderSetup = ({ userId, onComplete }) => {
         </p>
         <Button
           onClick={handleSaveAndContinue}
-          disabled={!isValid || updateConfigMutation.isLoading}
+          disabled={!isValid || isSaving}
           className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600"
         >
-          {updateConfigMutation.isLoading ? "Saving..." : "Save & Continue"}
+          {isSaving ? "Saving..." : "Save & Continue"}
           <ArrowRight className="ml-2 h-4 w-4" />
         </Button>
       </div>
