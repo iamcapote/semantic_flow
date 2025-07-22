@@ -10,9 +10,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Play, Settings, FileText, Code, Database, Globe, FileJson, FileX2, Loader2, CheckCircle, Download, Copy } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
-import { trpcVanilla } from '@/lib/trpc-vanilla';
 import PromptingEngine from '@/lib/promptingEngine';
 import { exportWorkflow } from '@/lib/exportUtils';
+import { SecureKeyManager } from '@/lib/security';
 
 const WorkflowExecutionModal = ({ workflow, trigger, onExecutionComplete }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -23,7 +23,7 @@ const WorkflowExecutionModal = ({ workflow, trigger, onExecutionComplete }) => {
   const [temperature, setTemperature] = useState([0.7]);
   const [maxTokens, setMaxTokens] = useState([1500]);
   const [availableProviders, setAvailableProviders] = useState([]);
-  const [promptingEngine] = useState(() => new PromptingEngine(trpcVanilla, "demo-user"));
+  const [promptingEngine] = useState(() => new PromptingEngine('demo-user'));
   const [executionResult, setExecutionResult] = useState(null);
   const [structuredWorkflow, setStructuredWorkflow] = useState('');
 
@@ -80,7 +80,7 @@ const WorkflowExecutionModal = ({ workflow, trigger, onExecutionComplete }) => {
     }
 
     // Get API key from session storage for selected provider
-    const providerApiKey = sessionStorage.getItem(`${selectedProvider}_api_key`);
+    const providerApiKey = SecureKeyManager.getApiKey(selectedProvider);
     if (!providerApiKey) {
       toast({
         title: "API Key Missing",

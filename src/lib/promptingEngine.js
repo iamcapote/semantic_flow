@@ -5,9 +5,61 @@ import { NODE_TYPES } from './ontology.js';
 import { exportWorkflowAsJSON, exportWorkflowAsMarkdown, exportWorkflowAsYAML, exportWorkflowAsXML } from './exportUtils.js';
 
 export class PromptingEngine {
-  constructor(trpcClient, userId) {
-    this.trpcClient = trpcClient;
+  constructor(userId) {
     this.userId = userId;
+    this.providers = [
+      {
+        providerId: 'openai',
+        name: 'OpenAI',
+        baseURL: 'https://api.openai.com/v1',
+        models: ['gpt-4o', 'gpt-4o-mini', 'gpt-4', 'o1-preview', 'o1-mini'],
+        headers: {},
+      },
+      {
+        providerId: 'openrouter',
+        name: 'OpenRouter',
+        baseURL: 'https://openrouter.ai/api/v1',
+        models: [
+          'qwen/qwen3-235b-a22b-07-25:free',
+          'moonshotai/kimi-k2:free',
+          'cognitivecomputations/dolphin-mistral-24b-venice-edition:free',
+          'qwen/qwen3-235b-a22b:free',
+          'deepseek/deepseek-chat-v3-0324:free',
+        ],
+        headers: {
+          'HTTP-Referer': window.location.origin,
+          'X-Title': 'Semantic Canvas',
+        },
+      },
+      {
+        providerId: 'venice',
+        name: 'Venice AI',
+        baseURL: 'https://api.venice.ai/api/v1',
+        models: ['venice-uncensored', 'mistral-31-24b', 'llama-3.2-3b'],
+        headers: {},
+      },
+    ];
+  }
+
+  async callProvider(providerId, model, apiKey, messages) {
+    const provider = this.providers.find((p) => p.providerId === providerId);
+    if (!provider) {
+      throw new Error('Unknown provider');
+    }
+    const response = await fetch(`${provider.baseURL}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        ...provider.headers,
+      },
+      body: JSON.stringify({ model, messages }),
+    });
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.error?.message || response.statusText);
+    }
+    return response.json();
   }
 
   // Mode 1: Text-to-Workflow Conversion
@@ -55,30 +107,21 @@ Position nodes logically from left to right, top to bottom. Use appropriate sema
     const userPrompt = `Convert this text into a semantic workflow:\n\n${textInput}`;
 
     try {
-      const result = await this.trpcClient.provider.testNode.mutate({
-        userId: this.userId,
-        nodeId: 'text-to-workflow',
-        nodeType: 'TextToWorkflow',
-        content: userPrompt,
-        providerId: providerId,
-        model: model,
-        apiKey: apiKey,
-        parameters: {
-          temperature: 0.3,
-          max_tokens: 2000,
-          top_p: 0.9,
-        },
-      });
+      const response = await this.callProvider(providerId, model, apiKey, [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
+      ]);
 
-      // Parse the AI response to extract workflow JSON
-      const workflowData = this.parseWorkflowFromAIResponse(result.result);
+      const workflowData = this.parseWorkflowFromAIResponse(
+        response.choices?.[0]?.message?.content || ''
+      );
       return {
         success: true,
         workflow: workflowData,
         metadata: {
           originalText: textInput,
-          generatedBy: `${result.provider} - ${model}`,
-          tokensUsed: result.usage
+          generatedBy: `${providerId} - ${model}`,
+          tokensUsed: response.usage,
         }
       };
     } catch (error) {
@@ -119,32 +162,22 @@ Process the workflow systematically and provide detailed reasoning for each node
     const userPrompt = `Execute this semantic workflow:\n\n${structuredWorkflow}`;
 
     try {
-      const result = await this.trpcClient.provider.testNode.mutate({
-        userId: this.userId,
-        nodeId: 'workflow-execution',
-        nodeType: 'WorkflowExecution',
-        content: userPrompt,
-        providerId: providerId,
-        model: model,
-        apiKey: apiKey,
-        parameters: {
-          temperature: temperature,
-          max_tokens: maxTokens,
-          top_p: 1,
-        },
-      });
+      const response = await this.callProvider(providerId, model, apiKey, [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
+      ]);
 
       return {
         success: true,
         execution: {
           originalWorkflow: workflow,
           format: outputFormat,
-          result: result.result,
-          provider: result.provider,
+          result: response.choices?.[0]?.message?.content || '',
+          provider: providerId,
           model: model,
-          usage: result.usage,
-          executedAt: new Date().toISOString()
-        }
+          usage: response.usage,
+          executedAt: new Date().toISOString(),
+        },
       };
     } catch (error) {
       return {
@@ -201,20 +234,10 @@ Original Node Content:
 Enhanced Content:`;
 
     try {
-      const result = await this.trpcClient.provider.testNode.mutate({
-        userId: this.userId,
-        nodeId: node.id,
-        nodeType: `${node.data.type}-Enhancement`,
-        content: userPrompt,
-        providerId: providerId,
-        model: model,
-        apiKey: apiKey,
-        parameters: {
-          temperature: temperature,
-          max_tokens: maxTokens,
-          top_p: 0.9,
-        },
-      });
+      const response = await this.callProvider(providerId, model, apiKey, [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
+      ]);
 
       return {
         success: true,
@@ -222,12 +245,12 @@ Enhanced Content:`;
           originalNode: node,
           enhancementType: enhancementType,
           originalContent: node.data.content,
-          enhancedContent: result.result,
-          provider: result.provider,
+          enhancedContent: response.choices?.[0]?.message?.content || '',
+          provider: providerId,
           model: model,
-          usage: result.usage,
-          enhancedAt: new Date().toISOString()
-        }
+          usage: response.usage,
+          enhancedAt: new Date().toISOString(),
+        },
       };
     } catch (error) {
       return {
@@ -279,13 +302,11 @@ Enhanced Content:`;
 
   // Helper: Get available providers for prompting
   async getAvailableProviders() {
-    try {
-      const providers = await this.trpcClient.provider.getConfig.query({ userId: this.userId });
-      return providers.filter(p => p.isActive || sessionStorage.getItem(`${p.providerId}_api_key`));
-    } catch (error) {
-      console.error('Failed to get providers:', error);
-      return [];
-    }
+    return this.providers.map(p => ({
+      ...p,
+      baseURL: sessionStorage.getItem(`base_url_${p.providerId}`) || p.baseURL,
+      isActive: sessionStorage.getItem('active_provider') === p.providerId,
+    }));
   }
 
   // Helper: Get recommended models for different prompting tasks

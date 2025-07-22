@@ -4,16 +4,13 @@ import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { trpc } from "./lib/trpc";
-import { httpBatchLink } from '@trpc/client';
 import ChatPage from "./pages/ChatPage";
 import WorkflowBuilderPage from "./pages/WorkflowBuilderPage";
 import LandingPage from "./pages/LandingPage";
+import { SecureKeyManager } from './lib/security';
 
 const queryClient = new QueryClient();
 
-// Use the modular trpcClient from src/lib/trpc.ts
-import { trpcClient } from './lib/trpc';
 
 const App = () => {
   const [hasApiKey, setHasApiKey] = useState(false);
@@ -22,7 +19,8 @@ const App = () => {
   useEffect(() => {
     // Check for API key on mount
     const checkApiKey = () => {
-      const storedApiKey = sessionStorage.getItem('openai_api_key');
+      const provider = sessionStorage.getItem('active_provider') || 'openai';
+      const storedApiKey = SecureKeyManager.getApiKey(provider);
       setHasApiKey(!!storedApiKey);
       setIsLoading(false);
     };
@@ -39,7 +37,8 @@ const App = () => {
   
   // Add a method to refresh the API key state
   const refreshApiKeyState = () => {
-    const storedApiKey = sessionStorage.getItem('openai_api_key');
+    const provider = sessionStorage.getItem('active_provider') || 'openai';
+    const storedApiKey = SecureKeyManager.getApiKey(provider);
     setHasApiKey(!!storedApiKey);
   };
 
@@ -56,20 +55,18 @@ const App = () => {
 
   return (
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-      <trpc.Provider client={trpcClient} queryClient={queryClient}>
-        <QueryClientProvider client={queryClient}>
-          <TooltipProvider>
-            <Toaster />
-            <BrowserRouter>
-              <Routes>
-                <Route path="/" element={hasApiKey ? <WorkflowBuilderPage /> : <LandingPage onApiKeySet={refreshApiKeyState} />} />
-                <Route path="/chat" element={<ChatPage />} />
-                <Route path="/setup" element={<LandingPage onApiKeySet={refreshApiKeyState} />} />
-              </Routes>
-            </BrowserRouter>
-          </TooltipProvider>
-        </QueryClientProvider>
-      </trpc.Provider>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <Toaster />
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={hasApiKey ? <WorkflowBuilderPage /> : <LandingPage onApiKeySet={refreshApiKeyState} />} />
+              <Route path="/chat" element={<ChatPage />} />
+              <Route path="/setup" element={<LandingPage onApiKeySet={refreshApiKeyState} />} />
+            </Routes>
+          </BrowserRouter>
+        </TooltipProvider>
+      </QueryClientProvider>
     </ThemeProvider>
   );
 };

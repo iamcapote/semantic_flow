@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Settings, MessageSquare, GitBranch, Play, Loader2, Download, FileJson, FileText, FileCode, FileX2, FolderOpen, Plus } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { SecureKeyManager } from '@/lib/security';
 
 import NodePalette from "../components/NodePalette";
 import LabCanvas from "../components/LabCanvas";
@@ -17,19 +18,12 @@ import ThemeToggle from "../components/ThemeToggle";
 import ClearSessionButton from "../components/ClearSessionButton";
 import { createWorkflowSchema, generateId } from "../lib/graphSchema";
 import { exportWorkflowAsJSON as exportAsJson, exportWorkflowAsYAML as exportAsYaml, exportWorkflowAsMarkdown as exportAsMarkdown, exportWorkflowAsXML as exportAsXml } from "../lib/exportUtils";
-import { trpc } from "../lib/trpc";
 import { toast } from "@/components/ui/use-toast";
 import WorkflowExecutionEngine from "../lib/WorkflowExecutionEngine";
+import PromptingEngine from "../lib/promptingEngine";
 
 const WorkflowBuilderPage = () => {
-  // tRPC queries
-  const { data: workflows, refetch: refetchWorkflows } = trpc.workflow.list.useQuery({ userId: "demo-user" }, {
-    enabled: true,
-    retry: false,
-    onError: (error) => {
-      console.log('Backend not available, using localStorage fallback');
-    }
-  });
+  const [workflows, setWorkflows] = useState([]);
 
   const [workflow, setWorkflow] = useState(() => {
     // Try to load saved workflow from localStorage
@@ -57,7 +51,10 @@ const WorkflowBuilderPage = () => {
   const [chatInput, setChatInput] = useState('');
   
   // Settings state (inherited from original ChatPage)
-  const [apiKey, setApiKey] = useState(() => sessionStorage.getItem('openai_api_key') || '');
+  const [apiKey, setApiKey] = useState(() => {
+    const provider = sessionStorage.getItem('active_provider') || 'openai';
+    return SecureKeyManager.getApiKey(provider) || '';
+  });
   const [systemMessage, setSystemMessage] = useState(() => 
     sessionStorage.getItem('system_message') || 'You are processing a semantic logic workflow.'
   );
@@ -71,7 +68,8 @@ const WorkflowBuilderPage = () => {
   
   // Save settings to sessionStorage
   useEffect(() => {
-    sessionStorage.setItem('openai_api_key', apiKey);
+    const provider = sessionStorage.getItem('active_provider') || 'openai';
+    SecureKeyManager.storeApiKey(provider, apiKey);
     sessionStorage.setItem('system_message', systemMessage);
   }, [apiKey, systemMessage]);
   
@@ -91,34 +89,16 @@ const WorkflowBuilderPage = () => {
 
   const loadWorkflow = async (workflowId) => {
     try {
-      const loadedWorkflow = await trpc.workflow.get.query(workflowId);
-      if (loadedWorkflow) {
-        setWorkflow({
-          id: loadedWorkflow.id,
-          nodes: loadedWorkflow.content?.nodes || [],
-          edges: loadedWorkflow.content?.edges || [],
-          viewport: loadedWorkflow.content?.viewport || { x: 0, y: 0, zoom: 1 },
-          metadata: {
-            id: loadedWorkflow.id,
-            title: loadedWorkflow.title,
-            description: loadedWorkflow.description,
-            createdAt: loadedWorkflow.createdAt,
-            updatedAt: loadedWorkflow.updatedAt,
-            version: loadedWorkflow.version
-          }
-        });
+      const saved = localStorage.getItem(`workflow-${workflowId}`);
+      if (saved) {
+        setWorkflow(JSON.parse(saved));
         toast({
-          title: "Workflow Loaded",
-          description: `Loaded "${loadedWorkflow.title}" from database.`,
+          title: 'Workflow Loaded',
+          description: `Loaded ${workflowId} from local storage.`,
         });
       }
     } catch (error) {
       console.error('Failed to load workflow:', error);
-      toast({
-        title: "Load Failed",
-        description: "Failed to load workflow from database.",
-        variant: "destructive",
-      });
     }
   };
   
@@ -219,17 +199,15 @@ const WorkflowBuilderPage = () => {
 
     try {
       setIsExecuting(true);
-      // Call backend chat endpoint with workflow context and chat history
-      const response = await window.trpc.provider.runChat.mutate({
-        workflow,
-        chatHistory: [...chatMessages, userMessage],
-        newestMessage: chatInput,
-        apiKey: window.sessionStorage.getItem(`${window.activeProvider?.providerId}_api_key`),
-        model: window.activeProvider?.models?.[0] || 'gpt-4o',
-      });
+      const providerId = sessionStorage.getItem('active_provider') || 'openai';
+      const apiKey = SecureKeyManager.getApiKey(providerId);
+      const promptingEngine = new PromptingEngine('demo-user');
+      const response = await promptingEngine.callProvider(providerId, 'gpt-4o', apiKey, [
+        { role: 'user', content: chatInput },
+      ]);
       const assistantMessage = {
         role: 'assistant',
-        content: response.content,
+        content: response.choices?.[0]?.message?.content || '',
       };
       setChatMessages(prev => [...prev, assistantMessage]);
     } catch (error) {

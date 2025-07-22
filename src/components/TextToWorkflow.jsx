@@ -7,8 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Wand2, Loader2, ChevronDown, ChevronUp, Settings } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
-import { trpcVanilla } from '@/lib/trpc-vanilla';
 import PromptingEngine from '@/lib/promptingEngine';
+import { SecureKeyManager } from '@/lib/security';
 
 const TextToWorkflow = ({ onWorkflowGenerated, apiKey }) => {
   const [textInput, setTextInput] = useState('');
@@ -17,7 +17,7 @@ const TextToWorkflow = ({ onWorkflowGenerated, apiKey }) => {
   const [selectedProvider, setSelectedProvider] = useState('openai');
   const [selectedModel, setSelectedModel] = useState('gpt-4o');
   const [availableProviders, setAvailableProviders] = useState([]);
-  const [promptingEngine] = useState(() => new PromptingEngine(trpcVanilla, "demo-user"));
+  const [promptingEngine] = useState(() => new PromptingEngine('demo-user'));
 
   // Load available providers on component mount
   useEffect(() => {
@@ -26,7 +26,8 @@ const TextToWorkflow = ({ onWorkflowGenerated, apiKey }) => {
         const providers = await promptingEngine.getAvailableProviders();
         setAvailableProviders(providers);
         if (providers.length > 0) {
-          const activeProvider = providers.find(p => p.isActive) || providers[0];
+          const storedId = sessionStorage.getItem('active_provider');
+          const activeProvider = providers.find(p => p.providerId === storedId) || providers.find(p => p.isActive) || providers[0];
           setSelectedProvider(activeProvider.providerId);
           setSelectedModel(activeProvider.models[0]);
         }
@@ -48,7 +49,7 @@ const TextToWorkflow = ({ onWorkflowGenerated, apiKey }) => {
     }
     
     // Get API key from session storage for selected provider
-    const providerApiKey = sessionStorage.getItem(`${selectedProvider}_api_key`) || apiKey;
+    const providerApiKey = SecureKeyManager.getApiKey(selectedProvider) || apiKey;
     if (!providerApiKey) {
       toast({
         title: "API Key Missing",

@@ -1,10 +1,11 @@
-import { trpcVanilla } from '@/lib/trpc-vanilla';
+import PromptingEngine from './promptingEngine.js';
+import { SecureKeyManager } from './security.js';
 
 class WorkflowExecutionEngine {
   constructor(userId, toast) {
     this.userId = userId;
     this.toast = toast;
-    this.trpcClient = trpcVanilla;
+    this.engine = new PromptingEngine(userId);
   }
 
   async executeWorkflow(workflow, onProgress) {
@@ -12,11 +13,11 @@ class WorkflowExecutionEngine {
       throw new Error('Workflow is empty');
     }
 
-    // Get user's provider configuration
-    const providers = await this.trpcClient.provider.getConfig.query({ userId: this.userId });
-    const activeProvider = providers.find(p => p.isActive);
-
-    if (!activeProvider || !activeProvider.apiKey) {
+    const providers = await this.engine.getAvailableProviders();
+    const activeId = sessionStorage.getItem('active_provider') || providers[0].providerId;
+    const activeProvider = providers.find(p => p.providerId === activeId) || providers[0];
+    const apiKey = SecureKeyManager.getApiKey(activeProvider.providerId);
+    if (!apiKey) {
       throw new Error('No active provider configured. Please set up your AI providers in settings.');
     }
 
@@ -65,26 +66,17 @@ class WorkflowExecutionEngine {
         const nodeInput = this.prepareNodeInput(node, nodeStates, workflow);
 
     // Execute node using the active provider
-    const apiKey = sessionStorage.getItem(`${activeProvider.providerId}_api_key`);
-    if (!apiKey) {
-      throw new Error(`API key for ${activeProvider.name} not found. Please configure it in settings.`);
-    }
-
-    const result = await this.trpcClient.provider.testNode.mutate({
-      userId: this.userId,
-      nodeId: nodeId,
-      nodeType: node.data.type,
-      content: nodeInput,
-      providerId: activeProvider.providerId,
-      model: activeProvider.models[0], // Use first available model
-      apiKey: apiKey,
-      parameters: {
-        temperature: 0.7,
-        max_tokens: 1000,
-        top_p: 1,
-      },
-    });        nodeState.status = 'completed';
-        nodeState.output = result.result;
+    const result = await this.engine.callProvider(
+      activeProvider.providerId,
+      activeProvider.models[0],
+      apiKey,
+      [
+        { role: 'system', content: `You are executing a workflow node of type ${node.data.type}.` },
+        { role: 'user', content: nodeInput },
+      ]
+    );
+        nodeState.status = 'completed';
+        nodeState.output = result.choices?.[0]?.message?.content || '';
         nodeState.endTime = Date.now();
 
         results.push({
@@ -92,11 +84,11 @@ class WorkflowExecutionEngine {
           nodeLabel: node.data.label,
           nodeType: node.data.type,
           input: nodeInput,
-          output: result.result,
+          output: nodeState.output,
           duration: nodeState.endTime - nodeState.startTime,
-          provider: result.provider,
-          model: result.model,
-          usage: result.usage
+          provider: activeProvider.providerId,
+          model: activeProvider.models[0],
+          usage: result.usage,
         });
 
         if (onProgress && typeof onProgress === 'function') {
@@ -173,27 +165,19 @@ class WorkflowExecutionEngine {
     return workflow.nodes.map(node => node.id);
   }
 
-  async testSingleNode(nodeId, nodeType, content, providerId, model) {
+  async testSingleNode(nodeId, nodeType, content, providerId, model, apiKey) {
     try {
-      const result = await this.trpcClient.provider.testNode.mutate({
-        nodeId: nodeId,
-        nodeType: nodeType,
-        content: content,
-        providerId: providerId,
-        model: model,
-        parameters: {
-          temperature: 0.7,
-          max_tokens: 500,
-          top_p: 1,
-        },
-      });
+      const result = await this.engine.callProvider(providerId, model, apiKey, [
+        { role: 'system', content: `You are testing a node of type ${nodeType}.` },
+        { role: 'user', content },
+      ]);
 
       return {
         success: true,
-        result: result.result,
-        provider: result.provider,
-        model: result.model,
-        usage: result.usage
+        result: result.choices?.[0]?.message?.content || '',
+        provider: providerId,
+        model: model,
+        usage: result.usage,
       };
     } catch (error) {
       return {

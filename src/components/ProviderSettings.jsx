@@ -2,99 +2,81 @@ import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { TestTube2, ChevronDown, ChevronUp, Eye, EyeOff, CheckCircle, AlertCircle, Settings2 } from "lucide-react";
-import { trpc } from "@/lib/trpc";
+import { ChevronDown, ChevronUp, Settings, TestTube2, CheckCircle, AlertCircle, ArrowRight, Eye, EyeOff, Plus } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+
+// ProviderSettings manages the configuration and testing of AI providers for the semantic flow canvas.
+const defaultProviders = [
+  {
+    providerId: 'openai',
+    name: 'OpenAI',
+    baseURL: 'https://api.openai.com/v1',
+    models: ['venice-uncensored', 'mistral-31-24b', 'llama-3.2-3b'],
+    defaultModel: 'venice-uncensored',
+    apiKey: '',
+    isActive: true,
+    description: 'Original ChatGPT models with highest quality reasoning'
+  },
+  {
+    providerId: 'openrouter',
+    name: 'OpenRouter',
+    baseURL: 'https://openrouter.ai/api/v1',
+    models: [
+      'qwen/qwen3-235b-a22b-07-25:free',
+      'moonshotai/kimi-k2:free',
+      'cognitivecomputations/dolphin-mistral-24b-venice-edition:free',
+      'qwen/qwen3-235b-a22b:free',
+      'deepseek/deepseek-chat-v3-0324:free',
+    ],
+    defaultModel: 'qwen/qwen3-235b-a22b-07-25:free',
+    apiKey: '',
+    isActive: false,
+    description: 'Access to multiple AI models through one API'
+  },
+  {
+    providerId: 'venice',
+    name: 'Venice AI',
+    baseURL: 'https://api.venice.ai/api/v1',
+    models: ['venice-uncensored', 'mistral-31-24b', 'llama-3.2-3b'],
+    defaultModel: 'venice-uncensored',
+    apiKey: '',
+    isActive: false,
+    description: 'Privacy-focused AI inference with no data retention'
+  }
+];
 
 const ProviderSettings = ({ userId }) => {
   const { toast } = useToast();
-  const [providers, setProviders] = useState([]);
+  const [providers, setProviders] = useState(defaultProviders);
   const [expandedProvider, setExpandedProvider] = useState(null);
   const [showApiKeys, setShowApiKeys] = useState({});
-  const [hasChanges, setHasChanges] = useState(false);
+  const [customModels, setCustomModels] = useState({});
 
-  const { data: initialProviders, isLoading, refetch } = trpc.provider.getConfig.useQuery(
-    { userId },
-    { 
-      enabled: !!userId,
-      refetchOnWindowFocus: false,
-      refetchOnReconnect: false
-    }
-  );
-  
-  const updateConfigMutation = trpc.provider.updateConfig.useMutation({
-    onSuccess: () => {
-      setHasChanges(false);
-      refetch();
-    }
-  });
-  
-  const testNodeMutation = trpc.provider.testNode.useMutation();
-
-  useEffect(() => {
-    if (
-      initialProviders &&
-      initialProviders.length > 0 &&
-      JSON.stringify(initialProviders) !== JSON.stringify(providers)
-    ) {
-      setProviders(initialProviders);
-    }
-  }, [initialProviders, providers]);
-
+  // No initialProviders logic needed; defaultProviders is always used.
   const handleProviderUpdate = (providerId, field, value) => {
-    setProviders(prev => prev.map(p => 
+    setProviders(prev => prev.map(p =>
       p.providerId === providerId ? { ...p, [field]: value } : p
     ));
-    setHasChanges(true);
   };
 
-  const handleSaveConfig = async () => {
-    if (!hasChanges) return;
-    
-    try {
-      await updateConfigMutation.mutateAsync({
-        userId,
-        configs: providers.map(({ userId, ...rest }) => rest)
-      });
-      toast({ title: "Success", description: "Provider settings saved." });
-      
-      const activeProvider = providers.find(p => p.isActive);
-      if (activeProvider && activeProvider.apiKey) {
-        sessionStorage.setItem(`${activeProvider.providerId}_api_key`, activeProvider.apiKey);
-      }
-    } catch (error) {
-      toast({ title: "Error", description: "Failed to save settings.", variant: "destructive" });
+  const handleAddCustomModel = (providerId) => {
+    const customModel = customModels[providerId];
+    if (customModel && customModel.trim() !== '') {
+      setProviders(prev => prev.map(p =>
+        p.providerId === providerId
+          ? { ...p, models: [...p.models, customModel.trim()] }
+          : p
+      ));
+      setCustomModels(prev => ({ ...prev, [providerId]: '' }));
     }
   };
 
-  const handleTestProvider = async (providerId, model) => {
-    const providerToTest = providers.find(p => p.providerId === providerId);
-    if (!providerToTest || !providerToTest.apiKey) {
-      toast({ title: "API Key Missing", description: "Please enter an API key for this provider before testing.", variant: "destructive" });
-      return;
-    }
-
-    try {
-      const result = await testNodeMutation.mutateAsync({
-        userId,
-        nodeId: 'test-node',
-        nodeType: 'Test',
-        content: 'Hello! This is a test to verify the connection works.',
-        providerId,
-        model,
-        apiKey: providerToTest.apiKey,
-        parameters: { temperature: 0.7, max_tokens: 50, top_p: 1 },
-      });
-      toast({ 
-        title: "Test Successful", 
-        description: `${result.provider} is working correctly!` 
-      });
-    } catch (error) {
-      toast({ title: "Test Failed", description: error.message, variant: "destructive" });
-    }
+  const handleCustomModelChange = (providerId, value) => {
+    setCustomModels(prev => ({ ...prev, [providerId]: value }));
   };
 
   const toggleApiKeyVisibility = (providerId) => {
@@ -109,7 +91,6 @@ const ProviderSettings = ({ userId }) => {
       ...p,
       isActive: p.providerId === providerId
     })));
-    setHasChanges(true);
   };
 
   const getProviderStatus = (provider) => {
@@ -122,169 +103,141 @@ const ProviderSettings = ({ userId }) => {
   const getStatusIcon = (status) => {
     switch (status) {
       case 'active':
-        return <CheckCircle className="h-4 w-4 text-green-500" />;
+        return <CheckCircle className="h-4 w-4 text-green-400" />;
       case 'configured':
-        return <CheckCircle className="h-4 w-4 text-blue-500" />;
+        return <CheckCircle className="h-4 w-4 text-blue-400" />;
       default:
-        return <AlertCircle className="h-4 w-4 text-yellow-500" />;
+        return <AlertCircle className="h-4 w-4 text-yellow-400" />;
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <div className="animate-spin h-6 w-6 border-b-2 border-primary rounded-full"></div>
-        <span className="ml-2 text-muted-foreground">Loading providers...</span>
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-6" data-testid="provider-settings">
-      <div className="flex justify-between items-center">
-        <div className="flex items-center gap-2">
-          <Settings2 className="h-5 w-5" />
-          <h2 className="text-xl font-semibold">AI Provider Settings</h2>
-        </div>
-        <Button 
-          onClick={handleSaveConfig} 
-          disabled={!hasChanges || updateConfigMutation.isLoading}
-          variant={hasChanges ? "default" : "outline"}
-        >
-          {updateConfigMutation.isLoading ? "Saving..." : "Save Settings"}
-        </Button>
-      </div>
-
-      <div className="space-y-4">
-        {providers.map((provider) => {
-          const status = getProviderStatus(provider);
-          const isExpanded = expandedProvider === provider.providerId;
-          
-          return (
-            <Card key={provider.providerId} className="transition-all duration-200 hover:shadow-md">
-              <Collapsible
-                open={isExpanded}
-                onOpenChange={(open) => setExpandedProvider(open ? provider.providerId : null)}
-              >
-                <CollapsibleTrigger asChild>
-                  <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        {getStatusIcon(status)}
-                        <div>
-                          <CardTitle className="text-lg">{provider.name}</CardTitle>
-                          <p className="text-sm text-muted-foreground">{provider.baseURL}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {status === 'active' && (
-                          <Badge variant="default" className="bg-green-500">
-                            Active
-                          </Badge>
-                        )}
-                        {status === 'configured' && (
-                          <Badge variant="secondary">
-                            Configured
-                          </Badge>
-                        )}
-                        {isExpanded ? 
-                          <ChevronUp className="h-4 w-4" /> : 
-                          <ChevronDown className="h-4 w-4" />
-                        }
+    <div className="space-y-4">
+      {providers.map((provider) => {
+        const status = getProviderStatus(provider);
+        const isExpanded = expandedProvider === provider.providerId;
+        return (
+          <Card key={provider.providerId} className="bg-white/10 backdrop-blur-md border-white/20">
+            <Collapsible
+              open={isExpanded}
+              onOpenChange={(open) => setExpandedProvider(open ? provider.providerId : null)}
+            >
+              <CollapsibleTrigger asChild>
+                <CardHeader className="cursor-pointer hover:bg-white/5 transition-colors">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      {getStatusIcon(status)}
+                      <div>
+                        <CardTitle className="text-white text-lg">{provider.name}</CardTitle>
+                        <p className="text-sm text-blue-100">{provider.description}</p>
                       </div>
                     </div>
-                  </CardHeader>
-                </CollapsibleTrigger>
-                
-                <CollapsibleContent>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <Label>Base URL</Label>
-                        <Input
-                          value={provider.baseURL}
-                          onChange={(e) => handleProviderUpdate(provider.providerId, 'baseURL', e.target.value)}
-                          placeholder="https://api.example.com/v1"
-                        />
-                      </div>
-                      
-                      <div>
-                        <Label>API Key</Label>
-                        <div className="relative">
-                          <Input
-                            type={showApiKeys[provider.providerId] ? "text" : "password"}
-                            value={provider.apiKey}
-                            onChange={(e) => handleProviderUpdate(provider.providerId, 'apiKey', e.target.value)}
-                            placeholder="Enter your API key..."
-                          />
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="absolute right-2 top-1/2 transform -translate-y-1/2"
-                            onClick={() => toggleApiKeyVisibility(provider.providerId)}
-                          >
-                            {showApiKeys[provider.providerId] ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                          </Button>
-                        </div>
-                      </div>
+                    <div className="flex items-center gap-2">
+                      {status === 'active' && (
+                        <Badge variant="outline" className="text-green-400 border-green-400">
+                          Active
+                        </Badge>
+                      )}
+                      {status === 'configured' && (
+                        <Badge variant="outline" className="text-blue-400 border-blue-400">
+                          Configured
+                        </Badge>
+                      )}
+                      {isExpanded ?
+                        <ChevronUp className="h-4 w-4 text-white" /> :
+                        <ChevronDown className="h-4 w-4 text-white" />
+                      }
                     </div>
-
+                  </div>
+                </CardHeader>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <Label>Available Models</Label>
-                      <div className="flex flex-wrap gap-2 mt-2">
-                        {provider.models.map(model => (
-                          <Badge key={model} variant="outline" className="flex items-center gap-1">
-                            {model}
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => handleTestProvider(provider.providerId, model)}
-                              disabled={!provider.apiKey || testNodeMutation.isLoading}
-                              className="h-4 w-4 p-0 hover:bg-muted"
-                            >
-                              <TestTube2 className="h-3 w-3" />
-                            </Button>
-                          </Badge>
-                        ))}
+                      <Label className="text-white">Base URL</Label>
+                      <Input
+                        className="bg-white/10 border-white/20 text-white placeholder-white/50"
+                        value={provider.baseURL}
+                        onChange={(e) => handleProviderUpdate(provider.providerId, 'baseURL', e.target.value)}
+                        placeholder="https://api.example.com/v1"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-white">API Key</Label>
+                      <div className="relative">
+                        <Input
+                          className="bg-white/10 border-white/20 text-white placeholder-white/50 pr-10"
+                          type={showApiKeys[provider.providerId] ? "text" : "password"}
+                          value={provider.apiKey}
+                          onChange={(e) => handleProviderUpdate(provider.providerId, 'apiKey', e.target.value)}
+                          placeholder="Enter your API key..."
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="absolute right-2 top-1/2 transform -translate-y-1/2 text-white/70 hover:text-white"
+                          onClick={() => toggleApiKeyVisibility(provider.providerId)}
+                        >
+                          {showApiKeys[provider.providerId] ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </Button>
                       </div>
                     </div>
-
-                    <div className="flex gap-2 pt-4 border-t">
-                      {provider.apiKey && (
-                        <Button
-                          variant="outline"
-                          onClick={() => handleTestProvider(provider.providerId, provider.models[0])}
-                          disabled={testNodeMutation.isLoading}
-                        >
-                          <TestTube2 className="h-4 w-4 mr-2" />
-                          Test Connection
-                        </Button>
-                      )}
-                      
-                      {provider.apiKey && !provider.isActive && (
-                        <Button
-                          onClick={() => handleActivateProvider(provider.providerId)}
-                          variant="default"
-                        >
-                          Set as Active
-                        </Button>
-                      )}
+                  </div>
+                  <div>
+                    <Label className="text-white">Default Model</Label>
+                    <Select
+                      value={provider.defaultModel}
+                      onValueChange={(value) => handleProviderUpdate(provider.providerId, 'defaultModel', value)}
+                    >
+                      <SelectTrigger className="bg-white/10 border-white/20 text-white">
+                        <SelectValue placeholder="Select default model" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {provider.models.map(model => (
+                          <SelectItem key={model} value={model}>
+                            {model}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-white">Add Custom Model</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        className="bg-white/10 border-white/20 text-white placeholder-white/50"
+                        value={customModels[provider.providerId] || ''}
+                        onChange={(e) => handleCustomModelChange(provider.providerId, e.target.value)}
+                        placeholder="e.g., gpt-4o-2024-08-06, claude-3-5-sonnet-20241022"
+                      />
+                      <Button
+                        variant="outline"
+                        onClick={() => handleAddCustomModel(provider.providerId)}
+                        disabled={!customModels[provider.providerId]?.trim()}
+                        className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
                     </div>
-                  </CardContent>
-                </CollapsibleContent>
-              </Collapsible>
-            </Card>
-          );
-        })}
-      </div>
-
-      {providers.length === 0 && (
-        <div className="text-center py-8 text-muted-foreground">
-          <Settings2 className="h-12 w-12 mx-auto mb-4 opacity-50" />
-          <p>No providers configured yet.</p>
-        </div>
-      )}
+                  </div>
+                  <div className="flex gap-2 pt-4 border-t border-white/10">
+                    {provider.apiKey && !provider.isActive && (
+                      <Button
+                        onClick={() => handleActivateProvider(provider.providerId)}
+                        className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600"
+                      >
+                        Set as Active
+                      </Button>
+                    )}
+                  </div>
+                </CardContent>
+              </CollapsibleContent>
+            </Collapsible>
+          </Card>
+        );
+      })}
     </div>
   );
 };
