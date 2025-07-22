@@ -18,7 +18,6 @@ import SemanticNode from "./SemanticNode";
 import WorkflowExecutionModal from "./WorkflowExecutionModal";
 import { createNode, createEdge, generateId } from "@/lib/graphSchema";
 import { NODE_TYPES, CLUSTER_COLORS } from "@/lib/ontology";
-import { trpc } from "@/lib/trpc";
 import { Save, Download, Upload, Play, RotateCcw, FileJson, FileText, FileCode, FileX2 } from "lucide-react";
 import { exportWorkflow } from "@/lib/exportUtils";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -40,40 +39,14 @@ const LabCanvas = ({
   const [reactFlowInstance, setReactFlowInstance] = useState(null);
   const { toast } = useToast();
   
-  // tRPC mutations
-  const createWorkflowMutation = trpc.workflow.create.useMutation({
-    onSuccess: (data) => {
-      toast({
-        title: "Workflow Created",
-        description: `Workflow "${data.title}" has been saved to the database.`,
-      });
+  const createWorkflowMutation = {
+    mutate: (data) => {
+      localStorage.setItem(`workflow-${data.id}`, JSON.stringify(data));
+      toast({ title: 'Workflow Saved', description: `Workflow "${data.title}" saved locally.` });
     },
-    onError: (error) => {
-      console.error('Failed to create workflow:', error);
-      toast({
-        title: "Save Failed",
-        description: "Failed to save workflow to database. Saved locally instead.",
-        variant: "destructive",
-      });
-    },
-  });
-  
-  const updateWorkflowMutation = trpc.workflow.update.useMutation({
-    onSuccess: (data) => {
-      toast({
-        title: "Workflow Updated",
-        description: `Workflow "${data.title}" has been updated.`,
-      });
-    },
-    onError: (error) => {
-      console.error('Failed to update workflow:', error);
-      toast({
-        title: "Update Failed", 
-        description: "Failed to update workflow in database. Saved locally instead.",
-        variant: "destructive",
-      });
-    },
-  });
+    isLoading: false,
+  };
+  const updateWorkflowMutation = createWorkflowMutation;
   
   // Update parent workflow when nodes/edges change
   React.useEffect(() => {
@@ -140,22 +113,19 @@ const LabCanvas = ({
       
       try {
         if (workflow?.id) {
-          // Update existing workflow
-          await updateWorkflowMutation.mutateAsync({
+          updateWorkflowMutation.mutate({
             id: workflow.id,
-            data: {
-              title: workflow.metadata?.title || 'Untitled Workflow',
-              description: workflow.metadata?.description,
-              content: {
-                nodes: flow.nodes,
-                edges: flow.edges,
-                viewport: flow.viewport
-              }
-            }
+            title: workflow.metadata?.title || 'Untitled Workflow',
+            description: workflow.metadata?.description,
+            content: {
+              nodes: flow.nodes,
+              edges: flow.edges,
+              viewport: flow.viewport,
+            },
           });
         } else {
           // Create new workflow
-          const newWorkflow = await createWorkflowMutation.mutateAsync({
+          createWorkflowMutation.mutate({
             title: workflow?.metadata?.title || 'Untitled Workflow',
             description: workflow?.metadata?.description || 'A semantic logic workflow',
             content: {
@@ -164,16 +134,7 @@ const LabCanvas = ({
               viewport: flow.viewport
             }
           });
-          
-          // Update local workflow with the new ID
-          onWorkflowChange({
-            ...workflowData,
-            id: newWorkflow.id,
-            metadata: {
-              ...workflowData.metadata,
-              id: newWorkflow.id
-            }
-          });
+          onWorkflowChange(workflowData);
         }
       } catch (error) {
         // Fallback to localStorage if API fails

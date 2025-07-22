@@ -17,19 +17,12 @@ import ThemeToggle from "../components/ThemeToggle";
 import ClearSessionButton from "../components/ClearSessionButton";
 import { createWorkflowSchema, generateId } from "../lib/graphSchema";
 import { exportWorkflowAsJSON as exportAsJson, exportWorkflowAsYAML as exportAsYaml, exportWorkflowAsMarkdown as exportAsMarkdown, exportWorkflowAsXML as exportAsXml } from "../lib/exportUtils";
-import { trpc } from "../lib/trpc";
 import { toast } from "@/components/ui/use-toast";
 import WorkflowExecutionEngine from "../lib/WorkflowExecutionEngine";
+import PromptingEngine from "../lib/promptingEngine";
 
 const WorkflowBuilderPage = () => {
-  // tRPC queries
-  const { data: workflows, refetch: refetchWorkflows } = trpc.workflow.list.useQuery({ userId: "demo-user" }, {
-    enabled: true,
-    retry: false,
-    onError: (error) => {
-      console.log('Backend not available, using localStorage fallback');
-    }
-  });
+  const [workflows, setWorkflows] = useState([]);
 
   const [workflow, setWorkflow] = useState(() => {
     // Try to load saved workflow from localStorage
@@ -91,34 +84,16 @@ const WorkflowBuilderPage = () => {
 
   const loadWorkflow = async (workflowId) => {
     try {
-      const loadedWorkflow = await trpc.workflow.get.query(workflowId);
-      if (loadedWorkflow) {
-        setWorkflow({
-          id: loadedWorkflow.id,
-          nodes: loadedWorkflow.content?.nodes || [],
-          edges: loadedWorkflow.content?.edges || [],
-          viewport: loadedWorkflow.content?.viewport || { x: 0, y: 0, zoom: 1 },
-          metadata: {
-            id: loadedWorkflow.id,
-            title: loadedWorkflow.title,
-            description: loadedWorkflow.description,
-            createdAt: loadedWorkflow.createdAt,
-            updatedAt: loadedWorkflow.updatedAt,
-            version: loadedWorkflow.version
-          }
-        });
+      const saved = localStorage.getItem(`workflow-${workflowId}`);
+      if (saved) {
+        setWorkflow(JSON.parse(saved));
         toast({
-          title: "Workflow Loaded",
-          description: `Loaded "${loadedWorkflow.title}" from database.`,
+          title: 'Workflow Loaded',
+          description: `Loaded ${workflowId} from local storage.`,
         });
       }
     } catch (error) {
       console.error('Failed to load workflow:', error);
-      toast({
-        title: "Load Failed",
-        description: "Failed to load workflow from database.",
-        variant: "destructive",
-      });
     }
   };
   
@@ -219,17 +194,14 @@ const WorkflowBuilderPage = () => {
 
     try {
       setIsExecuting(true);
-      // Call backend chat endpoint with workflow context and chat history
-      const response = await window.trpc.provider.runChat.mutate({
-        workflow,
-        chatHistory: [...chatMessages, userMessage],
-        newestMessage: chatInput,
-        apiKey: window.sessionStorage.getItem(`${window.activeProvider?.providerId}_api_key`),
-        model: window.activeProvider?.models?.[0] || 'gpt-4o',
-      });
+      const apiKey = sessionStorage.getItem('openai_api_key');
+      const promptingEngine = new PromptingEngine('demo-user');
+      const response = await promptingEngine.callProvider('openai', 'gpt-4o', apiKey, [
+        { role: 'user', content: chatInput },
+      ]);
       const assistantMessage = {
         role: 'assistant',
-        content: response.content,
+        content: response.choices?.[0]?.message?.content || '',
       };
       setChatMessages(prev => [...prev, assistantMessage]);
     } catch (error) {

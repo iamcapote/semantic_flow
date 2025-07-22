@@ -9,49 +9,64 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TestTube2, Plus, Trash2, Eye, EyeOff, ArrowRight } from "lucide-react";
-import { trpc } from "@/lib/trpc";
 import { useToast } from "@/components/ui/use-toast";
 import { SecureKeyManager } from '@/lib/security';
 
+const defaultProviders = [
+  {
+    providerId: 'openai',
+    name: 'OpenAI',
+    baseURL: 'https://api.openai.com/v1',
+    models: ['gpt-4o', 'gpt-4o-mini', 'gpt-4', 'o1-preview', 'o1-mini'],
+    isActive: true,
+  },
+  {
+    providerId: 'openrouter',
+    name: 'OpenRouter',
+    baseURL: 'https://openrouter.ai/api/v1',
+    models: [
+      'qwen/qwen3-235b-a22b-07-25:free',
+      'moonshotai/kimi-k2:free',
+      'cognitivecomputations/dolphin-mistral-24b-venice-edition:free',
+      'qwen/qwen3-235b-a22b:free',
+      'deepseek/deepseek-chat-v3-0324:free',
+    ],
+    isActive: false,
+  },
+  {
+    providerId: 'venice',
+    name: 'Venice AI',
+    baseURL: 'https://api.venice.ai/api/v1',
+    models: ['venice-uncensored', 'mistral-31-24b', 'llama-3.2-3b'],
+    isActive: false,
+  },
+];
+
 const ProviderSetup = ({ userId, onComplete }) => {
-  const { data: initialProviders = [], isLoading, refetch, error } = trpc.provider.getConfig.useQuery({ userId });
-  // Deep diagnostic logging for test/debug: log every change to query state
-  useEffect(() => {
-    // eslint-disable-next-line no-console
-    console.log('[ProviderSetup][DIAG] useQuery state changed:', { isLoading, initialProviders, error });
-  }, [isLoading, initialProviders, error]);
+  const isLoading = false;
+  const error = null;
   const { toast } = useToast();
   const [providers, setProviders] = useState([]);
   const [apiKeys, setApiKeys] = useState({});
   const [selectedProvider, setSelectedProvider] = useState('openai');
   const [showApiKeys, setShowApiKeys] = useState({});
   const [isValid, setIsValid] = useState(false);
-
-  const updateConfigMutation = trpc.provider.updateConfig.useMutation();
-  const testNodeMutation = trpc.provider.testNode.useMutation();
-
-  // Debug logging for integration test: log what the query returns
-  if (typeof window !== 'undefined') {
-    // eslint-disable-next-line no-console
-    console.log('[ProviderSetup] useQuery', { isLoading, initialProviders, error });
-  }
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    if (Array.isArray(initialProviders) && initialProviders.length > 0) {
-      setProviders(initialProviders);
-      const initialApiKeys = {};
-      const hasValidProvider = initialProviders.some(p => {
-        const key = SecureKeyManager.getApiKey(p.providerId);
-        if (key) {
-          initialApiKeys[p.providerId] = key;
-          return true;
-        }
-        return false;
-      });
-      setApiKeys(initialApiKeys);
-      setIsValid(hasValidProvider);
-    }
-  }, [initialProviders]);
+    setProviders(defaultProviders);
+    const initialApiKeys = {};
+    const hasValidProvider = defaultProviders.some(p => {
+      const key = SecureKeyManager.getApiKey(p.providerId);
+      if (key) {
+        initialApiKeys[p.providerId] = key;
+        return true;
+      }
+      return false;
+    });
+    setApiKeys(initialApiKeys);
+    setIsValid(hasValidProvider);
+  }, []);
 
   const handleProviderUpdate = (providerId, field, value) => {
     setProviders(prev => {
@@ -69,6 +84,7 @@ const ProviderSetup = ({ userId, onComplete }) => {
   };
 
   const handleSaveAndContinue = async () => {
+    setIsSaving(true);
     try {
       // Store keys in session storage
       Object.entries(apiKeys).forEach(([providerId, key]) => {
@@ -77,14 +93,6 @@ const ProviderSetup = ({ userId, onComplete }) => {
         }
       });
 
-      // Prepare providers data for backend (without API keys)
-      const providersToSave = providers.map(p => {
-        const { apiKey, ...rest } = p;
-        return rest;
-      });
-
-      await updateConfigMutation.mutateAsync(providersToSave);
-      
       // Store the active provider's API key in session storage for immediate use
       const activeProvider = providers.find(p => p.isActive);
       if (activeProvider && apiKeys[activeProvider.providerId]) {
@@ -96,6 +104,8 @@ const ProviderSetup = ({ userId, onComplete }) => {
       if (onComplete) onComplete();
     } catch (error) {
       toast({ title: "Error", description: "Failed to save settings.", variant: "destructive" });
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -159,20 +169,31 @@ const ProviderSetup = ({ userId, onComplete }) => {
         console.log('[ProviderSetup][Venice] Response:', data);
         return;
       }
-      // Fallback: use backend for other providers
-      const result = await testNodeMutation.mutateAsync({
-        nodeId: 'test-node',
-        nodeType: 'Test',
-        content: 'Hello, this is a test prompt to verify the connection.',
-        providerId,
-        model,
-        apiKey,
-        parameters: { temperature: 0.7, max_tokens: 50, top_p: 1 },
-      });
-      toast({
-        title: "Test Successful",
-        description: `${result.provider} responded: "${result.result.substring(0, 50)}..."`
-      });
+      if (providerId === 'openai') {
+        response = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model,
+            messages: [
+              { role: 'user', content: 'Hello, this is a test prompt to verify the connection.' }
+            ],
+            max_tokens: 50,
+            temperature: 0.7
+          })
+        });
+        data = await response.json();
+        if (!response.ok) throw new Error(data.error?.message || response.statusText);
+        toast({
+          title: "Test Successful",
+          description: `OpenAI responded: "${data.choices?.[0]?.message?.content?.substring(0, 50) || 'No response'}..."`
+        });
+        return;
+      }
+      toast({ title: 'Unsupported provider', description: providerId });
     } catch (error) {
       toast({ title: "Test Failed", description: error.message, variant: "destructive" });
     }
@@ -294,7 +315,7 @@ const ProviderSetup = ({ userId, onComplete }) => {
                             size="sm"
                             variant="ghost"
                             onClick={() => handleTestProvider(provider.providerId, model)}
-                            disabled={!provider.apiKey || testNodeMutation.isLoading}
+                            disabled={!provider.apiKey || isSaving}
                             className="h-4 w-4 p-0 text-white/70 hover:text-white"
                           >
                             <TestTube2 className="h-3 w-3" />
@@ -309,7 +330,7 @@ const ProviderSetup = ({ userId, onComplete }) => {
                       <Button
                         variant="outline"
                         onClick={() => handleTestProvider(provider.providerId, provider.models[0])}
-                        disabled={testNodeMutation.isLoading}
+                        disabled={isSaving}
                         className="w-full bg-white/10 border-white/20 text-white hover:bg-white/20"
                       >
                         <TestTube2 className="h-4 w-4 mr-2" />
@@ -329,10 +350,10 @@ const ProviderSetup = ({ userId, onComplete }) => {
           </p>
           <Button
             onClick={handleSaveAndContinue}
-            disabled={!isValid || updateConfigMutation.isLoading}
+            disabled={!isValid || isSaving}
             className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600"
           >
-            {updateConfigMutation.isLoading ? "Saving..." : "Save & Continue"}
+            {isSaving ? "Saving..." : "Save & Continue"}
             <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
         </div>
