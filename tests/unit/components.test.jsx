@@ -8,10 +8,10 @@ import SemanticNode from '../../src/components/SemanticNode.jsx';
 // ClearSessionButton
 describe('ClearSessionButton', () => {
   it('renders and clears sessionStorage on click', () => {
-    sessionStorage.setItem('openai_api_key', 'test-key');
+    sessionStorage.setItem('api_key_openai', 'test-key');
     render(<ClearSessionButton onSessionCleared={() => {}} />);
     fireEvent.click(screen.getByRole('button'));
-    expect(sessionStorage.getItem('openai_api_key')).toBeNull();
+    expect(sessionStorage.getItem('api_key_openai')).toBeNull();
   });
 });
 

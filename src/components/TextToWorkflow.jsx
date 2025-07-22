@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Wand2, Loader2, ChevronDown, ChevronUp, Settings } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import PromptingEngine from '@/lib/promptingEngine';
+import { SecureKeyManager } from '@/lib/security';
 
 const TextToWorkflow = ({ onWorkflowGenerated, apiKey }) => {
   const [textInput, setTextInput] = useState('');
@@ -47,7 +48,7 @@ const TextToWorkflow = ({ onWorkflowGenerated, apiKey }) => {
     }
     
     // Get API key from session storage for selected provider
-    const providerApiKey = sessionStorage.getItem(`${selectedProvider}_api_key`) || apiKey;
+    const providerApiKey = SecureKeyManager.getApiKey(selectedProvider) || apiKey;
     if (!providerApiKey) {
       toast({
         title: "API Key Missing",

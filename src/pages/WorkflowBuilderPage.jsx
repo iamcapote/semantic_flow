@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Settings, MessageSquare, GitBranch, Play, Loader2, Download, FileJson, FileText, FileCode, FileX2, FolderOpen, Plus } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { SecureKeyManager } from '@/lib/security';
 
 import NodePalette from "../components/NodePalette";
 import LabCanvas from "../components/LabCanvas";
@@ -50,7 +51,10 @@ const WorkflowBuilderPage = () => {
   const [chatInput, setChatInput] = useState('');
   
   // Settings state (inherited from original ChatPage)
-  const [apiKey, setApiKey] = useState(() => sessionStorage.getItem('openai_api_key') || '');
+  const [apiKey, setApiKey] = useState(() => {
+    const provider = sessionStorage.getItem('active_provider') || 'openai';
+    return SecureKeyManager.getApiKey(provider) || '';
+  });
   const [systemMessage, setSystemMessage] = useState(() => 
     sessionStorage.getItem('system_message') || 'You are processing a semantic logic workflow.'
   );
@@ -64,7 +68,8 @@ const WorkflowBuilderPage = () => {
   
   // Save settings to sessionStorage
   useEffect(() => {
-    sessionStorage.setItem('openai_api_key', apiKey);
+    const provider = sessionStorage.getItem('active_provider') || 'openai';
+    SecureKeyManager.storeApiKey(provider, apiKey);
     sessionStorage.setItem('system_message', systemMessage);
   }, [apiKey, systemMessage]);
   
@@ -194,9 +199,10 @@ const WorkflowBuilderPage = () => {
 
     try {
       setIsExecuting(true);
-      const apiKey = sessionStorage.getItem('openai_api_key');
+      const providerId = sessionStorage.getItem('active_provider') || 'openai';
+      const apiKey = SecureKeyManager.getApiKey(providerId);
       const promptingEngine = new PromptingEngine('demo-user');
-      const response = await promptingEngine.callProvider('openai', 'gpt-4o', apiKey, [
+      const response = await promptingEngine.callProvider(providerId, 'gpt-4o', apiKey, [
         { role: 'user', content: chatInput },
       ]);
       const assistantMessage = {

@@ -5,18 +5,18 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ChevronDown, ChevronUp, Settings, TestTube2, CheckCircle, AlertCircle, ArrowRight, Eye, EyeOff, Plus } from "lucide-react";
+import { Settings, TestTube2, CheckCircle, AlertCircle, ArrowRight, Eye, EyeOff, Plus } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { SecureKeyManager } from '@/lib/security';
 
 const SimpleProviderSetup = ({ userId, onComplete }) => {
   const { toast } = useToast();
   const [providers, setProviders] = useState([]);
-  const [expandedProvider, setExpandedProvider] = useState(null);
   const [showApiKeys, setShowApiKeys] = useState({});
   const [customModels, setCustomModels] = useState({});
   const [isValid, setIsValid] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [selectedProviderId, setSelectedProviderId] = useState('openai');
 
   const isLoading = false;
 
@@ -57,8 +57,17 @@ const SimpleProviderSetup = ({ userId, onComplete }) => {
   useEffect(() => {
     // Initialize with default providers immediately
     setProviders(defaultProviders);
+    const active = defaultProviders.find(p => p.isActive) || defaultProviders[0];
+    setSelectedProviderId(active.providerId);
+    const hasValidProvider = defaultProviders.some(p => p.apiKey && p.apiKey.trim() !== '');
+    setIsValid(hasValidProvider);
     // If you want to fetch from backend, add logic here and update providers accordingly.
   }, []);
+
+  useEffect(() => {
+    const hasValid = providers.some(p => p.apiKey && p.apiKey.trim() !== '');
+    setIsValid(hasValid);
+  }, [providers]);
 
   const handleProviderUpdate = (providerId, field, value) => {
     setProviders(prev => {
@@ -94,21 +103,27 @@ const SimpleProviderSetup = ({ userId, onComplete }) => {
   const handleSaveAndContinue = async () => {
     setIsSaving(true);
     try {
-      
-      // Always store the active provider's API key in session storage
+      // Store all provider keys securely
+      providers.forEach(p => {
+        if (p.apiKey && p.apiKey.trim()) {
+          SecureKeyManager.storeApiKey(p.providerId, p.apiKey);
+        }
+      });
+
+      // Persist active provider choice
       const activeProvider = providers.find(p => p.isActive && p.apiKey);
       if (activeProvider) {
-        sessionStorage.setItem('openai_api_key', activeProvider.apiKey);
+        sessionStorage.setItem('active_provider', activeProvider.providerId);
       }
-      
+
       toast({ title: "Success", description: "Provider settings saved." });
       
       if (onComplete) onComplete();
     } catch (error) {
-      // If backend fails, still save to session storage and continue
       const activeProvider = providers.find(p => p.isActive && p.apiKey);
       if (activeProvider) {
-        sessionStorage.setItem('openai_api_key', activeProvider.apiKey);
+        SecureKeyManager.storeApiKey(activeProvider.providerId, activeProvider.apiKey);
+        sessionStorage.setItem('active_provider', activeProvider.providerId);
         toast({ title: "Success", description: "Provider settings saved locally." });
         if (onComplete) onComplete();
       } else {
@@ -183,149 +198,138 @@ const SimpleProviderSetup = ({ userId, onComplete }) => {
       </div>
 
       <div className="space-y-4">
-        {providers.map((provider) => {
+        <div>
+          <Label className="text-white">Select Provider</Label>
+          <Select value={selectedProviderId} onValueChange={setSelectedProviderId}>
+            <SelectTrigger className="bg-white/10 border-white/20 text-white">
+              <SelectValue placeholder="Choose provider" />
+            </SelectTrigger>
+            <SelectContent>
+              {providers.map(p => (
+                <SelectItem key={p.providerId} value={p.providerId}>{p.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {(() => {
+          const provider = providers.find(p => p.providerId === selectedProviderId);
+          if (!provider) return null;
           const status = getProviderStatus(provider);
-          const isExpanded = expandedProvider === provider.providerId;
-          
           return (
-            <Card key={provider.providerId} className="bg-white/10 backdrop-blur-md border-white/20">
-              <Collapsible
-                open={isExpanded}
-                onOpenChange={(open) => setExpandedProvider(open ? provider.providerId : null)}
-              >
-                <CollapsibleTrigger asChild>
-                  <CardHeader className="cursor-pointer hover:bg-white/5 transition-colors">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        {getStatusIcon(status)}
-                        <div>
-                          <CardTitle className="text-white text-lg">{provider.name}</CardTitle>
-                          <p className="text-sm text-blue-100">{provider.description}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {status === 'active' && (
-                          <Badge variant="outline" className="text-green-400 border-green-400">
-                            Active
-                          </Badge>
-                        )}
-                        {status === 'configured' && (
-                          <Badge variant="outline" className="text-blue-400 border-blue-400">
-                            Configured
-                          </Badge>
-                        )}
-                        {isExpanded ? 
-                          <ChevronUp className="h-4 w-4 text-white" /> : 
-                          <ChevronDown className="h-4 w-4 text-white" />
-                        }
-                      </div>
-                    </div>
-                  </CardHeader>
-                </CollapsibleTrigger>
-                
-                <CollapsibleContent>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <Label className="text-white">Base URL</Label>
-                        <Input
-                          className="bg-white/10 border-white/20 text-white placeholder-white/50"
-                          value={provider.baseURL}
-                          onChange={(e) => handleProviderUpdate(provider.providerId, 'baseURL', e.target.value)}
-                          placeholder="https://api.example.com/v1"
-                        />
-                      </div>
-                      
-                      <div>
-                        <Label className="text-white">API Key</Label>
-                        <div className="relative">
-                          <Input
-                            className="bg-white/10 border-white/20 text-white placeholder-white/50 pr-10"
-                            type={showApiKeys[provider.providerId] ? "text" : "password"}
-                            value={provider.apiKey}
-                            onChange={(e) => handleProviderUpdate(provider.providerId, 'apiKey', e.target.value)}
-                            placeholder="Enter your API key..."
-                          />
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="absolute right-2 top-1/2 transform -translate-y-1/2 text-white/70 hover:text-white"
-                            onClick={() => toggleApiKeyVisibility(provider.providerId)}
-                          >
-                            {showApiKeys[provider.providerId] ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-
+            <Card className="bg-white/10 backdrop-blur-md border-white/20">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    {getStatusIcon(status)}
                     <div>
-                      <Label className="text-white">Default Model</Label>
-                      <Select
-                        value={provider.defaultModel}
-                        onValueChange={(value) => handleProviderUpdate(provider.providerId, 'defaultModel', value)}
+                      <CardTitle className="text-white text-lg">{provider.name}</CardTitle>
+                      <p className="text-sm text-blue-100">{provider.description}</p>
+                    </div>
+                  </div>
+                  {status === 'active' && (
+                    <Badge variant="outline" className="text-green-400 border-green-400">Active</Badge>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-white">Base URL</Label>
+                    <Input
+                      className="bg-white/10 border-white/20 text-white placeholder-white/50"
+                      value={provider.baseURL}
+                      onChange={(e) => handleProviderUpdate(provider.providerId, 'baseURL', e.target.value)}
+                      placeholder="https://api.example.com/v1"
+                    />
+                  </div>
+
+                  <div>
+                    <Label className="text-white">API Key</Label>
+                    <div className="relative">
+                      <Input
+                        className="bg-white/10 border-white/20 text-white placeholder-white/50 pr-10"
+                        type={showApiKeys[provider.providerId] ? 'text' : 'password'}
+                        value={provider.apiKey}
+                        onChange={(e) => handleProviderUpdate(provider.providerId, 'apiKey', e.target.value)}
+                        placeholder="Enter your API key..."
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-2 top-1/2 transform -translate-y-1/2 text-white/70 hover:text-white"
+                        onClick={() => toggleApiKeyVisibility(provider.providerId)}
                       >
-                        <SelectTrigger className="bg-white/10 border-white/20 text-white">
-                          <SelectValue placeholder="Select default model" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {provider.models.map(model => (
-                            <SelectItem key={model} value={model}>
-                              {model}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                        {showApiKeys[provider.providerId] ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </Button>
                     </div>
+                  </div>
+                </div>
 
-                    <div>
-                      <Label className="text-white">Add Custom Model</Label>
-                      <div className="flex gap-2">
-                        <Input
-                          className="bg-white/10 border-white/20 text-white placeholder-white/50"
-                          value={customModels[provider.providerId] || ''}
-                          onChange={(e) => handleCustomModelChange(provider.providerId, e.target.value)}
-                          placeholder="e.g., gpt-4o-2024-08-06, claude-3-5-sonnet-20241022"
-                        />
-                        <Button
-                          variant="outline"
-                          onClick={() => handleAddCustomModel(provider.providerId)}
-                          disabled={!customModels[provider.providerId]?.trim()}
-                          className="bg-white/10 border-white/20 text-white hover:bg-white/20"
-                        >
-                          <Plus className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
+                <div>
+                  <Label className="text-white">Default Model</Label>
+                  <Select
+                    value={provider.defaultModel}
+                    onValueChange={(value) => handleProviderUpdate(provider.providerId, 'defaultModel', value)}
+                  >
+                    <SelectTrigger className="bg-white/10 border-white/20 text-white">
+                      <SelectValue placeholder="Select default model" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {provider.models.map(model => (
+                        <SelectItem key={model} value={model}>{model}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-                    <div className="flex gap-2 pt-4 border-t border-white/10">
-                      {provider.apiKey && (
-                        <Button
-                          variant="outline"
-                          onClick={() => handleTestProvider(provider.providerId)}
-                          disabled={isSaving}
-                          className="bg-white/10 border-white/20 text-white hover:bg-white/20"
-                        >
-                          <TestTube2 className="h-4 w-4 mr-2" />
-                          Test with {provider.defaultModel || provider.models[0]}
-                        </Button>
-                      )}
-                      
-                      {provider.apiKey && !provider.isActive && (
-                        <Button
-                          onClick={() => handleActivateProvider(provider.providerId)}
-                          className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600"
-                        >
-                          Set as Active
-                        </Button>
-                      )}
-                    </div>
-                  </CardContent>
-                </CollapsibleContent>
-              </Collapsible>
+                <div>
+                  <Label className="text-white">Add Custom Model</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      className="bg-white/10 border-white/20 text-white placeholder-white/50"
+                      value={customModels[provider.providerId] || ''}
+                      onChange={(e) => handleCustomModelChange(provider.providerId, e.target.value)}
+                      placeholder="e.g., gpt-4o-2024-08-06"
+                    />
+                    <Button
+                      variant="outline"
+                      onClick={() => handleAddCustomModel(provider.providerId)}
+                      disabled={!customModels[provider.providerId]?.trim()}
+                      className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="flex gap-2 pt-4 border-t border-white/10">
+                  {provider.apiKey && (
+                    <Button
+                      variant="outline"
+                      onClick={() => handleTestProvider(provider.providerId)}
+                      disabled={isSaving}
+                      className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+                    >
+                      <TestTube2 className="h-4 w-4 mr-2" />
+                      Test with {provider.defaultModel || provider.models[0]}
+                    </Button>
+                  )}
+
+                  {provider.apiKey && !provider.isActive && (
+                    <Button
+                      onClick={() => handleActivateProvider(provider.providerId)}
+                      className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600"
+                    >
+                      Set as Active
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
             </Card>
           );
-        })}
+        })()}
       </div>
 
       <div className="flex justify-between items-center pt-6 border-t border-white/10">

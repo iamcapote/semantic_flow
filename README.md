@@ -84,6 +84,7 @@ At the heart of Semantic Flow is a deep semantic ontology—organized into clust
 - **No API Key Storage**: Your API keys never leave your browser session
 - **Session-Only Persistence**: Keys cleared when you close the browser
 - **Encrypted Communication**: All API calls use HTTPS
+- **Provider Selection**: Choose your preferred AI provider once and the app remembers your choice for the session
 
 ### Data Handling
 - **Workflows**: Stored in your browser only
