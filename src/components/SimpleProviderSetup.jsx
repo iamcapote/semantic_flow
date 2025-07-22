@@ -57,14 +57,8 @@ const SimpleProviderSetup = ({ userId, onComplete }) => {
   useEffect(() => {
     // Initialize with default providers immediately
     setProviders(defaultProviders);
-    
-    // Optionally try to fetch from backend if available
-    if (initialProviders && initialProviders.length > 0) {
-      setProviders(initialProviders);
-      const hasValidProvider = initialProviders.some(p => p.apiKey && p.apiKey.trim() !== '');
-      setIsValid(hasValidProvider);
-    }
-  }, [initialProviders]);
+    // If you want to fetch from backend, add logic here and update providers accordingly.
+  }, []);
 
   const handleProviderUpdate = (providerId, field, value) => {
     setProviders(prev => {

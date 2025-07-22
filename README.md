@@ -1,23 +1,28 @@
-# 🧠 Semantic Flow: The Context Engineering Canvas
 
-> **The Next Evolution in Context Engineering, Agentic Workflows, and System Design**  
-> Architect your imagination, design intelligent agents, and build complex interactive systems with a powerful, ontology-driven visual language. Turn your thoughts into structured, machine-readable schemas—ready for AI, code, or worldbuilding.
+# 🧠 Semantic Flow: The Live Context Engineering Canvas
 
-![Project Status](https://img.shields.io/badge/Status-Production%20Ready-green)
-![Version](https://img.shields.io/badge/Version-0.0.1-blue)
+> **Production-Ready, Live, and User-Focused**  
+> Architect, interact, and execute: build intelligent agentic workflows and systems with a powerful, ontology-driven visual language. 
+
+![Project Status](https://img.shields.io/badge/Status-Live%20Product-green)
+![Version](https://img.shields.io/badge/Version-1.0.0-blue)
 
 ---
 
-
 ## ✨ What is Semantic Flow?
 
-Semantic Flow is the first true **Context Engineering Canvas**—a creative environment for structuring complex ideas, systems, and worlds. It moves beyond prompt engineering and worldbuilding, empowering you to visually design, connect, and export intricate workflows using a rich semantic ontology. 
+Semantic Flow is a live, production-ready **Context Engineering Canvas**—a creative environment for structuring complex ideas, systems, and worlds. It empowers you to visually design, connect, and execute intricate workflows using a rich semantic ontology and direct AI integration.
 
-**Context Engineering** is the art and science of shaping, structuring, and managing the information context for agents, systems, and logic. With Semantic Flow, you architect not just prompts, but entire constructs, workflows, and schemas—turning imagination into machine-readable input.
-
-**The Canvas for Your Imagination:**
+**Key Features:**
+- **Three AI Providers:** Out-of-the-box support for OpenAI, OpenRouter, and Venice AI, with easy configuration and switching.
+- **Three Modes of AI Interaction:**
+  - Import workflows using AI API requests
+  - Interact and modify nodes with AI API requests
+  - Execute workflows with AI API inference
 - **Agentic Systems:** Design behaviors, interactions, and cognitive processes for AI agents and multi-agent worlds.
 - **Role-Playing & Scenario Design:** Create dynamic characters, rules, and logic for games, simulations, and collaborative storytelling.
+
+**Context Engineering** is the art and science of shaping, structuring, and managing the information context for agents, systems, and logic. With Semantic Flow, you architect not just prompts, but entire constructs, workflows, and schemas—turning imagination into machine-readable input.
 - **Code & Project Structuring:** Map out logic, architectures, and workflows for large codebases and technical projects.
 - **Schema Generation:** Instantly convert your thoughts into structured formats (JSON, YAML, XML, Markdown) for downstream use.
 
