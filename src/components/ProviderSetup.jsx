@@ -9,64 +9,76 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TestTube2, Plus, Trash2, Eye, EyeOff, ArrowRight } from "lucide-react";
-import { trpc } from "@/lib/trpc";
+
 import { useToast } from "@/components/ui/use-toast";
 import { SecureKeyManager } from '@/lib/security';
 
-const ProviderSetup = ({ userId, onComplete }) => {
-  const { data: initialProviders = [], isLoading, refetch, error } = trpc.provider.getConfig.useQuery({ userId });
-  // Deep diagnostic logging for test/debug: log every change to query state
-  useEffect(() => {
-    // eslint-disable-next-line no-console
-    console.log('[ProviderSetup][DIAG] useQuery state changed:', { isLoading, initialProviders, error });
-  }, [isLoading, initialProviders, error]);
+
+// Hardcoded provider config (frontend only, BYOK)
+const HARDCODED_PROVIDERS = [
+  {
+    providerId: 'openrouter',
+    name: 'OpenRouter',
+    baseURL: 'https://openrouter.ai/api/v1',
+    models: [
+      'qwen/qwen3-235b-a22b-07-25:free',
+      'moonshotai/kimi-k2:free',
+      'cognitivecomputations/dolphin-mistral-24b-venice-edition:free',
+      'qwen/qwen3-235b-a22b:free',
+      'deepseek/deepseek-chat-v3-0324:free',
+    ],
+    isActive: true,
+  },
+  {
+    providerId: 'venice',
+    name: 'Venice',
+    baseURL: 'https://api.venice.ai/api/v1',
+    models: [
+      'venice-uncensored',
+      'mistral-31-24b',
+      'llama-3.2-3b',
+    ],
+    isActive: false,
+  },
+];
+
+const ProviderSetup = ({ onComplete }) => {
   const { toast } = useToast();
-  const [providers, setProviders] = useState([]);
-  const [apiKeys, setApiKeys] = useState({});
-  const [selectedProvider, setSelectedProvider] = useState('openai');
+  const [providers, setProviders] = useState(HARDCODED_PROVIDERS);
+  const [apiKeys, setApiKeys] = useState(() => {
+    const keys = {};
+    HARDCODED_PROVIDERS.forEach(p => {
+      const key = SecureKeyManager.getApiKey(p.providerId);
+      if (key) keys[p.providerId] = key;
+    });
+    return keys;
+  });
+  const [selectedProvider, setSelectedProvider] = useState('openrouter');
   const [showApiKeys, setShowApiKeys] = useState({});
-  const [isValid, setIsValid] = useState(false);
+  const [isValid, setIsValid] = useState(() => {
+    return HARDCODED_PROVIDERS.some(p => {
+      const key = SecureKeyManager.getApiKey(p.providerId);
+      return key && key.trim() !== '';
+    });
+  });
 
-  const updateConfigMutation = trpc.provider.updateConfig.useMutation();
-  const testNodeMutation = trpc.provider.testNode.useMutation();
-
-  // Debug logging for integration test: log what the query returns
-  if (typeof window !== 'undefined') {
-    // eslint-disable-next-line no-console
-    console.log('[ProviderSetup] useQuery', { isLoading, initialProviders, error });
-  }
-
-  useEffect(() => {
-    if (Array.isArray(initialProviders) && initialProviders.length > 0) {
-      setProviders(initialProviders);
-      const initialApiKeys = {};
-      const hasValidProvider = initialProviders.some(p => {
-        const key = SecureKeyManager.getApiKey(p.providerId);
-        if (key) {
-          initialApiKeys[p.providerId] = key;
-          return true;
-        }
-        return false;
-      });
-      setApiKeys(initialApiKeys);
-      setIsValid(hasValidProvider);
-    }
-  }, [initialProviders]);
 
   const handleProviderUpdate = (providerId, field, value) => {
-    setProviders(prev => {
-      const updated = prev.map(p => 
-        p.providerId === providerId ? { ...p, [field]: value } : p
-      );
+    setProviders(prev => prev.map(p =>
+      p.providerId === providerId ? { ...p, [field]: value } : p
+    ));
+  };
+
+
+  const handleApiKeyChange = (providerId, value) => {
+    setApiKeys(prev => {
+      const updated = { ...prev, [providerId]: value };
+      const hasValidProvider = providers.some(p => updated[p.providerId] && updated[p.providerId].trim() !== '');
+      setIsValid(hasValidProvider);
       return updated;
     });
   };
 
-  const handleApiKeyChange = (providerId, value) => {
-    setApiKeys(prev => ({ ...prev, [providerId]: value }));
-    const hasValidProvider = providers.some(p => apiKeys[p.providerId] && apiKeys[p.providerId].trim() !== '');
-    setIsValid(hasValidProvider);
-  };
 
   const handleSaveAndContinue = async () => {
     try {
@@ -76,28 +88,18 @@ const ProviderSetup = ({ userId, onComplete }) => {
           SecureKeyManager.storeApiKey(providerId, key);
         }
       });
-
-      // Prepare providers data for backend (without API keys)
-      const providersToSave = providers.map(p => {
-        const { apiKey, ...rest } = p;
-        return rest;
-      });
-
-      await updateConfigMutation.mutateAsync(providersToSave);
-      
       // Store the active provider's API key in session storage for immediate use
       const activeProvider = providers.find(p => p.isActive);
       if (activeProvider && apiKeys[activeProvider.providerId]) {
-        sessionStorage.setItem('openai_api_key', apiKeys[activeProvider.providerId]);
+        sessionStorage.setItem(`${activeProvider.providerId}_api_key`, apiKeys[activeProvider.providerId]);
       }
-      
       toast({ title: "Success", description: "Provider settings saved." });
-      
       if (onComplete) onComplete();
     } catch (error) {
       toast({ title: "Error", description: "Failed to save settings.", variant: "destructive" });
     }
   };
+
 
   const handleTestProvider = async (providerId, model) => {
     try {
@@ -129,8 +131,6 @@ const ProviderSetup = ({ userId, onComplete }) => {
           title: "Test Successful",
           description: `OpenRouter responded: "${data.choices?.[0]?.message?.content?.substring(0, 50) || 'No response'}..."`
         });
-        // eslint-disable-next-line no-console
-        console.log('[ProviderSetup][OpenRouter] Response:', data);
         return;
       }
       if (providerId === 'venice') {
@@ -155,24 +155,10 @@ const ProviderSetup = ({ userId, onComplete }) => {
           title: "Test Successful",
           description: `Venice responded: "${data.choices?.[0]?.message?.content?.substring(0, 50) || 'No response'}..."`
         });
-        // eslint-disable-next-line no-console
-        console.log('[ProviderSetup][Venice] Response:', data);
         return;
       }
-      // Fallback: use backend for other providers
-      const result = await testNodeMutation.mutateAsync({
-        nodeId: 'test-node',
-        nodeType: 'Test',
-        content: 'Hello, this is a test prompt to verify the connection.',
-        providerId,
-        model,
-        apiKey,
-        parameters: { temperature: 0.7, max_tokens: 50, top_p: 1 },
-      });
-      toast({
-        title: "Test Successful",
-        description: `${result.provider} responded: "${result.result.substring(0, 50)}..."`
-      });
+      // Add more providers here as needed
+      toast({ title: "Test Failed", description: "Unknown provider.", variant: "destructive" });
     } catch (error) {
       toast({ title: "Test Failed", description: error.message, variant: "destructive" });
     }
@@ -186,6 +172,7 @@ const ProviderSetup = ({ userId, onComplete }) => {
   };
 
 
+
   const handleActivateProvider = (providerId) => {
     setProviders(prev => prev.map(p => ({
       ...p,
@@ -193,31 +180,7 @@ const ProviderSetup = ({ userId, onComplete }) => {
     })));
   };
 
-  if (isLoading) {
-    if (typeof window !== 'undefined') {
-      // eslint-disable-next-line no-console
-      console.log('[ProviderSetup] Still loading provider config...');
-    }
-    return (
-      <div className="flex items-center justify-center p-8">
-        <div className="animate-spin h-8 w-8 border-b-2 border-white rounded-full"></div>
-      </div>
-    );
-  }
-
-  if (error) {
-    if (typeof window !== 'undefined') {
-      // eslint-disable-next-line no-console
-      console.error('[ProviderSetup] Error loading provider config:', error);
-    }
-    return <div className="text-red-500">Error loading provider config: {error.message}</div>;
-  }
-
-  if (Array.isArray(initialProviders) && initialProviders.length === 0) {
-    return (
-      <div className="text-red-500">No providers available. Please contact support.</div>
-    );
-  }
+  // No loading/error states needed; providers are always available (hardcoded)
 
   return (
     <div className="w-full max-w-4xl mx-auto">
@@ -228,7 +191,7 @@ const ProviderSetup = ({ userId, onComplete }) => {
         </div>
 
         <Tabs value={selectedProvider} onValueChange={setSelectedProvider} className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-6">
+          <TabsList className="grid w-full grid-cols-2 mb-6">
             {providers.map(provider => (
               <TabsTrigger key={provider.providerId} value={provider.providerId} className="flex items-center gap-2">
                 {provider.name}
@@ -261,17 +224,16 @@ const ProviderSetup = ({ userId, onComplete }) => {
                       onChange={(e) => handleProviderUpdate(provider.providerId, 'baseURL', e.target.value)}
                     />
                   </div>
-                  
                   <div>
                     <Label className="text-white">API Key</Label>
                     <div className="relative">
-                    <Input
-                      className="bg-white/10 border-white/20 text-white placeholder-white/50 pr-10"
-                      type={showApiKeys[provider.providerId] ? "text" : "password"}
-                      value={apiKeys[provider.providerId] || ''}
-                      onChange={(e) => handleApiKeyChange(provider.providerId, e.target.value)}
-                      placeholder="Enter your API key"
-                    />
+                      <Input
+                        className="bg-white/10 border-white/20 text-white placeholder-white/50 pr-10"
+                        type={showApiKeys[provider.providerId] ? "text" : "password"}
+                        value={apiKeys[provider.providerId] || ''}
+                        onChange={(e) => handleApiKeyChange(provider.providerId, e.target.value)}
+                        placeholder="Enter your API key"
+                      />
                       <Button
                         type="button"
                         variant="ghost"
@@ -283,7 +245,6 @@ const ProviderSetup = ({ userId, onComplete }) => {
                       </Button>
                     </div>
                   </div>
-
                   <div>
                     <Label className="text-white">Available Models</Label>
                     <div className="flex flex-wrap gap-2 mt-2">
@@ -294,7 +255,7 @@ const ProviderSetup = ({ userId, onComplete }) => {
                             size="sm"
                             variant="ghost"
                             onClick={() => handleTestProvider(provider.providerId, model)}
-                            disabled={!provider.apiKey || testNodeMutation.isLoading}
+                            disabled={!apiKeys[provider.providerId]}
                             className="h-4 w-4 p-0 text-white/70 hover:text-white"
                           >
                             <TestTube2 className="h-3 w-3" />
@@ -303,13 +264,11 @@ const ProviderSetup = ({ userId, onComplete }) => {
                       ))}
                     </div>
                   </div>
-
-                  {provider.apiKey && (
+                  {apiKeys[provider.providerId] && (
                     <div className="pt-4 border-t border-white/10">
                       <Button
                         variant="outline"
                         onClick={() => handleTestProvider(provider.providerId, provider.models[0])}
-                        disabled={testNodeMutation.isLoading}
                         className="w-full bg-white/10 border-white/20 text-white hover:bg-white/20"
                       >
                         <TestTube2 className="h-4 w-4 mr-2" />
@@ -322,17 +281,16 @@ const ProviderSetup = ({ userId, onComplete }) => {
             </TabsContent>
           ))}
         </Tabs>
-
         <div className="mt-8 flex justify-between items-center">
           <p className="text-blue-100 text-sm">
             {isValid ? "✓ Ready to proceed" : "Please configure at least one provider with an API key"}
           </p>
           <Button
             onClick={handleSaveAndContinue}
-            disabled={!isValid || updateConfigMutation.isLoading}
+            disabled={!isValid}
             className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600"
           >
-            {updateConfigMutation.isLoading ? "Saving..." : "Save & Continue"}
+            Save & Continue
             <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
         </div>
