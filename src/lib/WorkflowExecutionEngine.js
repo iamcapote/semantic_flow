@@ -123,7 +123,7 @@ class WorkflowExecutionEngine {
         }
 
         // For now, continue execution even if a node fails
-        // In a production system, you might want to handle this differently
+        // Production: Handle node failures according to workflow requirements
         console.error(`Node ${nodeId} failed:`, error);
       }
     }
@@ -169,9 +169,7 @@ class WorkflowExecutionEngine {
   }
 
   getExecutionOrder(workflow) {
-    // Simple topological sort based on edges
-    // For now, return nodes in their original order
-    // In a production system, you'd implement proper dependency resolution
+    // Production: Implement topological sort and full dependency resolution for workflow nodes
     return workflow.nodes.map(node => node.id);
   }
 

@@ -254,7 +254,7 @@ const LabCanvas = ({
   }, [nodes, edges]);
   
   return (
-    <div className="w-full h-full overflow-hidden" ref={reactFlowWrapper}>
+    <div className="w-full h-full overflow-hidden" ref={reactFlowWrapper} data-testid="lab-canvas">
       <ReactFlow
         nodes={nodes}
         edges={edges}

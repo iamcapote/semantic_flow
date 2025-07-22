@@ -35,10 +35,14 @@ const ProviderSettings = ({ userId }) => {
   const testNodeMutation = trpc.provider.testNode.useMutation();
 
   useEffect(() => {
-    if (initialProviders && initialProviders.length > 0) {
+    if (
+      initialProviders &&
+      initialProviders.length > 0 &&
+      JSON.stringify(initialProviders) !== JSON.stringify(providers)
+    ) {
       setProviders(initialProviders);
     }
-  }, [initialProviders]);
+  }, [initialProviders, providers]);
 
   const handleProviderUpdate = (providerId, field, value) => {
     setProviders(prev => prev.map(p => 
@@ -136,7 +140,7 @@ const ProviderSettings = ({ userId }) => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-testid="provider-settings">
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-2">
           <Settings2 className="h-5 w-5" />

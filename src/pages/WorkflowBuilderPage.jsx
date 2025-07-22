@@ -212,20 +212,34 @@ const WorkflowBuilderPage = () => {
   const handleChatSubmit = async (e) => {
     e.preventDefault();
     if (!chatInput.trim() || isExecuting) return;
-    
+
     const userMessage = { role: 'user', content: chatInput };
     setChatMessages(prev => [...prev, userMessage]);
     setChatInput('');
-    
-    // For now, echo back - Engineer 2 will implement actual chat integration
-    const assistantMessage = {
-      role: 'assistant', 
-      content: `[Test mode] You said: "${userMessage.content}"\n\nThis will be integrated with the workflow execution engine.`
-    };
-    
-    setTimeout(() => {
+
+    try {
+      setIsExecuting(true);
+      // Call backend chat endpoint with workflow context and chat history
+      const response = await window.trpc.provider.runChat.mutate({
+        workflow,
+        chatHistory: [...chatMessages, userMessage],
+        newestMessage: chatInput,
+        apiKey: window.sessionStorage.getItem(`${window.activeProvider?.providerId}_api_key`),
+        model: window.activeProvider?.models?.[0] || 'gpt-4o',
+      });
+      const assistantMessage = {
+        role: 'assistant',
+        content: response.content,
+      };
       setChatMessages(prev => [...prev, assistantMessage]);
-    }, 500);
+    } catch (error) {
+      setChatMessages(prev => [...prev, {
+        role: 'system',
+        content: `❌ Chat failed: ${error.message}`
+      }]);
+    } finally {
+      setIsExecuting(false);
+    }
   };
   
   return (

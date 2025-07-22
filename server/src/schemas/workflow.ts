@@ -33,7 +33,7 @@ export const WorkflowContentSchema = z.object({
 export const CreateWorkflowInputSchema = z.object({
   title: z.string().min(1),
   description: z.string().optional(),
-  content: z.any(),
+  content: WorkflowContentSchema,
   isPublic: z.boolean().default(false),
   tags: z.array(z.string()).optional(),
 });
@@ -43,7 +43,7 @@ export const UpdateWorkflowInputSchema = z.object({
   data: z.object({
     title: z.string().min(1).optional(),
     description: z.string().optional(),
-    content: z.any().optional(),
+    content: WorkflowContentSchema.optional(),
     isPublic: z.boolean().optional(),
     tags: z.array(z.string()).optional(),
   }),

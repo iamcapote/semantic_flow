@@ -1,3 +1,4 @@
+// ...existing code...
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +14,12 @@ import { useToast } from "@/components/ui/use-toast";
 import { SecureKeyManager } from '@/lib/security';
 
 const ProviderSetup = ({ userId, onComplete }) => {
+  const { data: initialProviders = [], isLoading, refetch, error } = trpc.provider.getConfig.useQuery({ userId });
+  // Deep diagnostic logging for test/debug: log every change to query state
+  useEffect(() => {
+    // eslint-disable-next-line no-console
+    console.log('[ProviderSetup][DIAG] useQuery state changed:', { isLoading, initialProviders, error });
+  }, [isLoading, initialProviders, error]);
   const { toast } = useToast();
   const [providers, setProviders] = useState([]);
   const [apiKeys, setApiKeys] = useState({});
@@ -20,12 +27,17 @@ const ProviderSetup = ({ userId, onComplete }) => {
   const [showApiKeys, setShowApiKeys] = useState({});
   const [isValid, setIsValid] = useState(false);
 
-  const { data: initialProviders, isLoading, refetch } = trpc.provider.getConfig.useQuery({ userId });
   const updateConfigMutation = trpc.provider.updateConfig.useMutation();
   const testNodeMutation = trpc.provider.testNode.useMutation();
 
+  // Debug logging for integration test: log what the query returns
+  if (typeof window !== 'undefined') {
+    // eslint-disable-next-line no-console
+    console.log('[ProviderSetup] useQuery', { isLoading, initialProviders, error });
+  }
+
   useEffect(() => {
-    if (initialProviders) {
+    if (Array.isArray(initialProviders) && initialProviders.length > 0) {
       setProviders(initialProviders);
       const initialApiKeys = {};
       const hasValidProvider = initialProviders.some(p => {
@@ -94,18 +106,72 @@ const ProviderSetup = ({ userId, onComplete }) => {
         toast({ title: "API Key Missing", description: "Please enter an API key for this provider.", variant: "destructive" });
         return;
       }
+      let response, data;
+      if (providerId === 'openrouter') {
+        response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'HTTP-Referer': window.location.origin,
+            'X-Title': 'Semantic Canvas',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model,
+            messages: [
+              { role: 'user', content: 'Hello, this is a test prompt to verify the connection.' }
+            ]
+          })
+        });
+        data = await response.json();
+        if (!response.ok) throw new Error(data.error?.message || response.statusText);
+        toast({
+          title: "Test Successful",
+          description: `OpenRouter responded: "${data.choices?.[0]?.message?.content?.substring(0, 50) || 'No response'}..."`
+        });
+        // eslint-disable-next-line no-console
+        console.log('[ProviderSetup][OpenRouter] Response:', data);
+        return;
+      }
+      if (providerId === 'venice') {
+        response = await fetch('https://api.venice.ai/api/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model,
+            messages: [
+              { role: 'user', content: 'Hello, this is a test prompt to verify the connection.' }
+            ],
+            max_tokens: 50,
+            temperature: 0.7
+          })
+        });
+        data = await response.json();
+        if (!response.ok) throw new Error(data.error?.message || response.statusText);
+        toast({
+          title: "Test Successful",
+          description: `Venice responded: "${data.choices?.[0]?.message?.content?.substring(0, 50) || 'No response'}..."`
+        });
+        // eslint-disable-next-line no-console
+        console.log('[ProviderSetup][Venice] Response:', data);
+        return;
+      }
+      // Fallback: use backend for other providers
       const result = await testNodeMutation.mutateAsync({
         nodeId: 'test-node',
         nodeType: 'Test',
         content: 'Hello, this is a test prompt to verify the connection.',
         providerId,
         model,
-        apiKey, // Pass key directly to test mutation
+        apiKey,
         parameters: { temperature: 0.7, max_tokens: 50, top_p: 1 },
       });
-      toast({ 
-        title: "Test Successful", 
-        description: `${result.provider} responded: "${result.result.substring(0, 50)}..."` 
+      toast({
+        title: "Test Successful",
+        description: `${result.provider} responded: "${result.result.substring(0, 50)}..."`
       });
     } catch (error) {
       toast({ title: "Test Failed", description: error.message, variant: "destructive" });
@@ -119,6 +185,7 @@ const ProviderSetup = ({ userId, onComplete }) => {
     }));
   };
 
+
   const handleActivateProvider = (providerId) => {
     setProviders(prev => prev.map(p => ({
       ...p,
@@ -126,12 +193,29 @@ const ProviderSetup = ({ userId, onComplete }) => {
     })));
   };
 
-
   if (isLoading) {
+    if (typeof window !== 'undefined') {
+      // eslint-disable-next-line no-console
+      console.log('[ProviderSetup] Still loading provider config...');
+    }
     return (
       <div className="flex items-center justify-center p-8">
         <div className="animate-spin h-8 w-8 border-b-2 border-white rounded-full"></div>
       </div>
+    );
+  }
+
+  if (error) {
+    if (typeof window !== 'undefined') {
+      // eslint-disable-next-line no-console
+      console.error('[ProviderSetup] Error loading provider config:', error);
+    }
+    return <div className="text-red-500">Error loading provider config: {error.message}</div>;
+  }
+
+  if (Array.isArray(initialProviders) && initialProviders.length === 0) {
+    return (
+      <div className="text-red-500">No providers available. Please contact support.</div>
     );
   }
 
@@ -181,13 +265,13 @@ const ProviderSetup = ({ userId, onComplete }) => {
                   <div>
                     <Label className="text-white">API Key</Label>
                     <div className="relative">
-                      <Input
-                        className="bg-white/10 border-white/20 text-white placeholder-white/50 pr-10"
-                        type={showApiKeys[provider.providerId] ? "text" : "password"}
-                        value={provider.apiKey}
-                        onChange={(e) => handleProviderUpdate(provider.providerId, 'apiKey', e.target.value)}
-                        placeholder="Enter your API key..."
-                      />
+                    <Input
+                      className="bg-white/10 border-white/20 text-white placeholder-white/50 pr-10"
+                      type={showApiKeys[provider.providerId] ? "text" : "password"}
+                      value={apiKeys[provider.providerId] || ''}
+                      onChange={(e) => handleApiKeyChange(provider.providerId, e.target.value)}
+                      placeholder="Enter your API key"
+                    />
                       <Button
                         type="button"
                         variant="ghost"

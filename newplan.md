@@ -1,667 +1,244 @@
-# **Semantic‑Logic AI Workflow Builder**
+# 🚨 CTO's Surgical Refactor Prompt for Junior Developers 🚨
 
 ---
 
-## 1 Mission Definition
+## 🏥 Context: The Patient is the Codebase (#codebase)
 
-Large‑scale web application for constructing, simulating, and persisting fine‑grained AI reasoning graphs built from formally‑typed semantic nodes (statement, hypothesis, evidence, method, modal tag, speech‑act, gate, engine, error). Goal: replace coarse “macro‑flows” with micro-flow ontology‑driven logic prompting pipelines that expose logic, cognitive‑science and philosophy‑of‑science primitives and systems while remaining approachable to non‑logicians.
+You are now part of a high-stakes, mission-critical operation. Our application is a stateless, browser-storage-only AI workflow tool. The original vision is clear: **NO persistent user data, NO backend database for users, providers, or workflows.** All sensitive data (API keys, configs, workflows) must live in the browser (sessionStorage/localStorage) and nowhere else.
 
-In other words, this is prompt engineering on steroids. But shown in a visual easy to understand way.
-
----
-
-## 2 User‑Tier Specification
-
-### 2.1 Primary Surfaces
-
-| Surface | Purpose | Critical Widgets |
-| --- | --- | --- |
-| **Lab Canvas** | Author graph | Node palette (semantic categories), drag‑drop grid, zoom, panning, snaplines, edge connectors, context menu |
-| **Test Panel** | Chat harness | WhatsApp‑style transcript, prompt composer, send button, runtime config selector, “Run Flow” control. Sends prompt workflows to AI chats. |
-| **Configuration Modal** | Persist model parameters | Name field, multiline system prompt, temperature slider (0–2), model radio (GPT‑4o / GPT‑4o‑Mini), save button |
-| **Sidebar** | Utility blocks | GitHub token input (stored `localStorage`), “save Your AI workflow” instructions, AI Text-to-Workflow converter |
-| **Branding** | Visual Identity | Custom logo, browser favicon, unique color palette, dark/light mode support |
-
-### 2.2 Interaction Flow
-
-1. Authenticate with session cookie.
-2. Enter GitHub PAT (encrypted, local only).
-3. Use **Text-to-Workflow AI** to convert a block of text into a preliminary node graph.
-4. Drag additional ontology nodes from palette; connect via edges, and add content to each node.
-5. Open **New Configuration** → set prompt, temperature, select model.
-6. Switch to **Test** → type message → “Run Flow” (executes selected config).
-7. Optionally **Export to GitHub Gist** or **Download** graph as JSON, YAML, Markdown, or XML.
-
-### 2.3 Permissions
-
-| Role | Abilities |
-| --- | --- |
-| Viewer | load, simulate |
-| Editor | CRUD nodes/edges, configs |
-| Owner | role assignment, delete flow, link GitHub |
+**What went wrong?**  
+Legacy code and tests introduced backend/database persistence (Prisma, Supabase, SQL) that is NOT needed and is now technical debt. This has caused test failures, confusion, and is blocking us from shipping a healthy, live product.
 
 ---
 
-### 2.4 Export Formats
+## 🩺 Your Mission
 
-| Format | Purpose | Key Elements |
-| --- | --- | --- |
-| **JSON** | Machine-readable | Complete graph structure, positions, metadata. Ideal for re-importing. |
-| **YAML** | Human-readable | Clean, indented structure of the graph logic. Good for version control. |
-| **Markdown** | Documentation | Text-based representation of the workflow, showing node content and connections. |
-| **XML** | Interoperability | Verbose, structured format for integration with other systems. |
-
----
-
-## 3 Ontology Catalogue Short
-
-### 3.1 Proposition Cluster
-
-`Statement` · `Claim` · `Definition` · `Observation` · `Concept`
-
-### 3.2 Inquiry Cluster
-
-`Query` · `Question` · `Problem`
-
-### 3.3 Hypothesis / Evidence / Method
-
-`Hypothesis` · `Evidence` · `Data` · `Counterexample` · `Method` · `Procedure` · `Algorithm` · `Protocol`
-
-### 3.4 Reasoning Cluster
-
-`Deduction` · `Induction` · `Abduction` · `Analogy` · `InferenceRule`
-
-### 3.5 Evaluation Gates
-
-`Verification` · `Validation` · `FalsifiabilityGate` · `ConsistencyCheck`
-
-### 3.6 Modal & Mental‑State Tags
-
-`Necessity` · `Possibility` · `Obligation` · `Permission` · `TemporalTag` · `EpistemicTag` · `Belief` · `Desire` · `Intent`
-
-### 3.7 Speech‑Act Markers
-
-`Assertion` · `Request` · `Command` · `Advice` · `Warning` · `Promise` · `Apology`
-
-### 3.8 Discourse Meta
-
-`Annotation` · `Revision` · `Summarization` · `Citation` · `Caveat`
-
-### 3.9 Control & Meta Engines
-
-`Branch` · `Condition` · `Loop` · `Halt` · `AbductionEngine` · `HeuristicSelector` · `ConflictResolver` · `ParadoxDetector`
-
-### 3.10 Error / Exception
-
-`Contradiction` · `Fallacy` · `Exception`
+**With surgical precision, you must:**
+- Remove all unnecessary backend/database persistence.
+- Refactor the codebase and tests to be 100% stateless and browser-storage-only.
+- Ensure every modular part of the application is valid, efficient, and fully tested.
+- For every refactor, you MUST fix the tests and ensure they pass before moving on.
 
 ---
 
-## 4 Ontology Catalogue — Extended, gap‑closed, schema‑tagged
+## 🧑‍⚕️ Step-by-Step Surgical Plan
 
-### Legend
+### 1. **Diagnosis: Identify What to Remove or Refactor**
 
-`*Code*` = internal enum key `⟡` = semantic tag for UI filter `↦` = terse definition
+- Search for all uses of `prisma`, `supabase`, `DATABASE_URL`, `findUnique`, `findMany`, `create`, `update`, `delete`, etc. in:
+  - #codebase: `/server/`, `/prisma/`, `/tests/integration/`, `/tests/e2e/`, `/src/lib/`, `/src/components/`
+- Identify all backend API endpoints and logic that store or retrieve user/provider/workflow data from a database.
+- Identify all tests (integration, E2E, unit) that expect backend persistence.
 
----
+### 2. **Surgical Removal & Refactor**
 
-### 3.1 Proposition Cluster `PROP‑*`
+- Remove or refactor backend code, database schema, and API endpoints related to persistent user, provider, and workflow storage.
+- Refactor backend endpoints to be stateless or proxy-only (for CORS or API key security if needed).
+- Remove or stub out all Prisma/Supabase/SQL logic that is not required.
+- Refactor frontend and backend to use only browser storage for all user/provider/workflow data.
 
-| Code | UI Label | ⟡Tags | ↦ |
-| --- | --- | --- | --- |
-| PROP‑STM | Statement | {atomic} | Truth‑apt sentence |
-| PROP‑CLM | Claim | {assertive} | Contestable statement |
-| PROP‑DEF | Definition | {lexical} | Term explication |
-| PROP‑OBS | Observation | {empirical} | Sense/measurement report |
-| PROP‑CNC | Concept | {abstraction} | Mental representation |
+### 3. **Test-Driven Recovery**
 
----
+- For every file you touch, FIRST update or remove tests to match the new stateless, browser-storage-only architecture.
+- Remove or rewrite integration and E2E tests that depend on backend/database persistence.
+- Add/keep tests for:
+  - Browser storage (sessionStorage/localStorage)
+  - UI flows (provider setup, workflow creation, chat)
+  - Session management (simulate clearing storage/cookies)
+- **After each change, run the relevant test(s) and ensure they pass before moving on.**
+- If a test fails, fix the code or the test so that it matches the intended, stateless app behavior.
 
-### 3.2 Inquiry Cluster `INQ‑*`
+### 4. **AI API Communication: Triple Verification**
 
-| Code | UI Label | ⟡Tags | ↦ |
-| --- | --- | --- | --- |
-| INQ‑QRY | Query | {interrogative} | Data request |
-| INQ‑QST | Question | {wh, polar} | Information gap |
-| INQ‑PRB | Problem | {challenge} | Desired‑state mismatch |
+- The app must support and test ALL THREE ways to talk to the AI APIs:
+  1. **Direct browser-to-AI API** (with user-provided key)
+  2. **Proxy via backend (if needed for CORS/security)**
+  3. **Any third-party integration (e.g., Supabase Edge Functions, if present)**
+- For each, ensure:
+  - The UI allows the user to configure and use the method.
+  - The correct API key is used from browser storage.
+  - The response is handled and displayed correctly.
+  - There are tests (unit/E2E) for each method, simulating real user flows.
 
----
+### 5. **Manual QA & Edge Case Review**
 
-### 3.3 Hypothesis/Evidence/Method `HEM‑*`
+- Walk through all UI flows to confirm no user data is lost except when browser storage is cleared.
+- Validate error handling for missing data (e.g., after clearing cookies).
+- Ensure security and privacy: no sensitive data is ever sent to a backend or stored insecurely.
 
-| Code | UI Label | ⟡Tags | ↦ |
-| --- | --- | --- | --- |
-| HEM‑HYP | Hypothesis | {tentative} | Testable proposition |
-| HEM‑EVD | Evidence | {support} | Observation backing/undermining |
-| HEM‑DAT | Data | {raw} | Uninterpreted record |
-| HEM‑CTX | Counterexample | {refuter} | Instance violating hypothesis |
-| HEM‑MTH | Method | {procedure} | High‑level approach |
-| HEM‑PRC | Procedure | {stepwise} | Ordered steps |
-| HEM‑ALG | Algorithm | {computable} | Finite deterministic routine |
-| HEM‑PRT | Protocol | {standard} | Formalised procedure |
+### 6. **Final QA and Documentation**
 
----
-
-### 3.4 Reasoning Cluster `RSN‑*`
-
-| Code | UI Label | ⟡Tags | ↦ |
-| --- | --- | --- | --- |
-| RSN‑DED | Deduction | {validity} | Necessitation from premises |
-| RSN‑IND | Induction | {generalise} | Pattern extrapolation |
-| RSN‑ABD | Abduction | {explain} | Best‑fit hypothesis generation |
-| RSN‑ANL | Analogy | {similarity} | Mapping source→target infer |
-| RSN‑IRL | InferenceRule | {schema} | Formal derivation pattern |
+- Run the full test suite (unit, integration, E2E) to confirm all tests pass in the new, stateless architecture.
+- Update documentation to clarify that the app is browser-storage only, with no persistent user data on the backend.
+- Document the rationale for this refactor and the lessons learned for future contributors.
 
 ---
 
-### 3.5 Evaluation Gates `EVL‑*`
+## 🧑‍🔬 For Junior Developers: Step-by-Step Checklist
 
-| Code | UI Label | ⟡Tags | ↦ |
-| --- | --- | --- | --- |
-| EVL‑VER | Verification | {internal} | Meets spec/logic |
-| EVL‑VAL | Validation | {external} | Meets real‑world need |
-| EVL‑FAL | FalsifiabilityGate | {Popper} | Reject if counterevidence |
-| EVL‑CON | ConsistencyCheck | {coherence} | Non‑contradiction scan |
-
----
-
-### 3.6 Modal / Mental‑State Tags `MOD‑*`
-
-| Code | UI Label | ⟡Tags | ↦ |
-| --- | --- | --- | --- |
-| MOD‑NEC | Necessity | {◻} | True in all worlds |
-| MOD‑POS | Possibility | {◇} | True in some world |
-| MOD‑OBL | Obligation | {deontic} | Duty‑bound |
-| MOD‑PER | Permission | {deontic} | Allowed |
-| MOD‑TMP | TemporalTag | {time} | Past/Present/Future |
-| MOD‑EPI | EpistemicTag | {knowledge} | Certainty level |
-| MOD‑BEL | Belief | {mental} | Agent accepts p |
-| MOD‑DES | Desire | {mental} | Agent wants p |
-| MOD‑INT | Intent | {mental} | Agent plans p |
+1. **Read this plan and the #codebase `README.md` to understand the product vision.**
+2. **For each backend or test file you touch, FIRST update or remove tests to match the new stateless, browser-storage-only architecture.**
+3. **Remove backend/database code for user/provider/workflow persistence.**
+4. **Refactor frontend and backend to use only browser storage for all user/provider/workflow data.**
+5. **After each change, run the relevant test(s) and ensure they pass before moving on.**
+6. **If a test fails, fix the code or the test so that it matches the intended, stateless app behavior.**
+7. **Repeat until all backend/database persistence is removed and all tests pass.**
+8. **Run the full test suite and perform manual QA.**
+9. **Update documentation to reflect the new architecture.**
+10. **Ask for help if you are unsure—do not guess or make random changes.**
 
 ---
 
-### 3.7 Speech‑Act Markers `SPA‑*`
+## 🧑‍💻 For Senior Developers: Technical Details
 
-| Code | UI Label | ⟡Tags | ↦ |
-| --- | --- | --- | --- |
-| SPA‑AST | Assertion | {constative} | Claim truth |
-| SPA‑REQ | Request | {directive} | Ask action/info |
-| SPA‑CMD | Command | {imperative} | Order action |
-| SPA‑ADV | Advice | {directive} | Recommend |
-| SPA‑WRN | Warning | {directive} | Alert hazard |
-| SPA‑PRM | Promise | {commissive} | Commit future act |
-| SPA‑APO | Apology | {expressive} | Express regret |
+- **Browser Storage:** All provider configs, API keys, and workflows must be stored in `sessionStorage` or `localStorage`. Use secure, namespaced keys. Never store sensitive data in the backend or in cookies.
+- **API Communication:** Ensure all three AI API communication methods are modular, testable, and can be toggled/configured in the UI.
+- **Testing:** Use mocks for browser storage in unit tests. Use Playwright or similar for E2E UI flows. Remove all test DB setup/teardown.
+- **Security:** Never log or transmit API keys except as required for direct/proxy AI API calls. Clear storage on logout.
+- **Code Hygiene:** Remove all unused imports, dead code, and database artifacts. Refactor for clarity and maintainability.
+- **Documentation:** Update all relevant docs (#codebase: `README.md`, `newplan.md`, `test_plan.md`) to reflect the new architecture and test strategy.
 
 ---
 
-### 3.8 Discourse Meta `DSC‑*`
+## 🏁 Guiding Principles
 
-| Code | UI Label | ⟡Tags | ↦ |
-| --- | --- | --- | --- |
-| DSC‑ANN | Annotation | {meta} | Side note |
-| DSC‑REV | Revision | {edit} | Modify prior |
-| DSC‑SUM | Summarization | {abbrev} | Condense content |
-| DSC‑CIT | Citation | {source} | External ref |
-| DSC‑CAV | Caveat | {limitation} | Scope warning |
-
----
-
-### 3.9 Control & Meta Engines `CTL‑*`
-
-| Code | UI Label | ⟡Tags | ↦ |
-| --- | --- | --- | --- |
-| CTL‑BRN | Branch | {if} | Conditional fork |
-| CTL‑CND | Condition | {guard} | Boolean filter |
-| CTL‑LOP | Loop | {iterate} | Repeat until |
-| CTL‑HLT | Halt | {terminal} | Stop execution |
-| CTL‑ABD | AbductionEngine | {generator} | Auto‑create hypotheses |
-| CTL‑HSL | HeuristicSelector | {search} | Pick best rule |
-| CTL‑CRS | ConflictResolver | {merge} | Resolve contradictions |
-| CTL‑PDX | ParadoxDetector | {selfref} | Flag liar/loop |
+- **Tests validate the app, not vice versa.**
+- **Evidence-based fixes only.**
+- **No random or arbitrary changes.**
+- **Codebase must remain healthy and functional.**
+- **Deployment only when all tests pass and manual QA is complete.**
+- **Every refactor step must be accompanied by test fixes and passing tests before proceeding.**
 
 ---
 
-### 3.10 Error / Exception `ERR‑*`
+## 🚀 Hype from Your CTO
 
-| Code | UI Label | ⟡Tags | ↦ |
-| --- | --- | --- | --- |
-| ERR‑CON | Contradiction | {⊥} | p ∧ ¬p |
-| ERR‑FAL | Fallacy | {invalid} | Faulty reasoning type |
-| ERR‑EXC | Exception | {runtime} | Engine failure |
+You are the surgical team saving our codebase. Every line you touch is a life-or-death decision for our product. Move with confidence, precision, and pride. We are building the future of AI workflows—stateless, secure, and blazing fast. Let’s make this patient not just survive, but THRIVE. You got this!
 
 ---
 
-### 3.11 Creative Operations `CRT‑*`
-
-| Code | UI Label | ⟡Tags | ↦ |
-| --- | --- | --- | --- |
-| CRT‑INS | Insight | {aha} | Sudden re‑framing |
-| CRT‑DIV | DivergentThought | {brainstorm} | Idea expansion |
-| CRT‑COM | ConceptCombination | {blend} | Merge disparate concepts |
-
-### 3.12 Mathematical Reasoning `MTH‑*`
-
-| Code | UI Label | ⟡Tags | ↦ |
-| --- | --- | --- | --- |
-| MTH‑PRF | ProofStrategy | {meta‑proof} | Method to derive theorem |
-| MTH‑CON | Conjecture | {open} | Unproven proposition |
-| MTH‑UND | UndecidableTag | {Gödel} | Truth value unresolvable |
-
-### 3.13 Cognitive Mechanics `COG‑*`
-
-| Code | UI Label | ⟡Tags | ↦ |
-| --- | --- | --- | --- |
-| COG‑CHN | Chunk | {memory} | Unitised info |
-| COG‑SCH | Schema | {frame} | Organised prior knowledge |
-| COG‑CLD | CognitiveLoad | {resource} | Working‑memory usage |
-| COG‑PRM | Priming | {bias} | Prior activation |
-| COG‑INH | Inhibition | {suppress} | Filter interference |
-| COG‑THG | ThresholdGate | {attention} | Fire only if salience≥δ |
-| COG‑FLU | FluidIntelligence | {gf} | Novel problem solving |
-| COG‑CRY | CrystallizedProxy | {gc} | Stored knowledge metric |
-
-### 3.14 Mind Constructs `MND‑*`
-
-| Code | UI Label | ⟡Tags | ↦ |
-| --- | --- | --- | --- |
-| MND‑PHF | PhenomenalField | {qualia} | First‑person content |
-| MND‑ACC | AccessConsciousness | {reportable} | Info globally available |
-| MND‑ZOM | ZombieArgument | {philosophy} | Absence of qualia test |
-| MND‑SUP | SupervenienceTag | {dependence} | Higher‑level on base |
-| MND‑EXT | ExtendedMind | {4E} | Mind beyond skull |
-| MND‑EMB | EmbeddedProcess | {situated} | Cognition in env |
-
-### 3.15 Non‑Classical Logic `NCL‑*`
-
-| Code | UI Label | ⟡Tags | ↦ |
-| --- | --- | --- | --- |
-| NCL‑REL | RelevanceMarker | {R‑logic} | Enforce premise relevance |
-| NCL‑LIN | LinearResource | {⊗} | Consume‑once proposition |
-| NCL‑MNV | ManyValued | {Łukasiewicz} | >2 truth degrees |
-| NCL‑QNT | QuantumLogic | {orthomodular} | Non‑distributive lattice |
-| NCL‑REV | BeliefRevision | {AGM} | Update (K, φ)→K* |
-| NCL‑AGM | AGM‑Operator | {∘} | Contraction/revision func |
-
-### 3.16 Dynamic Semantics `DYN‑*`
-
-| Code | UI Label | ⟡Tags | ↦ |
-| --- | --- | --- | --- |
-| DYN‑UPD | UpdateProcedure | {context} | Modify discourse state |
-| DYN‑CSH | ContextShift | {indexical} | Change evaluation world |
-| DYN‑REF | DiscourseReferent | {DRT} | Entity slot |
-| DYN‑ANA | AnaphoraTag | {coref} | Pronoun link |
-| DYN‑CGD | CommonGround | {shared} | Mutual belief store |
-| DYN‑PRS | Presupposition | {presup} | Background truth |
+#codebase:  
+- `/src/` (frontend logic, browser storage, UI flows)  
+- `/server/` (backend, to be refactored for stateless/proxy only)  
+- `/tests/` (unit, integration, E2E—must be updated for stateless logic)  
+- `/prisma/` (remove if not needed)  
+- `.env`, `README.md`, `newplan.md`, `test_plan.md` (update docs and configs)
 
 ---
 
-## 3B Cross‑cutting Deficit Nodes
+**Now, scrub in and start the operation. For every change, TEST FIRST, then refactor, then TEST AGAIN. The patient’s life depends on you.**Summarized conversation history# 🚨 CTO Surgical Refactor & Test Protocol 🚨
 
-| Code | UI Label | ⟡Tags | ↦ |
-| --- | --- | --- | --- |
-| HYB‑NEU | NeuroSymbolicMap | {embedding} | Bridge vector⇄symbol |
-| ATT‑ECO | AttentionBudget | {economics} | Allocate cognitive tokens |
-| ETH‑BIA | BiasAudit | {fairness} | Detect value distortion |
+## Team, this is your moment. Our codebase is the patient. We are the surgeons. One wrong move and the patient dies. But with precision, discipline, and teamwork, we will save it and make it stronger than ever. This is not just a refactor—this is a rescue mission. Let’s go!
 
 ---
 
-## 3C Cluster‑to‑Palette Mapping
+## 🧭 Mission Context
 
-Palette groups list codes; UI filter uses ⟡Tags; engine switch routes by leading prefix (`PROP`, `INQ`, …, `ETH`). Graph JSON `kind` field stores code.
-
----
-
-### Gap audit complete — ontology now covers creative cognition, advanced maths, psychology, philosophy of mind, non‑classical logics, discourse dynamics, neurosymbolic bridges, attention economics, and algorithmic bias.
+- **Product Vision:** Stateless, browser-storage-only, BYOK (Bring Your Own Key). No persistent user/provider/workflow data on the backend. All sensitive data lives in the browser (sessionStorage/localStorage).
+- **Current State:** Legacy backend/database code is technical debt. Tests are failing because they expect persistence that should not exist. Our app must be 100% functional, modular, and efficient—every part must work, every test must pass, every feature must be real.
 
 ---
 
-## 5 Formal Logic Mapping
+## 🩺 Step-by-Step Surgical Plan
 
-| NodeKind | Logical Operator / Rule | Truth‑table / Semantics |
-| --- | --- | --- |
-| `Statement` | atomic proposition **p** | Boolean variable |
-| `Deduction` | Modus Ponens | (p → q) ∧ p ⇒ q |
-| `FalsifiabilityGate` | Popperian test | Reject H if ∃e : (e ⊨ ¬H) |
-| `Necessity` | ◻p true in all accessible worlds | Kripke frame (W,R) |
-| `Possibility` | ◇p ≝ ¬◻¬p | dual operator |
-| `ConflictResolver` | paraconsistent merge | Priest’s LP semantics |
-| `ParadoxDetector` | self‑reference scan | fixed‑point finder on Godel numbering |
+### 1. **Codebase Audit & Tagging**
+- **Tag all files and systems you touch with #codebase.**
+- Identify all backend/database persistence logic (Prisma, Supabase, SQL, server/src/routers, prisma/schema.prisma, etc.).
+- Identify all tests (unit, integration, e2e) that depend on backend persistence.
+- Identify all frontend code that references backend user/provider/workflow persistence.
 
----
+### 2. **Test-Driven Refactor Protocol**
+- **For every file/component you refactor, FIRST update or remove the related tests.**
+- Tests must validate the real, stateless, browser-storage-only app logic.
+- **Do not move to the next file/component until all relevant tests pass.**
+- If a test fails, fix the code or the test so it matches the intended, stateless behavior.
 
-## 5 Technology Stack
+### 3. **Backend Refactor**
+- Remove all backend/database persistence for users, providers, workflows.
+- Backend endpoints should be stateless or proxy-only (for CORS/API key security).
+- Remove or stub out all Prisma/Supabase/SQL logic.
+- If a backend endpoint is needed for proxying, ensure it does NOT store or persist any user/provider/workflow data.
 
-### 5.1 Frontend
+### 4. **Frontend Refactor**
+- All provider setup, workflow creation, and chat features must use only browser storage.
+- Remove any UI or logic that references backend user profiles or persistent provider configs.
+- Simulate clearing browser storage (sessionStorage/localStorage) and ensure the app recovers gracefully (prompts user to re-enter API keys, etc.).
 
-- **Framework**: React 18 + TypeScript (lovable.dev standard)
-- **Graph**: `react‑flow` with custom node renderers per ontology cluster
-- **State**: Zustand (graph), Jotai (form)
-- **Styling**: TailwindCSS + shadcn/ui + Radix primitives
-- **Icons**: lucide‑react
-- **Codegen**: Zod → TypeScript types for ontology
+### 5. **Testing: Three Ways to Talk to AI APIs**
+- **You MUST test all three ways the app can talk to AI APIs:**
+  1. **Direct from frontend (browser fetch/axios to provider API)**
+  2. **Via stateless backend proxy (if needed for CORS/security)**
+  3. **Via any tRPC or custom abstraction (e.g., trpcVanilla, PromptingEngine, etc.)**
+- For each, verify:
+  - API key is never leaked or persisted server-side.
+  - Session-only storage is enforced.
+  - All error cases (invalid key, network error, API error) are handled gracefully.
+  - The UI updates correctly and the user is always informed.
 
-### 5.2 Backend
+### 6. **Comprehensive Modular Testing**
+- Every modular part of the application (components, libraries, flows) MUST have passing, meaningful tests.
+- Tests must cover:
+  - Rendering, props, events, and state for React components.
+  - All core library logic (ontology, graph schema, workflow engine, security).
+  - All browser storage/session management logic.
+  - All UI flows (provider setup, workflow creation, chat, export, theme switching, error handling).
+  - Edge cases: missing/invalid API key, session expired, invalid workflow, etc.
+  - Security: BYOK, session-only, no leaks.
 
-- **Runtime**: Node 18 + Fastify
-- **API**: tRPC for type‑safe RPC
-- **DB**: PostgreSQL (Supabase)
-- **Cache**: Redis (token buckets, session tables)
-- **LLM Gateway**: OpenAI REST (models: `gpt‑4o`, `gpt‑4o‑mini`)
-- **Stream Transport**: Server‑Sent Events for partial completions
-- **Logic Engine**: custom executor + Z3 proofs via `wasm‑z3`
-
-### 5.3 DevOps
-
-- Container: Docker, multi‑stage (node:18‑alpine)
-- Orchestration: Fly.io (api), Vercel (frontend)
-- CI: GitHub Actions (lint → type → test → proof → build → deploy)
-- Secrets: Doppler injection
-
-### 5.4 Observability
-
-- Sentry (FE+BE), OpenTelemetry traces, Grafana Loki logs, Prometheus metrics
-- Alerts: LLM latency > 3 s P95, contradiction rate > 10 %, GitHub push failure
-
----
-
-## 6 Data Structures
-
-### 6.1 Prisma Models
-
-```
-model Flow {
-  id         String   @id @default(uuid())
-  name       String
-  graph      Json
-  ownerId    String
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  configs    Config[]
-}
-
-model Config {
-  id            String   @id @default(uuid())
-  flowId        String   @index
-  systemPrompt  String
-  temperature   Float
-  modelSlug     String   // gpt‑4o, gpt‑4o‑mini
-}
-
-```
-
-### 6.2 Graph JSON
-
-```
-{
-  "id": "uuid",
-  "version": 1,
-  "nodes": [
-    {
-      "id": "uuid",
-      "kind": "Hypothesis",
-      "label": "H1: All ravens are black",
-      "ports": [{ "id": "in", "name": "ctx", "type": "in" },
-                { "id": "out", "name": "proof", "type": "out"}],
-      "payload": {}
-    }
-  ],
-  "edges": [
-    { "id": "uuid", "source": "nodeA", "target": "nodeB", "condition": "truth==T" }
-  ]
-}
-
-```
+### 7. **Documentation & Communication**
+- Update README.md and all relevant docs to reflect the new architecture.
+- Document every major change and the rationale.
+- Use clear commit messages and PR descriptions.
+- If you are unsure, ASK. Do not guess. Do not make random changes.
 
 ---
 
-## 7 Execution Algorithm
+## 🏆 Guiding Principles
 
-```
-for node in topologicalSort(graph):
-    if node.kind in GATE_KINDS:
-        result = evaluateGate(node, ctx)
-        if result == FAIL: raise Contradiction
-    elif node.kind in ENGINE_KINDS:
-        ctx = runEngine(node, ctx)
-    else:
-        ctx = applyPrimitive(node, ctx)
-
-```
-
-*Edge conditions expressed in Pythonic infix; parsed by PEG; executed in Node VM sandbox.*
+- **Tests validate the app, not vice versa.**
+- **Every refactor step must be accompanied by test fixes and passing tests before proceeding.**
+- **No random or arbitrary changes.**
+- **Codebase must remain healthy and functional at all times.**
+- **Deployment only when all tests pass and manual QA is complete.**
+- **Every developer is responsible for the health of the patient (the codebase).**
 
 ---
 
-## 8 GitHub User‑Side Integration
+## 🧑‍💻 For Juniors: What To Do, How To Do It
 
-| Step | Action |
-| --- | --- |
-| 1 | User pastes PAT → `localStorage.githubToken` (AES‑256 encrypted by passphrase) |
-| 2 | “Export to GitHub” → POST /api/git/export {flowId} |
-| 3 | Backend clones/creates repo `<username>/hermes‑graphs` via user token |
-| 4 | Commits `flow‑<uuid>.json`, optional prompt `.md`, pushes branch |
-| 5 | Returns PR URL; UI shows toast |
-
-No server‑side storage of tokens.
-
----
-
-## 9 Security Checklist
-
-1. CSP default‑src 'self'; frame‑ancestors 'none'.
-2. OWASP top‑10 scan in CI.
-3. Zod validation all inbound JSON.
-4. Graph evaluation time‑boxed (worker threads, 3 s max).
-5. LLM responses passed through profanity + PII filters.
+- Read this plan, the README.md, and the codebase.
+- For every file you touch, FIRST update or remove the tests.
+- Remove backend/database code for user/provider/workflow persistence.
+- Refactor frontend and backend to use only browser storage.
+- After each change, run the relevant test(s) and ensure they pass before moving on.
+- If a test fails, fix the code or the test so that it matches the intended, stateless app behavior.
+- Repeat until all backend/database persistence is removed and all tests pass.
+- Run the full test suite and perform manual QA.
+- Update documentation to reflect the new architecture.
+- Ask for help if you are unsure—do not guess or make random changes.
 
 ---
 
-## 10 Testing Matrix
+## 🧑‍🔬 For Seniors: Technical Details
 
-| Layer | Tool | Coverage |
-| --- | --- | --- |
-| Unit | Vitest | ≥ 95 % ontology, executor |
-| Type | `tsc --noEmit` | 100 % |
-| Logic Proof | wasm‑z3 | all inference rules |
-| UI | Playwright | node drag, edge snap, config modal, SSE display |
-| E2E | Cypress | export to GitHub, reload, simulate |
-
----
-
-## 11 CLI Utility (`hermes`)
-
-```bash
-hermes create flow "Raven Paradigm"
-hermes add hypothesis --text "All ravens are black"
-hermes add evidence --text "Observed white raven"
-hermes add gate FalsifiabilityGate
-hermes link 1 3
-hermes link 2 3
-hermes run         # returns gate‑fail, hypothesis rejected
-hermes push github # commits to repo
-
-```
-
-Outputs JSON compliant with Graph schema.
+- Remove all Prisma/Supabase/SQL logic and related migrations/seeds.
+- Refactor tRPC routers and backend endpoints to be stateless or proxy-only.
+- Ensure all API key management is session-only and encrypted in the browser (see #codebase:src/lib/security.js).
+- Refactor PromptingEngine, WorkflowExecutionEngine, and all provider logic to use browser storage and stateless calls.
+- Ensure all three AI API call paths are tested and work as intended.
+- Use Playwright/Cypress for E2E, Jest/RTL for unit/integration.
+- Coverage must remain at or above 88–90%.
+- All error and edge cases must be tested.
+- No sensitive data may ever be persisted server-side.
 
 ---
 
-## 12 Deployment Environments
+## 🚀 Final Words
 
-| Env | URL | DB | LLM | GitHub App |
-| --- | --- | --- | --- | --- |
-| dev | *.local | docker postgres | mock‑llm | none |
-| staging | staging.hermes.ai | Supabase | GPT‑4o | Staging App ID |
-| prod | hermes.ai | Supabase prod | GPT‑4o | Production App ID |
+This is your moment. The world is watching. The codebase is the patient. Let’s save it—together, with precision, discipline, and pride. Every test must pass because the code is correct, not because the test is wrong. Every feature must work because it is real, not because it is faked. Let’s make this the best, most secure, most reliable stateless app in the world.
 
-Zero‑downtime deploys via Fly deploy hooks.
+#codebase #surgery #refactor #testdriven #stateless #browserstorage #BYOK #ai #security #modularity #teamwork
 
 ---
 
-## 13 Roadmap Highlights
-
-- Multi‑tenant CRDT collaboration (Yjs).
-- Visual proof tree inspector.
-- Paraconsistent mode toggle.
-- Ontology marketplace with semantic versioning.
-- Native iPad pencil node authoring.
-
----
-
-## 14 Glossary
-
-| Term | Definition |
-| --- | --- |
-| **Ontology Node** | Graph vertex labelled by `NodeKind`, encapsulating semantic function. |
-| **Gate** | Boolean filter applying logical or empirical test to upstream assertions. |
-| **Engine** | Active component that synthesises or resolves content (abduction, paradox). |
-| **Modal Tag** | Unary operator adding accessibility‑relation metadata. |
-| **Speech‑Act Marker** | Pragmatic wrapper aligning output with conversational intention. |
-| **lovable.dev** | React+Tailwind SaaS IDE hosting and authenticating the builder. |
-| **PAT** | GitHub Personal Access Token, client‑side only. |
-
----
-
-**Auth source ⇒ for testing session based , based on your api keys provided at the start. the flow is the same where the front page is gated expecting a correct api key.**
-
-every time you log out it restarts. download to github or downlad as .md to save progress. no user accounts. BYOK each run. users must independently have their own api keys.
-
-they source their keys from openai or their service provider. we provide a form at the start, where users input their api keys, choose the providers we support. use openai defaults, and let users change if they need to: url to send to api, and other basic settings, nothing too complicated. we use openai framework and many companies do so to with just using a different url which is great.
-
----
-
-user flow ⇒ opens site ⇒ inputs api keys for venice ⇒ opens clean dashboard with the tools to start a flowchart system for logic and ai reasoning. ⇒ uses platform ⇒ save to computer by downloading or by uploading to github.
-
-[extract prompt] ⇒ Download-to-computer/Upload-to-Github
-
-high material design, clear design, visually appealing, high value, masterpiece, magnum opus.
-
-millers law for modular ux ui. Palette collapsed into ~8 groups sets. this is for everything in general as a rule of thumb. octaves are a brand element too indicative of a hyper reasoning engine.
-
----
-
-mouse keys layout shortcuts to be simple and intuitive for now at the mvp but with room to improve. need zoom redo undo fit copy-paste and more!
-
----
-
-databases are used for our ontology and semantic framework. users 
-
-if possible reloading should not affect data but its saved on the browser/user side and at their own risk and expense.
-
----
-
-we should have a Minimum viable set of ontology nodes 
-
-however, we need to keep the full list in the files and server so that it is easier to make and start testing and developing.
-
----
-
-LLM interactions:
-
-1. For testing the LLM ⇒ flow chart or logic chart or semantic chart is converted into text, then passed to the ai as system prompt and instruction set.
-2. second way to test ai is token classifier mode. where you enter a small query , limit to 250 words. and it is passed to an ai with a system prompt (we need to properly define this) that will prompt the ai to classify the prompt in the way of the flowchart. so its a converter from text into flowchart.
-
----
-
-```
-### SYSTEM PROMPT: FlowExecutor‑v1  (Graph→Prompt mode)
-
-You are a deterministic reasoning micro‑kernel exposed through a large‑language‑model API.
-
-Input payload = JSON object:
-
-{
-  graph:   <Semantic‑Logic AI Workflow graph JSON v1>,
-  config:  {temperature: <float>, modelSlug: "<id>"},
-  ctxInit: <arbitrary JSON or null>
-}
-
-Ontology enumeration keys follow 3–4‑letter codes (PROP‑*, RSN‑*, CTL‑*, …).
-Each node kind maps to a *handler*:
-
-- PROP‑*   → `assertProp(node, ctx)`
-- RSN‑*    → `infer(node, ctx)`
-- EVL‑*    → `gate(node, ctx)`
-- CTL‑*    → `control(node, ctx)`
-- ERR‑*    → `raiseError(node)`
-
-Execution rules:
-
-1. Topological order; respect edge guards (`condition` field, JS‑safe Boolean, ctx‑scoped).
-2. Maintain immutable working memory `ctx`: {symbols, traces, errors}.
-3. On Gate fail ⇒ abort run, return `{status:"fail", nodeId, reason}`.
-4. On Engine node ⇒ may call this LLM recursively; budget `max_tokens` = 2048 – (#ctx tokens ⋅2).
-5. After final node emit:
-
-{
-
-status: "ok",
-
-result: ,
-
-traces: ,
-
-metrics: {tokens_used, latency_ms}
-
-}
-
-Respond **only** with the JSON result, no prose, no formatting.
-
-```
-
-```
-### SYSTEM PROMPT: FlowClassifier‑v1  (Text→Graph mode)
-
-You are a linguistic‑to‑ontology transpiler.
-Input text ≤ 250 tokens.
-
-Output strict JSON:
-
-{
-
-"version":1,
-
-"nodes":[
-
-{ "id":"n1", "kind":"", "label":"" },
-
-...
-
-],
-
-"edges":[
-
-{ "source":"n1", "target":"n2", "relation":"supports|contradicts|elaborates|causes" }
-
-]
-
-}
-
-Mapping rules:
-
-- Detect statements, claims, questions → PROP/INQ cluster codes.
-- Hypothesis/evidence patterns → HEM cluster codes.
-- Inferential verbs (“therefore”, “suggests”) → RSN‑* deduction or induction.
-- Modal auxiliaries (“must”, “might”) → MOD‑* tags on same node via `"mods":["MOD‑NEC"]`.
-- Reject content that does not map; exclude filler tokens.
-- Max unique nodes = 15.
-- Preserve original technical terms in `label`; truncate >120 chars with ellipsis.
-
-Return **only** the JSON object, without Markdown, comments, or additional text.
-
-```
-
----
-
-testing suite ⇒ test all usecase, and keep testing to a high 88% approving rate .
-
-errors should handle gracefully, but we should not have errors. we should plan for a solid engine that works without leaks. however common api errors like 500 can occur.
-
-strive for a machine with no leaks , whenever you do surgery on a patient you dont leave him bleeding, this is the same.
-
-return complete masterpiece magnum opus level of work.
-
----
-
----
+**Now, get to work. The patient is counting on you.**

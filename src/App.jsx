@@ -12,21 +12,8 @@ import LandingPage from "./pages/LandingPage";
 
 const queryClient = new QueryClient();
 
-// Create TRPC client with correct API URL
-const trpcClient = trpc.createClient({
-  links: [
-    httpBatchLink({
-      url: typeof window !== 'undefined' && window.location.hostname.includes('app.github.dev')
-        ? 'http://localhost:3002/api/trpc'  // Use localhost in Codespaces
-        : typeof window !== 'undefined' 
-          ? `${window.location.protocol}//${window.location.hostname.replace('8081', '3002')}/api/trpc`
-          : 'http://localhost:3002/api/trpc',
-      headers: () => {
-        return {};
-      },
-    }),
-  ],
-});
+// Use the modular trpcClient from src/lib/trpc.ts
+import { trpcClient } from './lib/trpc';
 
 const App = () => {
   const [hasApiKey, setHasApiKey] = useState(false);

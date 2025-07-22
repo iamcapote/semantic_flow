@@ -1,192 +1,75 @@
-# 🧠 Semantic Logic AI Workflow Builder
+# 🧠 Semantic Flow: The Context Engineering Canvas
 
-> **Transform complex reasoning into elegant visual workflows**  
-> Build sophisticated AI logic chains using our semantic node system with 50+ ontology-driven components.
+> **The Next Evolution in Context Engineering, Agentic Workflows, and System Design**  
+> Architect your imagination, design intelligent agents, and build complex interactive systems with a powerful, ontology-driven visual language. Turn your thoughts into structured, machine-readable schemas—ready for AI, code, or worldbuilding.
 
 ![Project Status](https://img.shields.io/badge/Status-Production%20Ready-green)
-![Version](https://img.shields.io/badge/Version-1.0.0-blue)
-
-
----
-
-## ✨ What Is This?
-
-The **Semantic Logic AI Workflow Builder** is a revolutionary visual tool that transforms the way we build AI reasoning systems. Instead of writing complex prompts in text, you construct **semantic workflows** using drag-and-drop nodes representing formal logic concepts like hypotheses, evidence, deductions, and speech acts.
-
-**Think of it as "Prompt Engineering on Steroids" - but visual, intuitive, and grounded in cognitive science.**
-
-### 🎯 Perfect For:
-- **Researchers** building complex reasoning chains
-- **AI Engineers** designing sophisticated prompt workflows  
-- **Educators** teaching logic and critical thinking
-- **Anyone** who wants to make AI reasoning transparent and debuggable
+![Version](https://img.shields.io/badge/Version-0.0.1-blue)
 
 ---
 
-## 🚀 Quick Start Guide
 
-### For Non-Technical Users
+## ✨ What is Semantic Flow?
 
-1. **Start the Application**
-   ```bash
-   # Clone and navigate to the project
-   git clone <repository-url>
-   cd chatgpt-clone-285
-   
-   # Install dependencies and start
-   npm install
-   npm run dev
-   ```
+Semantic Flow is the first true **Context Engineering Canvas**—a creative environment for structuring complex ideas, systems, and worlds. It moves beyond prompt engineering and worldbuilding, empowering you to visually design, connect, and export intricate workflows using a rich semantic ontology. 
 
-2. **Access the App**
-   - Open your browser to `http://localhost:8081`
-   - Choose your AI provider (OpenAI, OpenRouter, or Venice AI)
-   - Enter your API key for the selected provider
-   - Select a default model or enter a custom model name
-   - Start building workflows immediately!
+**Context Engineering** is the art and science of shaping, structuring, and managing the information context for agents, systems, and logic. With Semantic Flow, you architect not just prompts, but entire constructs, workflows, and schemas—turning imagination into machine-readable input.
 
-3. **Create Your First Workflow**
-   - Drag nodes from the left palette onto the canvas
-   - Connect them by clicking and dragging between node handles
-   - Add content to each node by clicking on them
-   - Test individual nodes or execute complete workflows
-   - Switch between AI providers for different capabilities
+**The Canvas for Your Imagination:**
+- **Agentic Systems:** Design behaviors, interactions, and cognitive processes for AI agents and multi-agent worlds.
+- **Role-Playing & Scenario Design:** Create dynamic characters, rules, and logic for games, simulations, and collaborative storytelling.
+- **Code & Project Structuring:** Map out logic, architectures, and workflows for large codebases and technical projects.
+- **Schema Generation:** Instantly convert your thoughts into structured formats (JSON, YAML, XML, Markdown) for downstream use.
 
-### For Technical Users
+**Why Context Engineering?**
+Semantic Flow lets you sculpt the context that drives agents, systems, and logic. Whether you’re building a complex agent, a simulated world, a business process, or a legal argument, you’re engineering the context—making your ideas actionable, testable, and interoperable.
 
-#### Prerequisites
-- Node.js 18+ 
-- PostgreSQL (via Docker)
-- OpenAI API key
-
-#### Development Setup
-```bash
-# 1. Install dependencies
-npm install
-cd server && npm install && cd ..
-
-# 2. Start PostgreSQL database
-docker run --name postgres-workflow \
-  -e POSTGRES_PASSWORD=password \
-  -e POSTGRES_DB=workflow_db \
-  -p 127.0.0.1:5432:5432 \
-  -d postgres:13
-
-# 3. Setup database schema
-cd server
-npx prisma migrate dev
-node seed-user.js
-cd ..
-
-# 4. Start development servers
-# Terminal 1: Frontend (Vite)
-npm run dev
-
-# Terminal 2: Backend (tRPC + Fastify)
-cd server && npm run dev:server
-```
-
-#### Production Build
-```bash
-npm run build:dev
-npm run preview
-```
+### 🎯 Who is Semantic Flow For?
+- **AI Engineers & Researchers:** Visually design, debug, and optimize agentic workflows and reasoning systems.
+- **Developers & Architects:** Scaffold applications, logic flows, and project structures in a visual environment.
+- **Writers, Game Masters, & Scenario Designers:** Create rich, structured narratives, interactive logic, and character-driven systems.
+- **Systems Thinkers:** Map, analyze, and optimize complex systems of any kind.
 
 ---
 
-## 🏗️ Architecture
 
-### Tech Stack
-- **Frontend**: React 18, Vite, Tailwind CSS, React Flow
-- **Backend**: Node.js, Fastify, tRPC, Prisma ORM
-- **AI Providers**: OpenAI, OpenRouter, Venice AI (Multi-provider support)
-- **Database**: PostgreSQL with Prisma ORM
-- **Security**: BYOK (Bring Your Own Key) model, session-only storage
-- **Database**: PostgreSQL
-- **UI Components**: shadcn/ui, Radix UI
-- **State Management**: React Query (TanStack Query)
-
-### Project Structure
-```
-chatgpt-clone-285/
-├── src/                          # Frontend React application
-│   ├── components/               # Reusable UI components
-│   │   ├── ui/                   # Base UI components (shadcn)
-│   │   ├── NodePalette.jsx       # Semantic node library
-│   │   ├── LabCanvas.jsx         # React Flow workflow canvas
-│   │   └── SemanticNode.jsx      # Custom workflow nodes
-│   ├── pages/                    # Main application pages
-│   │   ├── LandingPage.jsx       # API key entry & onboarding
-│   │   ├── WorkflowBuilderPage.jsx # Main workflow editor
-│   │   └── ChatPage.jsx          # Chat interface
-│   ├── lib/                      # Core libraries
-│   │   ├── ontology.js           # 50+ semantic node definitions
-│   │   ├── graphSchema.js        # Workflow data structures
-│   │   ├── exportUtils.js        # Multi-format export
-│   │   └── trpc.js              # API client configuration
-│   └── integrations/             # External service integrations
-│       └── supabase/             # Database client (fallback)
-├── server/                       # Backend tRPC API server
-│   ├── src/
-│   │   ├── routers/              # API route definitions
-│   │   ├── context.ts            # Request context setup
-│   │   └── index.ts              # Server entry point
-│   ├── prisma/                   # Database schema & migrations
-│   └── package.json              # Backend dependencies
-└── public/                       # Static assets
-```
-
----
 
 ## 🎨 Features
 
-### � **Multi-Provider AI Integration**
-- **OpenAI**: Latest models including GPT-4o, GPT-4o-mini, o1-preview
-- **OpenRouter**: Access to multiple models (Claude-3.5-Sonnet, Llama, and more)
-- **Venice AI**: Privacy-focused AI with various model options
-- **Custom Endpoints**: Support for additional providers
-- **Smart Defaults**: Each provider comes with a recommended default model
-- **Custom Model Support**: Override defaults with any model name/slug
-- **Real-time Testing**: Validate provider connections and model responses
-- **Per-Provider Settings**: Custom models, parameters, and headers
+### 🧩 Semantic Ontology: 16+ Clusters, 100+ Node Types
+At the heart of Semantic Flow is a deep semantic ontology—organized into clusters representing every facet of logic, reasoning, cognition, and context. Each node type is a building block for your workflows, agents, worlds, or schemas.
 
-### �🧩 **Visual Workflow Builder**
-- **50+ Semantic Node Types** across 10 ontological clusters
-- **Drag-and-Drop Interface** with React Flow canvas
-- **Real-time Collaboration** ready architecture
-- **Zoom, Pan, and Navigate** large workflow graphs
+| Cluster | Description |
+| :--- | :--- |
+| **Proposition (PROP)** | Basic truth assertions and statements |
+| **Inquiry (INQ)** | Information seeking and problem definition |
+| **Hypothesis/Evidence/Method (HEM)** | Scientific method and evidence |
+| **Reasoning (RSN)** | Deduction, induction, abduction, analogy |
+| **Evaluation Gates (EVL)** | Consistency, validity, and quality checks |
+| **Modal & Mental-State (MOD)** | Logic, beliefs, intentions, modalities |
+| **Speech-Act Markers (SPA)** | Communication intents and actions |
+| **Discourse Meta (DSC)** | Discourse management and annotation |
+| **Control & Meta Engines (CTL)** | Flow control, branching, merging |
+| **Error/Exception (ERR)** | Error handling, contradiction, recovery |
+| **Creative Operations (CRT)** | Brainstorming, combining, insight |
+| **Mathematical Reasoning (MTH)** | Mathematical logic, proofs, conjectures |
+| **Cognitive Mechanics (COG)** | Planning, goals, evaluation, schema |
+| **Mind Constructs (MND)** | Mental and philosophical concepts |
+| **Non-Classical Logic (NCL)** | Alternative logic systems |
+| **Dynamic Semantics (DYN)** | Context, meaning, and adaptation |
+| **Utility (UTIL)** | Metadata, blank nodes, scaffolding |
 
-### 🎯 **Semantic Ontology**
-| Cluster | Node Types | Purpose |
-|---------|------------|---------|
-| **Proposition** | Statement, Claim, Definition, Observation | Basic truth assertions |
-| **Inquiry** | Query, Question, Problem | Information seeking |
-| **Evidence** | Hypothesis, Evidence, Data, Counterexample | Scientific method |
-| **Reasoning** | Deduction, Induction, Abduction, Analogy | Logic operations |
-| **Evaluation** | Verification, Validation, Consistency Check | Quality gates |
-| **Modal** | Necessity, Possibility, Temporal Tags | Logical modalities |
-| **Speech Acts** | Assertion, Request, Command, Promise | Communication intents |
-| **Meta** | Annotation, Revision, Citation | Discourse management |
-| **Control** | Branch, Loop, Condition | Flow control |
-| **Error** | Contradiction, Fallacy, Exception | Error handling |
+### 📤 Multi-Format Export
+* Instantly export your creations to JSON, YAML, Markdown, and XML—turning your thoughts into machine-readable input for any downstream system.
 
-### 🔧 **Professional Tools**
-- **Multi-Format Export**: JSON, YAML, Markdown, XML
-- **AI Text-to-Workflow**: Convert text into preliminary node graphs
-- **Session Security**: BYOK (Bring Your Own Key) model
-- **Theme Support**: Professional light/dark modes with proper contrast
-- **Responsive Design**: Works on desktop, tablet, and mobile
-- **Clean Interface**: Attribution-free canvas for professional presentations
-- **Collapsible Panels**: Smart space management with expandable sections
-
-### ⚡ **AI Integration**
-- **Multi-Provider Support**: OpenAI, OpenRouter, Venice AI with smart defaults
-- **Latest Models**: GPT-4o, GPT-4o-mini, o1-preview, Claude-3.5-Sonnet, Gemini-2.0-Flash-Exp
-- **Custom Model Override**: Input any model slug for maximum flexibility
-- **Configurable Parameters**: Temperature, max tokens, and provider-specific settings
-- **Step-by-step Execution** with visual feedback
-- **Chat Interface** for testing workflows
-- **Streaming Results** for real-time interaction
+### 🛠️ Professional Tools
+* **Semantic Flow Canvas:** Drag-and-drop interface powered by React Flow—your imagination, structured.
+* **Rich Semantic Ontology:** 100+ node types across 16 clusters, grounded in logic and cognitive science.
+* **Multi-Format Export:** Export to JSON, YAML, Markdown, XML.
+* **Agent & World-Building Focus:** Design complex agents, worlds, and logic systems.
+* **AI Integration:** Connect to OpenAI, OpenRouter, Venice AI, and more.
+* **Secure:** BYOK model—your API keys never leave your local environment.
+* **Responsive Design:** Works on desktop, tablet, and mobile.
 
 ---
 
@@ -205,9 +88,10 @@ chatgpt-clone-285/
 
 ---
 
+
 ## 📚 Usage Examples
 
-### Example 1: Scientific Hypothesis Testing
+### Example 1: Scientific Hypothesis Testing (Context Engineering for Research)
 ```
 [Research Question] → [Hypothesis] → [Evidence Collection] 
      ↓                    ↓               ↓
@@ -215,22 +99,154 @@ chatgpt-clone-285/
      ↓                    ↓               ↓
 [Peer Review] → [Publication] → [Replication Studies]
 ```
+*Structure and automate the scientific method: define research questions, generate hypotheses, collect evidence, design experiments, analyze data, and manage peer review and publication workflows. Useful for academic research, lab automation, and collaborative science projects.*
 
-### Example 2: Legal Argument Structure
+### Example 2: Legal Argument Structure (Context Engineering for Law)
 ```
 [Legal Claim] → [Precedent Evidence] → [Statutory Analysis]
      ↓               ↓                    ↓
 [Counterarguments] → [Rebuttal] → [Judicial Decision]
 ```
+*Model legal reasoning: organize claims, precedents, statutes, and counterarguments to simulate courtroom logic, automate legal document generation, or support legal research and case analysis.*
 
-### Example 3: Business Decision Making
+### Example 3: Business Decision Making (Context Engineering for Strategy)
 ```
 [Problem Definition] → [Stakeholder Analysis] → [Option Generation]
      ↓                    ↓                      ↓
 [Risk Assessment] → [Cost-Benefit Analysis] → [Implementation Plan]
 ```
+*Visualize and optimize business processes: define problems, analyze stakeholders, generate options, assess risks, perform cost-benefit analysis, and plan implementations. Ideal for strategic planning, consulting, and operational management.*
+
+### Example 4: Roleplaying & Scenario Design (Context Engineering for Worlds)
+```
+[Character Creation] → [World Setting] → [Rule Definition]
+     ↓                    ↓               ↓
+[Dynamic Events] → [Player Choices] → [Consequence Engine]
+     ↓                    ↓               ↓
+[Feedback Loops] → [Narrative Arcs] → [Endgame Scenarios]
+```
+*Define characters, settings, and rules using semantic nodes. Create dynamic interactions and consequences for player actions. Ideal for D&D-style campaigns, collaborative storytelling, or simulation environments.*
+
 
 ---
+
+
+## 🚀 Quick Start Guide
+
+### For Non-Technical Users
+
+1. **Start the Application**
+   ```bash
+   # Clone and navigate to the project
+   git clone <repository-url>
+   cd semantic_flow
+   
+   # Install dependencies and start
+   npm install
+
+## 🛠️ Development
+
+### Available Scripts
+
+#### Frontend
+```bash
+npm run dev          # Start Vite development server (port 8081)
+
+npm run build:dev    # Development build
+npm run preview      # Preview production build
+npm run lint         # ESLint code checking
+```
+
+#### Backend
+```bash
+cd server
+npm run dev:server   # Start tRPC development server (port 3001)
+# 4. Start development servers
+npx prisma migrate dev # Run database migrations
+```
+
+#### Database
+```bash
+# Start PostgreSQL container
+# Terminal 1: Frontend (Vite)
+  -e POSTGRES_PASSWORD=password \
+  -p 127.0.0.1:5432:5432 \
+  -d postgres
+```
+
+### Environment Variables
+```bash
+# server/.env
+DATABASE_URL="postgresql://postgres:password@localhost:5432/semantic_workflows"
+# Note: The database name 'semantic_workflows' is the default if not specified in the docker command.
+```
+
+### Contributing
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+npm run dev
+
+# Terminal 2: Backend (tRPC + Fastify)
+cd server && npm run dev:server
+```
+
+#### Production Build
+```bash
+npm run build:dev
+npm run preview
+```
+
+---
+
+
+## 🏗️ Architecture
+
+### Tech Stack
+- **Frontend:** React 18, Vite, Tailwind CSS, React Flow
+- **Backend:** Node.js, Fastify, tRPC, Prisma ORM
+- **AI Providers:** OpenAI, OpenRouter, Venice AI (Multi-provider support)
+- **Database:** PostgreSQL with Prisma ORM
+- **Security:** BYOK (Bring Your Own Key) model, session-only storage
+- **UI Components:** shadcn/ui, Radix UI
+- **State Management:** React Query (TanStack Query)
+
+### Project Structure
+```
+semantic_flow/
+├── src/                          # Frontend React application
+│   ├── components/               # Reusable UI components
+│   │   ├── ui/                   # Base UI components (shadcn)
+│   │   ├── NodePalette.jsx       # Semantic node library
+│   │   ├── LabCanvas.jsx         # Semantic Flow Canvas (React Flow)
+│   │   └── SemanticNode.jsx      # Custom workflow nodes
+│   ├── pages/                    # Main application pages
+│   │   ├── LandingPage.jsx       # API key entry & onboarding
+│   │   ├── WorkflowBuilderPage.jsx # Main workflow editor
+│   │   └── ChatPage.jsx          # Chat interface
+│   ├── lib/                      # Core libraries
+│   │   ├── ontology.js           # 100+ semantic node definitions
+│   │   ├── graphSchema.js        # Workflow data structures
+│   │   ├── exportUtils.js        # Multi-format export
+│   │   └── trpc.js              # API client configuration
+│   └── integrations/             # External service integrations
+│       └── supabase/             # Database client (fallback)
+├── server/                       # Backend tRPC API server
+│   ├── src/
+│   │   ├── routers/              # API route definitions
+│   │   ├── context.ts            # Request context setup
+│   │   └── index.ts              # Server entry point
+│   ├── prisma/                   # Database schema & migrations
+│   └── package.json              # Backend dependencies
+└── public/                       # Static assets
+```
+
+---
+
+---
+
 
 ## 🚀 API Reference
 
@@ -380,7 +396,7 @@ curl http://localhost:8081         # Frontend status
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the GNU Affero General Public License v3.0 (AGPL-3.0)
 
 ---
 
@@ -392,14 +408,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **Tailwind CSS** for the utility-first styling approach
 - **OpenAI** for the powerful language models
 
----
-
-## 📞 Support
-
-- **Documentation**: Check this README and inline code comments
-- **Issues**: Open a GitHub issue for bugs or feature requests
-- **Discussions**: Use GitHub Discussions for questions and ideas
-
----
-
-**Built with ❤️ for the future of AI reasoning**
+**Built with ∞❤️∞ for the future of context engineering and AI reasoning**

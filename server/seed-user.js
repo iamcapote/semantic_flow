@@ -2,16 +2,16 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('Seeding initial user...');
+  console.log('Seeding demo user...');
   const user = await prisma.user.upsert({
-      where: { email: 'dev@example.com' },
-      update: {},
-      create: {
-        id: 'clerk-user-id-12345', // Example of a Clerk or other auth provider ID
-        email: 'dev@example.com',
-        name: 'Dev User',
-      },
-    });
+    where: { email: 'demo@semantic.app' },
+    update: {},
+    create: {
+      id: '00000000-0000-0000-0000-000000000000',
+      email: 'demo@semantic.app',
+      name: 'Demo User',
+    },
+  });
   console.log({ user });
 }
 

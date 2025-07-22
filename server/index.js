@@ -37,16 +37,17 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.prisma = void 0;
+// All Prisma/database logic removed: stateless, in-memory only
 exports.createServer = createServer;
 var fastify_1 = require("fastify");
 var fastify_2 = require("@trpc/server/adapters/fastify");
 var cors_1 = require("@fastify/cors");
-var client_1 = require("@prisma/client");
 var context_1 = require("./src/context");
 var routers_1 = require("./src/routers");
-// Initialize Prisma Client
-exports.prisma = new client_1.PrismaClient();
+// In-memory stores for stateless backend
+const providerConfigStore = {};
+const workflowStore = {};
+let workflowIdCounter = 1;
 // Create and configure Fastify server
 function createServer() {
     return __awaiter(this, void 0, void 0, function () {
@@ -59,6 +60,7 @@ function createServer() {
                         logger: true,
                         trustProxy: true
                     });
+    // No Prisma client: stateless, in-memory only
                     // Register CORS plugin
                     return [4 /*yield*/, fastify.register(cors_1.default, {
                             origin: process.env.CORS_ORIGIN || true,
@@ -84,11 +86,155 @@ function createServer() {
                             return [2 /*return*/, { status: 'ok', timestamp: new Date().toISOString() }];
                         });
                     }); });
+    // GET /api/user - Always return mock user
+    fastify.get('/api/user', async function (req, reply) {
+        reply.send({
+            id: '00000000-0000-0000-0000-000000000000',
+            email: 'demo@semantic.app',
+            name: 'Demo User',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        });
+    });
+
+    // GET /api/providers - Return all provider configs for demo user (stateless)
+    fastify.get('/api/providers', async function (req, reply) {
+        const userId = 'demo-user';
+        let providers = providerConfigStore[userId];
+        if (!providers) {
+            providers = [
+                {
+                    providerId: 'openai',
+                    name: 'OpenAI',
+                    baseURL: 'https://api.openai.com/v1',
+                    models: { models: ['gpt-4o', 'gpt-4'] },
+                    isActive: true,
+                    headers: {},
+                    userId: userId,
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString()
+                }
+            ];
+            providerConfigStore[userId] = providers;
+        }
+        reply.send(providers);
+    });
+
+    // POST /api/providers - Upsert provider config (stateless)
+    fastify.post('/api/providers', async function (req, reply) {
+        try {
+            const { providerId, name, baseURL, models, isActive, headers, userId } = req.body;
+            if (!providerId || !userId) {
+                return reply.code(400).send({ error: 'Invalid provider config' });
+            }
+            let modelsObj;
+            if (Array.isArray(models)) {
+                modelsObj = { models };
+            } else if (models && typeof models === 'object' && Array.isArray(models.models)) {
+                modelsObj = models;
+            } else {
+                modelsObj = { models: [] };
+            }
+            if (!providerConfigStore[userId]) providerConfigStore[userId] = [];
+            let idx = providerConfigStore[userId].findIndex(p => p.providerId === providerId);
+            let upserted;
+            if (idx >= 0) {
+                providerConfigStore[userId][idx] = {
+                    providerId, name, baseURL, models: modelsObj, isActive, headers, userId,
+                    updatedAt: new Date().toISOString(),
+                    createdAt: providerConfigStore[userId][idx].createdAt || new Date().toISOString()
+                };
+                upserted = providerConfigStore[userId][idx];
+            } else {
+                upserted = {
+                    providerId, name, baseURL, models: modelsObj, isActive, headers, userId,
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString()
+                };
+                providerConfigStore[userId].push(upserted);
+            }
+            reply.send({ success: true, provider: upserted });
+        } catch (err) {
+            console.error('POST /api/providers error:', err);
+            reply.code(500).send({ error: err.message, details: err });
+        }
+    });
+
+    // GET /api/workflows - Return all workflows for demo user (stateless)
+    fastify.get('/api/workflows', async function (req, reply) {
+        const userId = 'demo-user';
+        let workflows = workflowStore[userId];
+        if (!workflows) {
+            workflows = [
+                {
+                    id: 'demo-workflow',
+                    title: 'Demo Workflow',
+                    description: 'A mock workflow for testing',
+                    content: { nodes: [], edges: [], viewport: { x: 0, y: 0, zoom: 1 } },
+                    isPublic: true,
+                    userId: userId,
+                    version: '1.0.0',
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString()
+                }
+            ];
+            workflowStore[userId] = workflows;
+        }
+        reply.send(workflows);
+    });
+
+    // POST /api/workflows - Create workflow (stateless)
+    fastify.post('/api/workflows', async function (req, reply) {
+        try {
+            const { title, description, content, userId } = req.body;
+            if (!title || !userId) {
+                return reply.code(400).send({ error: 'Invalid workflow creation' });
+            }
+            if (!workflowStore[userId]) workflowStore[userId] = [];
+            const workflow = {
+                id: `wf-${workflowIdCounter++}`,
+                title,
+                description,
+                content: content || { nodes: [], edges: [], viewport: { x: 0, y: 0, zoom: 1 } },
+                isPublic: true,
+                userId,
+                version: '1.0.0',
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            };
+            workflowStore[userId].push(workflow);
+            reply.code(201).send(workflow);
+        } catch (err) {
+            reply.code(500).send({ error: err.message });
+        }
+    });
                     return [2 /*return*/, fastify];
             }
         });
     });
 }
+// Export a getApp function for testing (Supertest)
+function getApp() {
+    return __awaiter(this, void 0, void 0, function () {
+        var server;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    // Create and fully initialize the Fastify server for Supertest
+                    return [4 /*yield*/, createServer()];
+                case 1:
+                    server = _a.sent();
+                    // Wait for all plugins and routes to be ready
+                    return [4 /*yield*/, server.ready()];
+                case 2:
+                    _a.sent();
+                    // Return the underlying Node HTTP server for Supertest
+                    return [2 /*return*/, { server: server.server }];
+            }
+        });
+    });
+}
+exports.getApp = getApp;
 // Start the server if this file is run directly
 if (require.main === module) {
     var PORT_1 = process.env.PORT ? parseInt(process.env.PORT, 10) : 3001;

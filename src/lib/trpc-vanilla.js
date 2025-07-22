@@ -2,17 +2,12 @@ import { createTRPCClient, httpBatchLink } from '@trpc/client';
 
 // Get the API URL - use the environment variable or construct it
 const getApiUrl = () => {
-  // For Vite projects in browser
-  if (typeof window !== 'undefined') {
-    // Try to get from window (Vite exposes env vars on window)
-    if (window.ENV && window.ENV.VITE_API_URL) {
-      return `${window.ENV.VITE_API_URL}/api/trpc`;
-    }
-    // Fallback to constructing URL from current hostname
-    return `${window.location.protocol}//${window.location.hostname.replace('8081', '3002')}/api/trpc`;
+  // Use window.ENV for browser, fallback to localhost for dev
+  if (typeof window !== 'undefined' && window.ENV && window.ENV.SEMANTIC_FLOW_API_URL) {
+    return window.ENV.SEMANTIC_FLOW_API_URL;
   }
-  // Fallback for non-browser environments
-  return 'http://localhost:3002/api/trpc';
+  // For server-side Node.js, you can add process.env support if needed
+  return 'http://localhost:3001/api/trpc';
 };
 
 // This client is for use outside of React components

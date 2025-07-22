@@ -1,0 +1,329 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="jest tests" tests="82" failures="10" errors="0" time="46.465">
+  <testsuite name="E2E: UI Flows" errors="0" failures="2" skipped="0" timestamp="2025-07-21T20:06:45" time="10.597" tests="2">
+    <testcase classname="E2E: UI Flows switches theme" name="E2E: UI Flows switches theme" time="0.001">
+      <failure>page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:8081/
+Call log:
+  - navigating to &quot;http://localhost:8081/&quot;, waiting until &quot;load&quot;
+
+    at Object.goto (/workspaces/semantic_flow/tests/e2e/ui/ui-flows.e2e.test.js:11:16)</failure>
+    </testcase>
+    <testcase classname="E2E: UI Flows handles navigation and error boundaries" name="E2E: UI Flows handles navigation and error boundaries" time="0">
+      <failure>page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:8081/
+Call log:
+  - navigating to &quot;http://localhost:8081/&quot;, waiting until &quot;load&quot;
+
+    at Object.goto (/workspaces/semantic_flow/tests/e2e/ui/ui-flows.e2e.test.js:11:16)</failure>
+    </testcase>
+  </testsuite>
+  <testsuite name="E2E: Workflow Creation and Execution" errors="0" failures="2" skipped="0" timestamp="2025-07-21T20:06:56" time="0.708" tests="2">
+    <testcase classname="E2E: Workflow Creation and Execution creates a new workflow" name="E2E: Workflow Creation and Execution creates a new workflow" time="0">
+      <failure>page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:8081/
+Call log:
+  - navigating to &quot;http://localhost:8081/&quot;, waiting until &quot;load&quot;
+
+    at Object.goto (/workspaces/semantic_flow/tests/e2e/scenarios/workflow.e2e.test.js:11:16)</failure>
+    </testcase>
+    <testcase classname="E2E: Workflow Creation and Execution executes workflow and displays results" name="E2E: Workflow Creation and Execution executes workflow and displays results" time="0.001">
+      <failure>page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:8081/
+Call log:
+  - navigating to &quot;http://localhost:8081/&quot;, waiting until &quot;load&quot;
+
+    at Object.goto (/workspaces/semantic_flow/tests/e2e/scenarios/workflow.e2e.test.js:11:16)</failure>
+    </testcase>
+  </testsuite>
+  <testsuite name="ProviderSetup E2E" errors="0" failures="2" skipped="0" timestamp="2025-07-21T20:06:56" time="10.71" tests="2">
+    <testcase classname="ProviderSetup E2E renders provider setup and allows API key entry" name="ProviderSetup E2E renders provider setup and allows API key entry" time="1.05">
+      <failure>Error: Unable to find an element with the text: /Provider Setup/i. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+&lt;body&gt;
+  &lt;div&gt;
+    &lt;div
+      class=&quot;flex items-center justify-center p-8&quot;
+    &gt;
+      &lt;div
+        class=&quot;animate-spin h-8 w-8 border-b-2 border-white rounded-full&quot;
+      /&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/body&gt;
+    at waitForWrapper (/workspaces/semantic_flow/node_modules/@testing-library/dom/dist/wait-for.js:163:27)
+    at /workspaces/semantic_flow/node_modules/@testing-library/dom/dist/query-helpers.js:86:32
+    at Object.findByText (/workspaces/semantic_flow/tests/e2e/providerSetup.e2e.test.js:29:25)
+    at Promise.finally.completed (/workspaces/semantic_flow/node_modules/jest-circus/build/jestAdapterInit.js:1559:28)
+    at new Promise (&lt;anonymous&gt;)
+    at callAsyncCircusFn (/workspaces/semantic_flow/node_modules/jest-circus/build/jestAdapterInit.js:1499:10)
+    at _callCircusTest (/workspaces/semantic_flow/node_modules/jest-circus/build/jestAdapterInit.js:1009:40)
+    at _runTest (/workspaces/semantic_flow/node_modules/jest-circus/build/jestAdapterInit.js:949:3)
+    at _runTestsForDescribeBlock (/workspaces/semantic_flow/node_modules/jest-circus/build/jestAdapterInit.js:839:13)
+    at _runTestsForDescribeBlock (/workspaces/semantic_flow/node_modules/jest-circus/build/jestAdapterInit.js:829:11)
+    at run (/workspaces/semantic_flow/node_modules/jest-circus/build/jestAdapterInit.js:757:3)
+    at runAndTransformResultsToJestFormat (/workspaces/semantic_flow/node_modules/jest-circus/build/jestAdapterInit.js:1920:21)
+    at jestAdapter (/workspaces/semantic_flow/node_modules/jest-circus/build/runner.js:103:25)
+    at runTestInternal (/workspaces/semantic_flow/node_modules/jest-runner/build/index.js:297:22)
+    at runTest (/workspaces/semantic_flow/node_modules/jest-runner/build/index.js:365:13)</failure>
+    </testcase>
+    <testcase classname="ProviderSetup E2E shows error for invalid API key" name="ProviderSetup E2E shows error for invalid API key" time="1.019">
+      <failure>Error: Unable to find an element with the placeholder text of: /Enter API Key/i
+
+Ignored nodes: comments, script, style
+&lt;body&gt;
+  &lt;div&gt;
+    &lt;div
+      class=&quot;flex items-center justify-center p-8&quot;
+    &gt;
+      &lt;div
+        class=&quot;animate-spin h-8 w-8 border-b-2 border-white rounded-full&quot;
+      /&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/body&gt;
+    at waitForWrapper (/workspaces/semantic_flow/node_modules/@testing-library/dom/dist/wait-for.js:163:27)
+    at /workspaces/semantic_flow/node_modules/@testing-library/dom/dist/query-helpers.js:86:32
+    at Object.findByPlaceholderText (/workspaces/semantic_flow/tests/e2e/providerSetup.e2e.test.js:52:32)
+    at Promise.finally.completed (/workspaces/semantic_flow/node_modules/jest-circus/build/jestAdapterInit.js:1559:28)
+    at new Promise (&lt;anonymous&gt;)
+    at callAsyncCircusFn (/workspaces/semantic_flow/node_modules/jest-circus/build/jestAdapterInit.js:1499:10)
+    at _callCircusTest (/workspaces/semantic_flow/node_modules/jest-circus/build/jestAdapterInit.js:1009:40)
+    at _runTest (/workspaces/semantic_flow/node_modules/jest-circus/build/jestAdapterInit.js:949:3)
+    at _runTestsForDescribeBlock (/workspaces/semantic_flow/node_modules/jest-circus/build/jestAdapterInit.js:839:13)
+    at _runTestsForDescribeBlock (/workspaces/semantic_flow/node_modules/jest-circus/build/jestAdapterInit.js:829:11)
+    at run (/workspaces/semantic_flow/node_modules/jest-circus/build/jestAdapterInit.js:757:3)
+    at runAndTransformResultsToJestFormat (/workspaces/semantic_flow/node_modules/jest-circus/build/jestAdapterInit.js:1920:21)
+    at jestAdapter (/workspaces/semantic_flow/node_modules/jest-circus/build/runner.js:103:25)
+    at runTestInternal (/workspaces/semantic_flow/node_modules/jest-runner/build/index.js:297:22)
+    at runTest (/workspaces/semantic_flow/node_modules/jest-runner/build/index.js:365:13)</failure>
+    </testcase>
+  </testsuite>
+  <testsuite name="API Integration: Provider" errors="0" failures="1" skipped="0" timestamp="2025-07-21T20:07:07" time="5.381" tests="3">
+    <testcase classname="API Integration: Provider GET /api/providers returns provider configs" name="API Integration: Provider GET /api/providers returns provider configs" time="0.207">
+    </testcase>
+    <testcase classname="API Integration: Provider POST /api/providers updates provider config" name="API Integration: Provider POST /api/providers updates provider config" time="0.15">
+      <failure>Error: expect(received).toBe(expected) // Object.is equality
+
+Expected: 200
+Received: 500
+    at Object.toBe (/workspaces/semantic_flow/tests/integration/api/provider.integration.test.js:28:28)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)</failure>
+    </testcase>
+    <testcase classname="API Integration: Provider handles invalid provider config" name="API Integration: Provider handles invalid provider config" time="0.003">
+    </testcase>
+  </testsuite>
+  <testsuite name="E2E: Provider Setup and Security" errors="0" failures="2" skipped="0" timestamp="2025-07-21T20:07:12" time="0.491" tests="2">
+    <testcase classname="E2E: Provider Setup and Security sets up provider with valid API key" name="E2E: Provider Setup and Security sets up provider with valid API key" time="0">
+      <failure>Error: VITE_SITE_URL environment variable must be set to the Codespaces frontend URL (e.g. https://miniature-adventure-p777vrr5px4h595-8081.app.github.dev/)
+    at Object.&lt;anonymous&gt; (/workspaces/semantic_flow/tests/e2e/security/provider.e2e.test.js:13:13)</failure>
+    </testcase>
+    <testcase classname="E2E: Provider Setup and Security handles invalid API key gracefully" name="E2E: Provider Setup and Security handles invalid API key gracefully" time="0">
+      <failure>Error: VITE_SITE_URL environment variable must be set to the Codespaces frontend URL (e.g. https://miniature-adventure-p777vrr5px4h595-8081.app.github.dev/)
+    at Object.&lt;anonymous&gt; (/workspaces/semantic_flow/tests/e2e/security/provider.e2e.test.js:13:13)</failure>
+    </testcase>
+  </testsuite>
+  <testsuite name="UI Components" errors="0" failures="0" skipped="0" timestamp="2025-07-21T20:07:13" time="5.531" tests="8">
+    <testcase classname="UI Components renders Accordion" name="UI Components renders Accordion" time="0.006">
+    </testcase>
+    <testcase classname="UI Components renders AlertDialog" name="UI Components renders AlertDialog" time="0.002">
+    </testcase>
+    <testcase classname="UI Components renders Card" name="UI Components renders Card" time="0.009">
+    </testcase>
+    <testcase classname="UI Components renders Calendar" name="UI Components renders Calendar" time="0.036">
+    </testcase>
+    <testcase classname="UI Components renders Table" name="UI Components renders Table" time="0.003">
+    </testcase>
+    <testcase classname="UI Components renders Tabs" name="UI Components renders Tabs" time="0.002">
+    </testcase>
+    <testcase classname="UI Components renders Progress" name="UI Components renders Progress" time="0.004">
+    </testcase>
+    <testcase classname="UI Components renders Skeleton" name="UI Components renders Skeleton" time="0.002">
+    </testcase>
+  </testsuite>
+  <testsuite name="WorkflowBuilderPage E2E" errors="0" failures="0" skipped="0" timestamp="2025-07-21T20:07:19" time="3.1" tests="3">
+    <testcase classname="WorkflowBuilderPage E2E renders workflow builder and loads workflows" name="WorkflowBuilderPage E2E renders workflow builder and loads workflows" time="0.464">
+    </testcase>
+    <testcase classname="WorkflowBuilderPage E2E creates a new workflow node" name="WorkflowBuilderPage E2E creates a new workflow node" time="0.219">
+    </testcase>
+    <testcase classname="WorkflowBuilderPage E2E executes workflow and displays results" name="WorkflowBuilderPage E2E executes workflow and displays results" time="0.188">
+    </testcase>
+  </testsuite>
+  <testsuite name="API Integration: Workflow" errors="0" failures="1" skipped="0" timestamp="2025-07-21T20:07:22" time="0.435" tests="3">
+    <testcase classname="API Integration: Workflow GET /api/workflows returns list of workflows" name="API Integration: Workflow GET /api/workflows returns list of workflows" time="0.01">
+    </testcase>
+    <testcase classname="API Integration: Workflow POST /api/workflows creates a workflow" name="API Integration: Workflow POST /api/workflows creates a workflow" time="0.004">
+      <failure>Error: expect(received).toBe(expected) // Object.is equality
+
+Expected: 201
+Received: 500
+    at Object.toBe (/workspaces/semantic_flow/tests/integration/api/workflow.integration.test.js:25:28)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)</failure>
+    </testcase>
+    <testcase classname="API Integration: Workflow handles invalid workflow creation" name="API Integration: Workflow handles invalid workflow creation" time="0.002">
+    </testcase>
+  </testsuite>
+  <testsuite name="API Integration: User" errors="0" failures="0" skipped="0" timestamp="2025-07-21T20:07:22" time="0.176" tests="2">
+    <testcase classname="API Integration: User GET /api/user returns user info" name="API Integration: User GET /api/user returns user info" time="0.008">
+    </testcase>
+    <testcase classname="API Integration: User handles missing user" name="API Integration: User handles missing user" time="0">
+    </testcase>
+  </testsuite>
+  <testsuite name="ClearSessionButton" errors="0" failures="0" skipped="0" timestamp="2025-07-21T20:07:22" time="0.328" tests="3">
+    <testcase classname="ClearSessionButton renders and clears sessionStorage on click" name="ClearSessionButton renders and clears sessionStorage on click" time="0.026">
+    </testcase>
+    <testcase classname="NodePalette renders search input and clusters" name="NodePalette renders search input and clusters" time="0.115">
+    </testcase>
+    <testcase classname="SemanticNode renders with edit state for new node" name="SemanticNode renders with edit state for new node" time="0.023">
+    </testcase>
+  </testsuite>
+  <testsuite name="NodePalette" errors="0" failures="0" skipped="0" timestamp="2025-07-21T20:07:23" time="0.241" tests="3">
+    <testcase classname="NodePalette renders node clusters" name="NodePalette renders node clusters" time="0.143">
+    </testcase>
+    <testcase classname="NodePalette expands clusters on click" name="NodePalette expands clusters on click" time="0">
+    </testcase>
+    <testcase classname="NodePalette handles node drag events" name="NodePalette handles node drag events" time="0">
+    </testcase>
+  </testsuite>
+  <testsuite name="ProviderSettings" errors="0" failures="0" skipped="0" timestamp="2025-07-21T20:07:23" time="0.252" tests="3">
+    <testcase classname="ProviderSettings renders provider selection" name="ProviderSettings renders provider selection" time="0.022">
+    </testcase>
+    <testcase classname="ProviderSettings handles API key input" name="ProviderSettings handles API key input" time="0.001">
+    </testcase>
+    <testcase classname="ProviderSettings validates provider selection" name="ProviderSettings validates provider selection" time="0.01">
+    </testcase>
+  </testsuite>
+  <testsuite name="ProviderSettings" errors="0" failures="0" skipped="0" timestamp="2025-07-21T20:07:23" time="0.266" tests="1">
+    <testcase classname="ProviderSettings renders provider settings UI" name="ProviderSettings renders provider settings UI" time="0.062">
+    </testcase>
+  </testsuite>
+  <testsuite name="NodeTestingPanel" errors="0" failures="0" skipped="0" timestamp="2025-07-21T20:07:24" time="0.196" tests="1">
+    <testcase classname="NodeTestingPanel renders node testing panel UI" name="NodeTestingPanel renders node testing panel UI" time="0.057">
+    </testcase>
+  </testsuite>
+  <testsuite name="LabCanvas" errors="0" failures="0" skipped="0" timestamp="2025-07-21T20:07:24" time="0.156" tests="4">
+    <testcase classname="LabCanvas renders without crashing" name="LabCanvas renders without crashing" time="0.032">
+    </testcase>
+    <testcase classname="LabCanvas handles node drag and drop" name="LabCanvas handles node drag and drop" time="0.001">
+    </testcase>
+    <testcase classname="LabCanvas updates state on node connection" name="LabCanvas updates state on node connection" time="0.001">
+    </testcase>
+    <testcase classname="LabCanvas handles large workflow graphs" name="LabCanvas handles large workflow graphs" time="0">
+    </testcase>
+  </testsuite>
+  <testsuite name="ConfigurationModal" errors="0" failures="0" skipped="0" timestamp="2025-07-21T20:07:24" time="0.112" tests="1">
+    <testcase classname="ConfigurationModal renders configuration modal UI" name="ConfigurationModal renders configuration modal UI" time="0.009">
+    </testcase>
+  </testsuite>
+  <testsuite name="LabCanvas" errors="0" failures="0" skipped="0" timestamp="2025-07-21T20:07:24" time="0.144" tests="1">
+    <testcase classname="LabCanvas renders LabCanvas UI" name="LabCanvas renders LabCanvas UI" time="0.026">
+    </testcase>
+  </testsuite>
+  <testsuite name="ExportModal E2E" errors="0" failures="0" skipped="0" timestamp="2025-07-21T20:07:24" time="0.173" tests="2">
+    <testcase classname="ExportModal E2E renders export modal and allows format selection" name="ExportModal E2E renders export modal and allows format selection" time="0.016">
+    </testcase>
+    <testcase classname="ExportModal E2E handles export action" name="ExportModal E2E handles export action" time="0.002">
+    </testcase>
+  </testsuite>
+  <testsuite name="WorkflowExecutionEngine" errors="0" failures="0" skipped="0" timestamp="2025-07-21T20:07:24" time="0.097" tests="4">
+    <testcase classname="WorkflowExecutionEngine should not execute empty workflow" name="WorkflowExecutionEngine should not execute empty workflow" time="0.021">
+    </testcase>
+    <testcase classname="WorkflowExecutionEngine should prepare node input" name="WorkflowExecutionEngine should prepare node input" time="0.001">
+    </testcase>
+    <testcase classname="WorkflowExecutionEngine should get execution order" name="WorkflowExecutionEngine should get execution order" time="0">
+    </testcase>
+    <testcase classname="WorkflowExecutionEngine should test single node" name="WorkflowExecutionEngine should test single node" time="0.001">
+    </testcase>
+  </testsuite>
+  <testsuite name="SemanticNode" errors="0" failures="0" skipped="0" timestamp="2025-07-21T20:07:25" time="0.118" tests="2">
+    <testcase classname="SemanticNode renders with blank label" name="SemanticNode renders with blank label" time="0.011">
+    </testcase>
+    <testcase classname="SemanticNode calls update callback on edit" name="SemanticNode calls update callback on edit" time="0.001">
+    </testcase>
+  </testsuite>
+  <testsuite name="ExportModal" errors="0" failures="0" skipped="0" timestamp="2025-07-21T20:07:25" time="0.116" tests="1">
+    <testcase classname="ExportModal renders ExportModal UI" name="ExportModal renders ExportModal UI" time="0.006">
+    </testcase>
+  </testsuite>
+  <testsuite name="Theme Components" errors="0" failures="0" skipped="0" timestamp="2025-07-21T20:07:25" time="0.118" tests="1">
+    <testcase classname="Theme Components renders ThemeProvider and ThemeToggle" name="Theme Components renders ThemeProvider and ThemeToggle" time="0.006">
+    </testcase>
+  </testsuite>
+  <testsuite name="Provider Integration" errors="0" failures="0" skipped="0" timestamp="2025-07-21T20:07:25" time="0.059" tests="2">
+    <testcase classname="Provider Integration gets and updates provider config" name="Provider Integration gets and updates provider config" time="0">
+    </testcase>
+    <testcase classname="Provider Integration tests provider connection" name="Provider Integration tests provider connection" time="0">
+    </testcase>
+  </testsuite>
+  <testsuite name="GraphSchema" errors="0" failures="0" skipped="0" timestamp="2025-07-21T20:07:25" time="0.064" tests="2">
+    <testcase classname="GraphSchema should define schema version" name="GraphSchema should define schema version" time="0.001">
+    </testcase>
+    <testcase classname="GraphSchema should define port types" name="GraphSchema should define port types" time="0.001">
+    </testcase>
+  </testsuite>
+  <testsuite name="exportUtils" errors="0" failures="0" skipped="0" timestamp="2025-07-21T20:07:25" time="0.163" tests="4">
+    <testcase classname="exportUtils exports workflow as JSON" name="exportUtils exports workflow as JSON" time="0.001">
+    </testcase>
+    <testcase classname="exportUtils exports workflow as Markdown" name="exportUtils exports workflow as Markdown" time="0.065">
+    </testcase>
+    <testcase classname="exportUtils exports workflow as YAML" name="exportUtils exports workflow as YAML" time="0.001">
+    </testcase>
+    <testcase classname="utils cn merges class names" name="utils cn merges class names" time="0.002">
+    </testcase>
+  </testsuite>
+  <testsuite name="exportUtils.js" errors="0" failures="0" skipped="0" timestamp="2025-07-21T20:07:25" time="0.056" tests="4">
+    <testcase classname="exportUtils.js exports workflow as JSON" name="exportUtils.js exports workflow as JSON" time="0.001">
+    </testcase>
+    <testcase classname="exportUtils.js exports workflow as YAML" name="exportUtils.js exports workflow as YAML" time="0.001">
+    </testcase>
+    <testcase classname="exportUtils.js exports workflow as Markdown" name="exportUtils.js exports workflow as Markdown" time="0">
+    </testcase>
+    <testcase classname="exportUtils.js exports workflow as XML" name="exportUtils.js exports workflow as XML" time="0.001">
+    </testcase>
+  </testsuite>
+  <testsuite name="Ontology" errors="0" failures="0" skipped="0" timestamp="2025-07-21T20:07:25" time="0.054" tests="1">
+    <testcase classname="Ontology should define semantic node types" name="Ontology should define semantic node types" time="0.001">
+    </testcase>
+  </testsuite>
+  <testsuite name="PromptingEngine" errors="0" failures="0" skipped="0" timestamp="2025-07-21T20:07:25" time="0.052" tests="1">
+    <testcase classname="PromptingEngine converts text to workflow" name="PromptingEngine converts text to workflow" time="0.001">
+    </testcase>
+  </testsuite>
+  <testsuite name="SECURITY_CONFIG" errors="0" failures="0" skipped="0" timestamp="2025-07-21T20:07:25" time="0.06" tests="3">
+    <testcase classname="SECURITY_CONFIG should use session storage and encryption" name="SECURITY_CONFIG should use session storage and encryption" time="0.001">
+    </testcase>
+    <testcase classname="SECURITY_CONFIG should not store API keys in database" name="SECURITY_CONFIG should not store API keys in database" time="0.001">
+    </testcase>
+    <testcase classname="SECURITY_CONFIG should clear API keys on logout" name="SECURITY_CONFIG should clear API keys on logout" time="0">
+    </testcase>
+  </testsuite>
+  <testsuite name="Workflow Integration" errors="0" failures="0" skipped="0" timestamp="2025-07-21T20:07:26" time="0.063" tests="1">
+    <testcase classname="Workflow Integration creates, updates, and deletes a workflow" name="Workflow Integration creates, updates, and deletes a workflow" time="0.001">
+    </testcase>
+  </testsuite>
+  <testsuite name="env-config" errors="0" failures="0" skipped="0" timestamp="2025-07-21T20:07:26" time="0.083" tests="1">
+    <testcase classname="env-config should set window.ENV variables" name="env-config should set window.ENV variables" time="0.001">
+    </testcase>
+  </testsuite>
+  <testsuite name="graphSchema.js" errors="0" failures="0" skipped="0" timestamp="2025-07-21T20:07:26" time="0.068" tests="4">
+    <testcase classname="graphSchema.js validates a correct node" name="graphSchema.js validates a correct node" time="0.001">
+    </testcase>
+    <testcase classname="graphSchema.js invalidates an incorrect node" name="graphSchema.js invalidates an incorrect node" time="0.001">
+    </testcase>
+    <testcase classname="graphSchema.js validates a correct workflow" name="graphSchema.js validates a correct workflow" time="0">
+    </testcase>
+    <testcase classname="graphSchema.js invalidates an incorrect workflow" name="graphSchema.js invalidates an incorrect workflow" time="0.001">
+    </testcase>
+  </testsuite>
+  <testsuite name="API Integration" errors="0" failures="0" skipped="0" timestamp="2025-07-21T20:07:26" time="0.057" tests="3">
+    <testcase classname="API Integration should list workflows for demo user" name="API Integration should list workflows for demo user" time="0.001">
+    </testcase>
+    <testcase classname="API Integration should get provider config" name="API Integration should get provider config" time="0">
+    </testcase>
+    <testcase classname="API Integration should execute workflow" name="API Integration should execute workflow" time="0">
+    </testcase>
+  </testsuite>
+  <testsuite name="ontology.js" errors="0" failures="0" skipped="0" timestamp="2025-07-21T20:07:26" time="0.054" tests="2">
+    <testcase classname="ontology.js maps node types to clusters" name="ontology.js maps node types to clusters" time="0">
+    </testcase>
+    <testcase classname="ontology.js handles error nodes" name="ontology.js handles error nodes" time="0">
+    </testcase>
+  </testsuite>
+</testsuites>

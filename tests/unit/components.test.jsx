@@ -1,0 +1,56 @@
+import React from 'react';
+import { render, screen, fireEvent } from '@testing-library/react';
+import '@testing-library/jest-dom';
+import ClearSessionButton from '../../src/components/ClearSessionButton.jsx';
+import NodePalette from '../../src/components/NodePalette.jsx';
+import SemanticNode from '../../src/components/SemanticNode.jsx';
+
+// ClearSessionButton
+describe('ClearSessionButton', () => {
+  it('renders and clears sessionStorage on click', () => {
+    sessionStorage.setItem('openai_api_key', 'test-key');
+    render(<ClearSessionButton onSessionCleared={() => {}} />);
+    fireEvent.click(screen.getByRole('button'));
+    expect(sessionStorage.getItem('openai_api_key')).toBeNull();
+  });
+});
+
+// NodePalette
+describe('NodePalette', () => {
+  it('renders search input and clusters', () => {
+    const { ReactFlowProvider } = require('reactflow');
+    render(
+      <ReactFlowProvider>
+        <NodePalette onNodeDragStart={() => {}} />
+      </ReactFlowProvider>
+    );
+    expect(screen.getByPlaceholderText(/search/i)).toBeInTheDocument();
+  });
+});
+
+// SemanticNode
+describe('SemanticNode', () => {
+    it('renders with edit state for new node', () => {
+      const { ReactFlowProvider } = require('reactflow');
+      render(
+        <ReactFlowProvider>
+          <SemanticNode
+            id="blank-1"
+            data={{
+              isNew: true,
+              label: 'Blank Node',
+              type: 'UTIL-BLANK',
+              content: '',
+              metadata: {},
+              ports: {},
+              config: {}
+            }}
+            isConnectable={true}
+            selected={false}
+            onNodeUpdate={() => {}}
+          />
+        </ReactFlowProvider>
+      );
+      expect(screen.getByTestId('semantic-node')).toBeInTheDocument();
+    });
+});

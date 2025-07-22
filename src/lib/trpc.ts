@@ -1,3 +1,11 @@
+// Add type declaration for window.ENV
+declare global {
+  interface Window {
+    ENV?: {
+      SEMANTIC_FLOW_API_URL?: string;
+    };
+  }
+}
 import { createTRPCReact } from '@trpc/react-query';
 import { createTRPCClient, httpBatchLink } from '@trpc/client';
 import type { AppRouter } from '../../server/src/routers/index';
@@ -7,15 +15,11 @@ export const trpc = createTRPCReact<AppRouter>();
 
 // Get API URL - using hardcoded value for now
 const getApiUrl = () => {
-  // In Codespaces, use localhost instead of external URL
-  if (typeof window !== 'undefined') {
-    // Check if we're in Codespaces
-    if (window.location.hostname.includes('app.github.dev')) {
-      return 'http://localhost:3002/api/trpc';
-    }
-    return `${window.location.protocol}//${window.location.hostname.replace('8081', '3002')}/api/trpc`;
+  // Use window.ENV for browser, fallback to localhost for dev
+  if (typeof window !== 'undefined' && window.ENV && window.ENV.SEMANTIC_FLOW_API_URL) {
+    return window.ENV.SEMANTIC_FLOW_API_URL;
   }
-  return 'http://localhost:3002/api/trpc';
+  return 'http://localhost:3001/api/trpc';
 };
 
 // Create the tRPC client

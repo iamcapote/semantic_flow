@@ -14,6 +14,8 @@ export const NodeTestingPanel = ({ node, onTestResult }) => {
   const [selectedProvider, setSelectedProvider] = useState('');
   const [selectedModel, setSelectedModel] = useState('');
   const { toast } = useToast();
+  // Import tRPC client
+  const { trpcClient } = require('../lib/trpc-vanilla');
 
   const handleTest = async () => {
     if (!testInput.trim()) {
@@ -24,23 +26,50 @@ export const NodeTestingPanel = ({ node, onTestResult }) => {
       });
       return;
     }
-
+    if (!selectedProvider || !selectedModel) {
+      toast({
+        title: "Error",
+        description: "Select provider and model",
+        variant: "destructive"
+      });
+      return;
+    }
+    // Get API key from sessionStorage only (browser-safe)
+    let apiKey = sessionStorage.getItem(`${selectedProvider}_api_key`);
+    if (!apiKey) {
+      toast({
+        title: "API Key Missing",
+        description: `Please configure your ${selectedProvider} API key in settings.
+        If you are self-hosting, set it in your .env and expose it to the frontend via window.ENV or a secure settings modal.`,
+        variant: "destructive"
+      });
+      return;
+    }
     setIsLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const result = {
-        success: true,
-        output: `Test result for "${testInput}" using ${selectedProvider}/${selectedModel}`,
-        executionTime: '1.2s',
-        tokenUsage: { prompt: 10, completion: 25, total: 35 }
-      };
-      
+      const result = await trpcClient.provider.testNode.mutate({
+        userId: 'demo-user',
+        nodeId: node?.id || 'test-node',
+        nodeType: node?.data?.type || 'semantic',
+        content: testInput,
+        providerId: selectedProvider,
+        model: selectedModel,
+        apiKey: apiKey,
+        parameters: {
+          temperature: 0.7,
+          max_tokens: 500,
+          top_p: 1,
+        },
+      });
       if (onTestResult) {
-        onTestResult(result);
+        onTestResult({
+          success: true,
+          output: result.result,
+          provider: result.provider,
+          model: result.model,
+          usage: result.usage
+        });
       }
-      
       toast({
         title: "Test Completed",
         description: "Node test executed successfully"
@@ -48,9 +77,12 @@ export const NodeTestingPanel = ({ node, onTestResult }) => {
     } catch (error) {
       toast({
         title: "Test Failed",
-        description: error.message,
+        description: error.message || 'Unknown error',
         variant: "destructive"
       });
+      if (onTestResult) {
+        onTestResult({ success: false, error: error.message });
+      }
     } finally {
       setIsLoading(false);
     }

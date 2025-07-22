@@ -13,19 +13,36 @@ const SemanticNode = ({ id, data, isConnectable, selected, onNodeUpdate }) => {
   const [isEditing, setIsEditing] = useState(!!data.isNew); // Open editor for new nodes
   const [editContent, setEditContent] = useState(data.content || '');
   
+  // Blank Node edit state
+  const isBlankNode = data.type === 'UTIL-BLANK';
+  const [editLabel, setEditLabel] = useState(data.label || 'Blank Node');
+  const [editTags, setEditTags] = useState(Array.isArray(data.metadata?.tags) ? data.metadata.tags : []);
+  const [editType, setEditType] = useState(data.type);
+  
   const nodeType = NODE_TYPES[data.type];
   const clusterColor = CLUSTER_COLORS[data.metadata?.cluster] || '#6B7280';
   
   const handleSaveEdit = () => {
-    // Update node content - this should be connected to state management
+    // Update node content and editable fields for Blank Node
     data.content = editContent;
+    if (isBlankNode) {
+      data.label = editLabel;
+      data.type = editType;
+      data.metadata.tags = editTags;
+    }
     data.metadata.updatedAt = new Date().toISOString();
     delete data.isNew; // Remove new flag after first edit
     setIsEditing(false);
-    
     // Call parent update if provided
     if (onNodeUpdate) {
-      onNodeUpdate(id, { content: editContent });
+      onNodeUpdate(id, {
+        content: editContent,
+        ...(isBlankNode && {
+          label: editLabel,
+          type: editType,
+          tags: editTags,
+        })
+      });
     }
   };
   
@@ -53,9 +70,8 @@ const SemanticNode = ({ id, data, isConnectable, selected, onNodeUpdate }) => {
   
   return (
     <Card 
-      className={`min-w-[200px] max-w-[300px] transition-all duration-200 bg-white dark:bg-gray-800 ${
-        selected ? 'ring-2 ring-blue-500 ring-offset-2' : ''
-      }`}
+      data-testid="semantic-node"
+      className={`min-w-[200px] max-w-[300px] transition-all duration-200 bg-white dark:bg-gray-800 ${selected ? 'ring-2 ring-blue-500 ring-offset-2' : ''}`}
       style={{ 
         borderLeftColor: clusterColor,
         borderLeftWidth: '4px'
@@ -155,6 +171,31 @@ const SemanticNode = ({ id, data, isConnectable, selected, onNodeUpdate }) => {
       <CardContent className="pt-0">
         {isEditing ? (
           <div className="space-y-2">
+            {isBlankNode && (
+              <div className="space-y-2">
+                <input
+                  type="text"
+                  value={editLabel}
+                  onChange={e => setEditLabel(e.target.value)}
+                  placeholder="Node name"
+                  className="w-full px-2 py-1 border rounded text-sm mb-1"
+                />
+                <input
+                  type="text"
+                  value={editType}
+                  onChange={e => setEditType(e.target.value)}
+                  placeholder="Node type (e.g. UTIL-BLANK)"
+                  className="w-full px-2 py-1 border rounded text-sm mb-1"
+                />
+                <input
+                  type="text"
+                  value={Array.isArray(editTags) ? editTags.join(', ') : ''}
+                  onChange={e => setEditTags(e.target.value.split(',').map(tag => tag.trim()).filter(Boolean))}
+                  placeholder="Tags (comma separated)"
+                  className="w-full px-2 py-1 border rounded text-sm mb-1"
+                />
+              </div>
+            )}
             <Textarea
               value={editContent}
               onChange={(e) => setEditContent(e.target.value)}
