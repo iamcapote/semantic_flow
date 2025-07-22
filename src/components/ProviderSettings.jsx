@@ -15,8 +15,8 @@ const defaultProviders = [
     providerId: 'openai',
     name: 'OpenAI',
     baseURL: 'https://api.openai.com/v1',
-    models: ['gpt-4o', 'gpt-4o-mini', 'gpt-4', 'o1-preview', 'o1-mini'],
-    defaultModel: 'gpt-4o',
+    models: ['venice-uncensored', 'mistral-31-24b', 'llama-3.2-3b'],
+    defaultModel: 'venice-uncensored',
     apiKey: '',
     isActive: true,
     description: 'Original ChatGPT models with highest quality reasoning'
@@ -25,8 +25,14 @@ const defaultProviders = [
     providerId: 'openrouter',
     name: 'OpenRouter',
     baseURL: 'https://openrouter.ai/api/v1',
-    models: ['openai/gpt-4o', 'anthropic/claude-3.5-sonnet', 'google/gemini-2.0-flash-exp', 'meta-llama/llama-3.1-405b-instruct'],
-    defaultModel: 'openai/gpt-4o',
+    models: [
+      'qwen/qwen3-235b-a22b-07-25:free',
+      'moonshotai/kimi-k2:free',
+      'cognitivecomputations/dolphin-mistral-24b-venice-edition:free',
+      'qwen/qwen3-235b-a22b:free',
+      'deepseek/deepseek-chat-v3-0324:free',
+    ],
+    defaultModel: 'qwen/qwen3-235b-a22b-07-25:free',
     apiKey: '',
     isActive: false,
     description: 'Access to multiple AI models through one API'
@@ -35,8 +41,8 @@ const defaultProviders = [
     providerId: 'venice',
     name: 'Venice AI',
     baseURL: 'https://api.venice.ai/api/v1',
-    models: ['gpt-4o', 'gpt-4o-mini', 'claude-3.5-sonnet'],
-    defaultModel: 'gpt-4o',
+    models: ['venice-uncensored', 'mistral-31-24b', 'llama-3.2-3b'],
+    defaultModel: 'venice-uncensored',
     apiKey: '',
     isActive: false,
     description: 'Privacy-focused AI inference with no data retention'

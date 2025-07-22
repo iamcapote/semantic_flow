@@ -92,11 +92,17 @@ const ProviderSetup = ({ userId, onComplete }) => {
           SecureKeyManager.storeApiKey(providerId, key);
         }
       });
+      providers.forEach(p => {
+        if (p.baseURL) {
+          sessionStorage.setItem(`base_url_${p.providerId}`, p.baseURL);
+        }
+      });
 
       // Store the active provider's API key in session storage for immediate use
       const activeProvider = providers.find(p => p.isActive);
       if (activeProvider && apiKeys[activeProvider.providerId]) {
         sessionStorage.setItem('openai_api_key', apiKeys[activeProvider.providerId]);
+        sessionStorage.setItem('active_provider', activeProvider.providerId);
       }
       
       toast({ title: "Success", description: "Provider settings saved." });

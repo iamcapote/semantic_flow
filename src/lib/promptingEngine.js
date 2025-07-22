@@ -302,7 +302,11 @@ Enhanced Content:`;
 
   // Helper: Get available providers for prompting
   async getAvailableProviders() {
-    return this.providers;
+    return this.providers.map(p => ({
+      ...p,
+      baseURL: sessionStorage.getItem(`base_url_${p.providerId}`) || p.baseURL,
+      isActive: sessionStorage.getItem('active_provider') === p.providerId,
+    }));
   }
 
   // Helper: Get recommended models for different prompting tasks

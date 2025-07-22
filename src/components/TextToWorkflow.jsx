@@ -26,7 +26,8 @@ const TextToWorkflow = ({ onWorkflowGenerated, apiKey }) => {
         const providers = await promptingEngine.getAvailableProviders();
         setAvailableProviders(providers);
         if (providers.length > 0) {
-          const activeProvider = providers.find(p => p.isActive) || providers[0];
+          const storedId = sessionStorage.getItem('active_provider');
+          const activeProvider = providers.find(p => p.providerId === storedId) || providers.find(p => p.isActive) || providers[0];
           setSelectedProvider(activeProvider.providerId);
           setSelectedModel(activeProvider.models[0]);
         }

@@ -40,7 +40,8 @@ const NodeEnhancementModal = ({ node, onNodeUpdate, trigger }) => {
         const providers = await promptingEngine.getAvailableProviders();
         setAvailableProviders(providers);
         if (providers.length > 0) {
-          const activeProvider = providers.find(p => p.isActive) || providers[0];
+          const storedId = sessionStorage.getItem('active_provider');
+          const activeProvider = providers.find(p => p.providerId === storedId) || providers.find(p => p.isActive) || providers[0];
           setSelectedProvider(activeProvider.providerId);
           
           // Use smaller model for node enhancement by default
