@@ -78,9 +78,14 @@ const ProviderSetup = ({ userId, onComplete }) => {
   };
 
   const handleApiKeyChange = (providerId, value) => {
-    setApiKeys(prev => ({ ...prev, [providerId]: value }));
-    const hasValidProvider = providers.some(p => apiKeys[p.providerId] && apiKeys[p.providerId].trim() !== '');
-    setIsValid(hasValidProvider);
+    setApiKeys(prev => {
+      const updated = { ...prev, [providerId]: value };
+      const hasValidProvider = providers.some(
+        p => updated[p.providerId] && updated[p.providerId].trim() !== ''
+      );
+      setIsValid(hasValidProvider);
+      return updated;
+    });
   };
 
   const handleSaveAndContinue = async () => {
@@ -240,7 +245,7 @@ const ProviderSetup = ({ userId, onComplete }) => {
     return <div className="text-red-500">Error loading provider config: {error.message}</div>;
   }
 
-  if (Array.isArray(initialProviders) && initialProviders.length === 0) {
+  if (Array.isArray(providers) && providers.length === 0) {
     return (
       <div className="text-red-500">No providers available. Please contact support.</div>
     );
@@ -321,7 +326,7 @@ const ProviderSetup = ({ userId, onComplete }) => {
                             size="sm"
                             variant="ghost"
                             onClick={() => handleTestProvider(provider.providerId, model)}
-                            disabled={!provider.apiKey || isSaving}
+                            disabled={!apiKeys[provider.providerId] || isSaving}
                             className="h-4 w-4 p-0 text-white/70 hover:text-white"
                           >
                             <TestTube2 className="h-3 w-3" />
@@ -331,7 +336,7 @@ const ProviderSetup = ({ userId, onComplete }) => {
                     </div>
                   </div>
 
-                  {provider.apiKey && (
+                  {apiKeys[provider.providerId] && (
                     <div className="pt-4 border-t border-white/10">
                       <Button
                         variant="outline"
