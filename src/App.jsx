@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import ChatPage from "./pages/ChatPage";
 import WorkflowBuilderPage from "./pages/WorkflowBuilderPage";
 import LandingPage from "./pages/LandingPage";
+import Win95Suite from "./pages/Win95Suite";
 import { SecureKeyManager } from './lib/security';
 
 const queryClient = new QueryClient();
@@ -62,6 +63,7 @@ const App = () => {
             <Routes>
               <Route path="/" element={hasApiKey ? <WorkflowBuilderPage /> : <LandingPage onApiKeySet={refreshApiKeyState} />} />
               <Route path="/chat" element={<ChatPage />} />
+              <Route path="/win95" element={<Win95Suite />} />
               <Route path="/setup" element={<LandingPage onApiKeySet={refreshApiKeyState} />} />
             </Routes>
           </BrowserRouter>
