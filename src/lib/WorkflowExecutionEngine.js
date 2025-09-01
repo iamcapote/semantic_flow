@@ -1,4 +1,5 @@
 import PromptingEngine from './promptingEngine.js';
+import { SecureKeyManager } from './security.js';
 
 class WorkflowExecutionEngine {
   constructor(userId, toast) {
@@ -13,9 +14,9 @@ class WorkflowExecutionEngine {
     }
 
     const providers = await this.engine.getAvailableProviders();
-    const activeProvider =
-      providers.find(p => sessionStorage.getItem(`${p.providerId}_api_key`)) || providers[0];
-    const apiKey = sessionStorage.getItem(`${activeProvider.providerId}_api_key`);
+    const activeId = sessionStorage.getItem('active_provider') || providers[0].providerId;
+    const activeProvider = providers.find(p => p.providerId === activeId) || providers[0];
+    const apiKey = SecureKeyManager.getApiKey(activeProvider.providerId);
     if (!apiKey) {
       throw new Error('No active provider configured. Please set up your AI providers in settings.');
     }

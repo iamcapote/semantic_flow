@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Sparkles, Loader2, CheckCircle, ArrowRight, RotateCcw } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import PromptingEngine from '@/lib/promptingEngine';
+import { SecureKeyManager } from '@/lib/security';
 
 const NodeEnhancementModal = ({ node, onNodeUpdate, trigger }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -39,7 +40,8 @@ const NodeEnhancementModal = ({ node, onNodeUpdate, trigger }) => {
         const providers = await promptingEngine.getAvailableProviders();
         setAvailableProviders(providers);
         if (providers.length > 0) {
-          const activeProvider = providers.find(p => p.isActive) || providers[0];
+          const storedId = sessionStorage.getItem('active_provider');
+          const activeProvider = providers.find(p => p.providerId === storedId) || providers.find(p => p.isActive) || providers[0];
           setSelectedProvider(activeProvider.providerId);
           
           // Use smaller model for node enhancement by default
@@ -65,7 +67,7 @@ const NodeEnhancementModal = ({ node, onNodeUpdate, trigger }) => {
     }
 
     // Get API key from session storage for selected provider
-    const providerApiKey = sessionStorage.getItem(`${selectedProvider}_api_key`);
+    const providerApiKey = SecureKeyManager.getApiKey(selectedProvider);
     if (!providerApiKey) {
       toast({
         title: "API Key Missing",
