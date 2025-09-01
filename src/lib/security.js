@@ -1,5 +1,6 @@
 // Security Configuration for Semantic-Logic AI Workflow Builder
 // Implements "Bring Your Own Key" (BYOK) model
+import CryptoJS from 'crypto-js';
 
 export const SECURITY_CONFIG = {
   // API Key Management
@@ -58,13 +59,18 @@ export class SecureKeyManager {
     });
   }
   
-  // Simple encryption for browser storage (not for production)
+  // Encrypt using AES
   static encrypt(text) {
-    return btoa(text); // Base64 encoding (replace with proper encryption)
+    return CryptoJS.AES.encrypt(text, this.ENCRYPTION_KEY).toString();
   }
-  
+
   static decrypt(encoded) {
-    return atob(encoded); // Base64 decoding (replace with proper decryption)
+    try {
+      const bytes = CryptoJS.AES.decrypt(encoded, this.ENCRYPTION_KEY);
+      return bytes.toString(CryptoJS.enc.Utf8);
+    } catch (e) {
+      return null;
+    }
   }
 }
 
