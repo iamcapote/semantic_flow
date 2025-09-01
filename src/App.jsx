@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import ChatPage from "./pages/ChatPage";
 import WorkflowBuilderPage from "./pages/WorkflowBuilderPage";
 import LandingPage from "./pages/LandingPage";
+import { SecureKeyManager } from './lib/security';
 
 const queryClient = new QueryClient();
 
@@ -18,7 +19,8 @@ const App = () => {
   useEffect(() => {
     // Check for API key on mount
     const checkApiKey = () => {
-      const storedApiKey = sessionStorage.getItem('openai_api_key');
+      const provider = sessionStorage.getItem('active_provider') || 'openai';
+      const storedApiKey = SecureKeyManager.getApiKey(provider);
       setHasApiKey(!!storedApiKey);
       setIsLoading(false);
     };
@@ -35,7 +37,8 @@ const App = () => {
   
   // Add a method to refresh the API key state
   const refreshApiKeyState = () => {
-    const storedApiKey = sessionStorage.getItem('openai_api_key');
+    const provider = sessionStorage.getItem('active_provider') || 'openai';
+    const storedApiKey = SecureKeyManager.getApiKey(provider);
     setHasApiKey(!!storedApiKey);
   };
 

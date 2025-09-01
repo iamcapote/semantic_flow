@@ -1,23 +1,28 @@
-# 🧠 Semantic Flow: The Context Engineering Canvas
 
-> **The Next Evolution in Context Engineering, Agentic Workflows, and System Design**  
-> Architect your imagination, design intelligent agents, and build complex interactive systems with a powerful, ontology-driven visual language. Turn your thoughts into structured, machine-readable schemas—ready for AI, code, or worldbuilding.
+# 🧠 Semantic Flow: The Live Context Engineering Canvas
 
-![Project Status](https://img.shields.io/badge/Status-Production%20Ready-green)
-![Version](https://img.shields.io/badge/Version-0.0.1-blue)
+> **Production-Ready, Live, and User-Focused**  
+> Architect, interact, and execute: build intelligent agentic workflows and systems with a powerful, ontology-driven visual language. 
+
+![Project Status](https://img.shields.io/badge/Status-Live%20Product-green)
+![Version](https://img.shields.io/badge/Version-1.0.0-blue)
 
 ---
 
-
 ## ✨ What is Semantic Flow?
 
-Semantic Flow is the first true **Context Engineering Canvas**—a creative environment for structuring complex ideas, systems, and worlds. It moves beyond prompt engineering and worldbuilding, empowering you to visually design, connect, and export intricate workflows using a rich semantic ontology. 
+Semantic Flow is a live, production-ready **Context Engineering Canvas**—a creative environment for structuring complex ideas, systems, and worlds. It empowers you to visually design, connect, and execute intricate workflows using a rich semantic ontology and direct AI integration.
 
-**Context Engineering** is the art and science of shaping, structuring, and managing the information context for agents, systems, and logic. With Semantic Flow, you architect not just prompts, but entire constructs, workflows, and schemas—turning imagination into machine-readable input.
-
-**The Canvas for Your Imagination:**
+**Key Features:**
+- **Three AI Providers:** Out-of-the-box support for OpenAI, OpenRouter, and Venice AI, with easy configuration and switching.
+- **Three Modes of AI Interaction:**
+  - Import workflows using AI API requests
+  - Interact and modify nodes with AI API requests
+  - Execute workflows with AI API inference
 - **Agentic Systems:** Design behaviors, interactions, and cognitive processes for AI agents and multi-agent worlds.
 - **Role-Playing & Scenario Design:** Create dynamic characters, rules, and logic for games, simulations, and collaborative storytelling.
+
+**Context Engineering** is the art and science of shaping, structuring, and managing the information context for agents, systems, and logic. With Semantic Flow, you architect not just prompts, but entire constructs, workflows, and schemas—turning imagination into machine-readable input.
 - **Code & Project Structuring:** Map out logic, architectures, and workflows for large codebases and technical projects.
 - **Schema Generation:** Instantly convert your thoughts into structured formats (JSON, YAML, XML, Markdown) for downstream use.
 
@@ -76,13 +81,13 @@ At the heart of Semantic Flow is a deep semantic ontology—organized into clust
 ## 🔐 Security & Privacy
 
 ### BYOK (Bring Your Own Key) Model
-- **No API Key Storage**: Your OpenAI keys never leave your browser session
+- **No API Key Storage**: Your API keys never leave your browser session
 - **Session-Only Persistence**: Keys cleared when you close the browser
-- **Local Database**: PostgreSQL bound to localhost only
 - **Encrypted Communication**: All API calls use HTTPS
+- **Provider Selection**: Choose your preferred AI provider once and the app remembers your choice for the session
 
 ### Data Handling
-- **Workflows**: Stored locally in PostgreSQL database
+- **Workflows**: Stored in your browser only
 - **Session Data**: Browser sessionStorage only
 - **Export Control**: You own and control all your data
 
@@ -157,41 +162,12 @@ npm run preview      # Preview production build
 npm run lint         # ESLint code checking
 ```
 
-#### Backend
-```bash
-cd server
-npm run dev:server   # Start tRPC development server (port 3001)
-# 4. Start development servers
-npx prisma migrate dev # Run database migrations
-```
-
-#### Database
-```bash
-# Start PostgreSQL container
-# Terminal 1: Frontend (Vite)
-  -e POSTGRES_PASSWORD=password \
-  -p 127.0.0.1:5432:5432 \
-  -d postgres
-```
-
-### Environment Variables
-```bash
-# server/.env
-DATABASE_URL="postgresql://postgres:password@localhost:5432/semantic_workflows"
-# Note: The database name 'semantic_workflows' is the default if not specified in the docker command.
-```
-
 ### Contributing
 1. Fork the repository
 2. Create your feature branch (`git checkout -b feature/amazing-feature`)
 3. Commit your changes (`git commit -m 'Add amazing feature'`)
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
-npm run dev
-
-# Terminal 2: Backend (tRPC + Fastify)
-cd server && npm run dev:server
-```
 
 #### Production Build
 ```bash
@@ -206,9 +182,7 @@ npm run preview
 
 ### Tech Stack
 - **Frontend:** React 18, Vite, Tailwind CSS, React Flow
-- **Backend:** Node.js, Fastify, tRPC, Prisma ORM
 - **AI Providers:** OpenAI, OpenRouter, Venice AI (Multi-provider support)
-- **Database:** PostgreSQL with Prisma ORM
 - **Security:** BYOK (Bring Your Own Key) model, session-only storage
 - **UI Components:** shadcn/ui, Radix UI
 - **State Management:** React Query (TanStack Query)
@@ -230,16 +204,7 @@ semantic_flow/
 │   │   ├── ontology.js           # 100+ semantic node definitions
 │   │   ├── graphSchema.js        # Workflow data structures
 │   │   ├── exportUtils.js        # Multi-format export
-│   │   └── trpc.js              # API client configuration
 │   └── integrations/             # External service integrations
-│       └── supabase/             # Database client (fallback)
-├── server/                       # Backend tRPC API server
-│   ├── src/
-│   │   ├── routers/              # API route definitions
-│   │   ├── context.ts            # Request context setup
-│   │   └── index.ts              # Server entry point
-│   ├── prisma/                   # Database schema & migrations
-│   └── package.json              # Backend dependencies
 └── public/                       # Static assets
 ```
 
@@ -249,70 +214,6 @@ semantic_flow/
 
 
 ## 🚀 API Reference
-
-### tRPC Endpoints
-
-#### Workflows
-```typescript
-// List all workflows
-workflow.list.useQuery()
-
-// Get specific workflow
-workflow.get.useQuery(workflowId)
-
-// Create new workflow
-workflow.create.useMutation({
-  title: string,
-  description?: string,
-  content: {
-    nodes: Node[],
-    edges: Edge[],
-    viewport: Viewport
-  }
-})
-
-// Update workflow
-workflow.update.useMutation({
-  id: string,
-  data: Partial<WorkflowData>
-})
-
-// Delete workflow
-workflow.delete.useMutation(workflowId)
-```
-
-#### AI Providers
-```typescript
-// Get user's provider configurations
-provider.getConfig.useQuery({ userId: string })
-
-// Update all provider configurations for a user
-provider.updateConfig.useMutation(ProviderConfig[])
-
-// Test a single node with a specific provider
-provider.testNode.useMutation(TestNodeInput)
-```
-
-#### Node Schema
-```typescript
-interface SemanticNode {
-  id: string
-  type: 'semantic'
-  position: { x: number, y: number }
-  data: {
-    type: string          // Node type code (e.g., 'PROP-STM')
-    label: string         // Display name
-    content: string       // User-entered content
-    metadata: {
-      cluster: string     // Ontological cluster
-      tags: string[]      // Semantic tags
-      color: string       // Visual color code
-    }
-  }
-}
-```
-
----
 
 ## 🛠️ Development
 
@@ -327,34 +228,6 @@ npm run preview      # Preview production build
 npm run lint         # ESLint code checking
 ```
 
-#### Backend
-```bash
-cd server
-npm run dev:server   # Start tRPC development server (port 3001)
-npx prisma studio    # Database admin interface
-npx prisma migrate dev # Run database migrations
-```
-
-#### Database
-```bash
-# Start PostgreSQL container
-docker run --name semantic-workflows-db \
-  -e POSTGRES_PASSWORD=password \
-  -p 127.0.0.1:5432:5432 \
-  -d postgres
-```
-
-### Environment Variables
-```bash
-# server/.env
-DATABASE_URL="postgresql://postgres:password@localhost:5432/semantic_workflows"
-# Note: The database name 'semantic_workflows' is the default if not specified in the docker command.
-```
-
-### Contributing
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
@@ -368,13 +241,11 @@ DATABASE_URL="postgresql://postgres:password@localhost:5432/semantic_workflows"
 A: This has been fixed with responsive typography scaling (text-4xl sm:text-5xl md:text-6xl lg:text-7xl)
 
 **Q: I get an infinite loading loop when setting up AI providers**
-A: This has been resolved by disabling automatic tRPC queries and improving error handling in the provider setup
+A: This has been resolved by improving provider configuration in the provider setup
 
 **Q: The landing page doesn't appear**
 A: Clear your browser's sessionStorage: `sessionStorage.clear(); location.reload()`
 
-**Q: Backend server won't start**
-A: Ensure PostgreSQL is running and the DATABASE_URL is correct
 
 **Q: Node palette appears white in dark mode**
 A: Hard refresh your browser (Ctrl+F5) to reload the CSS
@@ -385,12 +256,6 @@ A: Verify your AI provider API key is valid and has sufficient credits
 **Q: Models like 'gpt-4-turbo' don't work**
 A: These models have been deprecated. Use the new defaults (GPT-4o, GPT-4o-mini) or enter custom model names
 
-### Server Status Check
-```bash
-# Check if services are running
-curl http://localhost:3001/health  # Backend health
-curl http://localhost:8081         # Frontend status
-```
 
 ---
 
@@ -404,7 +269,6 @@ This project is licensed under the GNU Affero General Public License v3.0 (AGPL-
 
 - **React Flow** for the incredible workflow canvas library
 - **shadcn/ui** for the beautiful component system
-- **tRPC** for type-safe API development
 - **Tailwind CSS** for the utility-first styling approach
 - **OpenAI** for the powerful language models
 

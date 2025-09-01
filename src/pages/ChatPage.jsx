@@ -5,6 +5,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import ReactMarkdown from 'react-markdown'
 import SettingsModal from '@/components/SettingsModal';
 import { Loader2, PlusCircle, ChevronLeft, ChevronRight, Search } from "lucide-react"
+import { SecureKeyManager } from '@/lib/security';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { toast } from "@/components/ui/use-toast"
@@ -12,7 +13,10 @@ import { useNavigate } from 'react-router-dom';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 
 const ChatPage = () => {
-  const [apiKey, setApiKey] = useState(() => sessionStorage.getItem('openai_api_key') || '');
+  const [apiKey, setApiKey] = useState(() => {
+    const provider = sessionStorage.getItem('active_provider') || 'openai';
+    return SecureKeyManager.getApiKey(provider) || '';
+  });
   const [systemMessage, setSystemMessage] = useState(() => sessionStorage.getItem('system_message') || 'You are a helpful assistant.');
   const [conversations, setConversations] = useState(() => {
     const savedConversations = sessionStorage.getItem('conversations');
@@ -43,7 +47,8 @@ const ChatPage = () => {
   }, [conversations]);
 
   useEffect(() => {
-    sessionStorage.setItem('openai_api_key', apiKey);
+    const provider = sessionStorage.getItem('active_provider') || 'openai';
+    SecureKeyManager.storeApiKey(provider, apiKey);
     sessionStorage.setItem('system_message', systemMessage);
     sessionStorage.setItem('conversations', JSON.stringify(conversations));
   }, [apiKey, systemMessage, conversations]);
