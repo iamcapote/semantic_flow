@@ -5,6 +5,9 @@ import ClearSessionButton from '../../src/components/ClearSessionButton.jsx';
 import NodePalette from '../../src/components/NodePalette.jsx';
 import SemanticNode from '../../src/components/SemanticNode.jsx';
 
+// Mock NodeEnhancementModal to avoid async useEffect state updates during simple render tests
+jest.mock('../../src/components/NodeEnhancementModal.jsx', () => () => null);
+
 // ClearSessionButton
 describe('ClearSessionButton', () => {
   it('renders and clears sessionStorage on click', () => {

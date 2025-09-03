@@ -1,0 +1,642 @@
+/* Windows 95-plus styling for Semantic Flow Builder */
+
+:root {
+  --w95-background: #008080;
+  --w95-face: #C0C0C0;
+  --w95-highlight: #FFFFFF;
+  --w95-shadow: #808080;
+  --w95-dark-shadow: #404040;
+  --w95-title: #000080;
+  --w95-text: #000000;
+  --w95-accent: #1084d0;
+  --w95-sunken: #FFFFFF;
+  --w95-grid-primary: #BBD4E5;
+  --w95-grid-secondary: #DDEAF2;
+  --w95-node-title: #000080;
+  --w95-node-body: #FFFFFF;
+}
+
+/* Window Structure */
+.w95-window {
+  background-color: var(--w95-background);
+  color: var(--w95-text);
+  font-family: 'MS Sans Serif', Tahoma, Arial, sans-serif;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.w95-title-bar {
+  background-color: var(--w95-title);
+  color: var(--w95-highlight);
+  padding: 4px 6px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: bold;
+  font-size: 14px;
+  user-select: none;
+}
+
+.w95-title {
+  flex-grow: 1;
+}
+
+.w95-buttons {
+  display: flex;
+  gap: 2px;
+}
+
+.w95-minimize, .w95-maximize, .w95-close {
+  width: 16px;
+  height: 16px;
+  background-color: var(--w95-face);
+  border: 1px solid var(--w95-shadow);
+  box-shadow: inset 1px 1px 0 var(--w95-highlight), inset -1px -1px 0 var(--w95-dark-shadow);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  cursor: pointer;
+  color: var(--w95-text);
+}
+
+.w95-menu-bar {
+  background-color: var(--w95-face);
+  border: 1px solid var(--w95-shadow);
+  padding: 4px 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.w95-button {
+  background-color: var(--w95-face);
+  border: 1px solid var(--w95-shadow);
+  box-shadow: inset 1px 1px 0 var(--w95-highlight), inset -1px -1px 0 var(--w95-dark-shadow);
+  padding: 4px 10px;
+  cursor: pointer;
+  color: var(--w95-text);
+  font-size: 13px;
+  min-width: 80px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.w95-button:active {
+  box-shadow: inset -1px -1px 0 var(--w95-highlight), inset 1px 1px 0 var(--w95-dark-shadow);
+}
+
+.w95-button:disabled {
+  color: var(--w95-shadow);
+  cursor: not-allowed;
+}
+
+.w95-button.w95-block {
+  display: block;
+  width: 100%;
+  margin-bottom: 6px;
+}
+
+.w95-button.w95-danger {
+  background-color: #f0c0c0;
+}
+
+.w95-spacer {
+  flex-grow: 1;
+}
+
+.w95-zoom-display {
+  padding: 4px 10px;
+  background-color: var(--w95-sunken);
+  border: 1px solid var(--w95-shadow);
+  font-size: 13px;
+}
+
+/* Content Area Layout */
+.w95-content-area {
+  display: grid;
+  grid-template-columns: 300px 1fr 220px;
+  gap: 8px;
+  padding: 8px;
+  flex-grow: 1;
+  /* Full height minus title and menu bars */
+  height: calc(100vh - 96px);
+  overflow: hidden;
+}
+
+.w95-panel {
+  background-color: var(--w95-face);
+  border: 2px solid var(--w95-shadow);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.w95-panel-title {
+  background-color: var(--w95-title);
+  color: var(--w95-highlight);
+  padding: 4px 10px;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.w95-panel-content {
+  padding: 8px;
+  overflow-y: auto;
+  flex-grow: 1;
+}
+
+/* Palette Panel */
+.w95-palette {
+  min-width: 300px;
+}
+
+.w95-search {
+  width: 100%;
+  padding: 6px 8px;
+  border: 2px solid var(--w95-shadow);
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+
+.w95-tools-section {
+  background-color: var(--w95-sunken);
+  border: 1px solid var(--w95-shadow);
+  padding: 8px;
+  margin-bottom: 10px;
+}
+
+.w95-tools-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+.w95-tool-button {
+  background-color: var(--w95-face);
+  border: 1px solid var(--w95-shadow);
+  box-shadow: inset 1px 1px 0 var(--w95-highlight), inset -1px -1px 0 var(--w95-dark-shadow);
+  padding: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  text-align: center;
+}
+
+.w95-tool-button.w95-active {
+  background-color: #E6E6E6;
+  box-shadow: inset -1px -1px 0 var(--w95-highlight), inset 1px 1px 0 var(--w95-dark-shadow);
+}
+
+.w95-ai-section {
+  background-color: var(--w95-sunken);
+  border: 1px solid var(--w95-shadow);
+  padding: 8px;
+  margin-bottom: 10px;
+}
+
+.w95-section-header {
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+
+.w95-textarea {
+  width: 100%;
+  height: 60px;
+  resize: none;
+  padding: 6px;
+  border: 2px solid var(--w95-shadow);
+  font-family: 'MS Sans Serif', Tahoma, Arial, sans-serif;
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+
+.w95-generate {
+  margin-left: auto;
+  display: block;
+}
+
+.w95-swatches-section {
+  background-color: var(--w95-sunken);
+  border: 1px solid var(--w95-shadow);
+  padding: 8px;
+  overflow-y: auto;
+  flex-grow: 1;
+}
+
+.w95-cluster {
+  margin-bottom: 6px;
+}
+
+.w95-cluster-button {
+  width: 100%;
+  text-align: left;
+  padding: 6px 8px;
+  background-color: var(--w95-face);
+  border: 1px solid var(--w95-shadow);
+  box-shadow: inset -1px -1px 0 var(--w95-highlight), inset 1px 1px 0 var(--w95-dark-shadow);
+  cursor: pointer;
+  margin-bottom: 4px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.w95-cluster-button.w95-active {
+  background-color: #E6E6E6;
+}
+
+.w95-cluster-count {
+  font-size: 11px;
+  margin-left: 6px;
+}
+
+.w95-node-list {
+  margin-left: 8px;
+  margin-bottom: 8px;
+}
+
+.w95-node-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 1px solid var(--w95-shadow);
+  padding: 6px;
+  margin-bottom: 4px;
+  background-color: #F6F6F6;
+  cursor: grab;
+}
+
+.w95-node-item-content {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.w95-node-item-tags {
+  display: flex;
+}
+
+.w95-tag {
+  font-size: 10px;
+  border: 1px solid var(--w95-shadow);
+  padding: 0 4px;
+  background-color: #EEE;
+  margin-left: 4px;
+}
+
+.w95-brush-info {
+  margin-top: 20px;
+  border: 1px solid var(--w95-shadow);
+  padding: 8px;
+}
+
+.w95-brush-title {
+  background-color: var(--w95-title);
+  color: var(--w95-highlight);
+  margin: -8px -8px 8px -8px;
+  padding: 2px 8px;
+  font-weight: bold;
+}
+
+.w95-brush-text {
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+/* Canvas Panel */
+.w95-canvas {
+  position: relative;
+  flex-grow: 1;
+}
+
+.w95-flow-canvas {
+  background-color: var(--w95-sunken);
+  width: 100%;
+  /* Fill panel minus title height */
+  height: calc(100% - 28px);
+  position: relative;
+  z-index: 1;
+}
+
+.w95-flow-canvas .react-flow__node {
+  font-family: 'MS Sans Serif', Tahoma, Arial, sans-serif;
+  cursor: move !important;
+}
+
+/* Make sure nodes can be dragged */
+.react-flow__node {
+  cursor: grab !important;
+}
+
+.react-flow__node.selected {
+  cursor: grabbing !important;
+}
+
+/* Improve the grid background */
+.w95-grid-background {
+  background-size: 20px 20px;
+  background-image: linear-gradient(to right, var(--w95-grid-secondary) 1px, transparent 1px),
+                    linear-gradient(to bottom, var(--w95-grid-secondary) 1px, transparent 1px);
+  background-color: var(--w95-sunken);
+  z-index: 0;
+}
+
+.react-flow__background path {
+  stroke: var(--w95-grid-primary);
+  stroke-width: 1px;
+}
+
+.w95-flow-controls {
+  background-color: var(--w95-face) !important;
+  border: 1px solid var(--w95-shadow) !important;
+  position: absolute !important;
+  top: 8px !important;
+  left: 8px !important;
+  width: auto !important;
+  display: inline-flex !important;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px;
+}
+
+.w95-flow-minimap {
+  background-color: var(--w95-face) !important;
+  border: 1px solid var(--w95-shadow) !important;
+  position: absolute !important;
+  right: 8px !important;
+  bottom: 40px !important; /* leave space for status bar */
+  width: 180px !important;
+  height: 120px !important;
+  opacity: 0.95;
+}
+
+/* Compact in-canvas toolbar (Panel-based) */
+.w95-compact-toolbar {
+  position: absolute !important;
+  top: 8px !important;
+  right: 8px !important;
+  z-index: 3;
+}
+
+.w95-toolbar {
+  background-color: var(--w95-face);
+  border: 1px solid var(--w95-shadow);
+  box-shadow: inset 1px 1px 0 var(--w95-highlight), inset -1px -1px 0 var(--w95-dark-shadow);
+  padding: 4px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.w95-toolbar.collapsed {
+  padding: 0;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+.w95-toolbar-row {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.w95-toolbar-indicator {
+  min-width: 56px;
+  height: 24px;
+  padding: 0 8px;
+  background-color: var(--w95-sunken);
+  border: 1px solid var(--w95-shadow);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+}
+
+.w95-toolbar-pill {
+  background-color: var(--w95-face);
+  border: 1px solid var(--w95-shadow);
+  box-shadow: inset 1px 1px 0 var(--w95-highlight), inset -1px -1px 0 var(--w95-dark-shadow);
+  padding: 2px 8px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.w95-toolbar-button.locked {
+  background-color: #e4e4e4;
+}
+
+.w95-toolbar-button {
+  width: 32px;
+  height: 24px;
+  background-color: var(--w95-face);
+  border: 1px solid var(--w95-shadow);
+  box-shadow: inset 1px 1px 0 var(--w95-highlight), inset -1px -1px 0 var(--w95-dark-shadow);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.w95-toolbar-button:active {
+  box-shadow: inset -1px -1px 0 var(--w95-highlight), inset 1px 1px 0 var(--w95-dark-shadow);
+}
+
+.w95-flow-status-bar {
+  position: absolute;
+  bottom: 0;
+  left: 8px;
+  right: 8px;
+  height: 28px;
+  background-color: var(--w95-face);
+  border: 1px solid var(--w95-shadow);
+  box-shadow: inset 1px 1px 0 var(--w95-highlight), inset -1px -1px 0 var(--w95-dark-shadow);
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  font-size: 12px;
+  pointer-events: none; /* don’t block canvas interactions */
+  z-index: 0;
+}
+
+/* Keep React Flow defaults; optionally raise z-index without altering positioning */
+.w95-flow-canvas .react-flow__renderer,
+.w95-flow-canvas .react-flow__pane,
+.w95-flow-canvas .react-flow__nodes,
+.w95-flow-canvas .react-flow__edges,
+.w95-flow-canvas .react-flow__controls,
+.w95-flow-canvas .react-flow__minimap {
+  z-index: 2;
+}
+
+/* Canvas title shouldn’t steal events from the canvas area below */
+.w95-canvas > .w95-panel-title {
+  pointer-events: none;
+}
+
+.w95-flow-status-bar span {
+  margin-right: 16px;
+}
+
+/* Inspector Panel */
+.w95-inspector {
+  width: 220px;
+}
+
+.w95-inspector-content {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.w95-inspector-header {
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+
+.w95-highlight {
+  color: var(--w95-accent);
+}
+
+.w95-form-group {
+  margin-bottom: 10px;
+}
+
+.w95-form-group label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 13px;
+}
+
+.w95-input {
+  width: 100%;
+  padding: 4px 6px;
+  border: 1px solid var(--w95-shadow);
+  box-shadow: inset -1px -1px 0 var(--w95-highlight), inset 1px 1px 0 var(--w95-shadow);
+  font-size: 13px;
+}
+
+.w95-form-section {
+  background-color: var(--w95-sunken);
+  border: 1px solid var(--w95-shadow);
+  padding: 8px;
+  margin-bottom: 10px;
+}
+
+.w95-checkbox-group {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.w95-checkbox {
+  width: 14px;
+  height: 14px;
+  border: 1px solid var(--w95-shadow);
+  background-color: var(--w95-sunken);
+  box-shadow: inset -1px -1px 0 var(--w95-highlight), inset 1px 1px 0 var(--w95-shadow);
+  cursor: pointer;
+}
+
+.w95-checkbox.w95-checked {
+  background-color: var(--w95-accent);
+}
+
+.w95-checkbox.w95-checked:after {
+  content: '✓';
+  color: white;
+  font-size: 10px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+}
+
+.w95-history-section {
+  background-color: var(--w95-sunken);
+  border: 1px solid var(--w95-shadow);
+  padding: 8px;
+  margin-bottom: 10px;
+}
+
+.w95-history-entry {
+  font-family: Consolas, 'Lucida Console', 'Courier New', monospace;
+  font-size: 12px;
+  margin-bottom: 2px;
+}
+
+.w95-action-buttons {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.w95-inspector-empty {
+  color: #808080;
+  font-style: italic;
+  font-size: 13px;
+}
+
+/* Status Bar */
+.w95-status-bar {
+  background-color: var(--w95-face);
+  border: 1px solid var(--w95-shadow);
+  box-shadow: inset 1px 1px 0 var(--w95-highlight), inset -1px -1px 0 var(--w95-dark-shadow);
+  padding: 4px 10px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  height: 24px;
+  font-size: 13px;
+}
+
+/* Node Styles */
+.semantic-node {
+  background-color: var(--w95-face);
+  border: 1px solid var(--w95-shadow);
+  box-shadow: 1px 1px 0 #000;
+  min-width: 200px;
+  max-width: 320px;
+}
+
+.semantic-node.selected {
+  box-shadow: 0 0 0 2px rgba(59,130,246,0.5);
+}
+
+.semantic-node-header {
+  background-color: var(--w95-node-title);
+  color: var(--w95-highlight);
+  padding: 4px 6px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.semantic-node-body {
+  padding: 6px;
+  background-color: #F5F5F5;
+}
+
+/* For smaller screens (disabled; app enforces desktop-only) */
+/*
+@media (max-width: 1200px) {
+  .w95-content-area { grid-template-columns: 250px 1fr 200px; }
+  .w95-palette { min-width: 250px; }
+  .w95-inspector { width: 200px; }
+}
+
+@media (max-width: 992px) {
+  .w95-content-area { grid-template-columns: 200px 1fr; }
+  .w95-palette { min-width: 200px; }
+  .w95-inspector { display: none; }
+}
+*/

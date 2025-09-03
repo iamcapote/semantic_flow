@@ -378,7 +378,7 @@ tag_groups
 
 list 
 
-​	
+​		
 
 show 
 
@@ -387,7 +387,7 @@ id
 
 create 
 
-​	
+​		
 
 update 
 
@@ -397,7 +397,7 @@ categories
 
 list 
 
-​	
+​		
 
 show 
 
@@ -407,7 +407,7 @@ uploads
 
 create 
 
-​	
+​		
 users			
 
 bookmarks 
@@ -440,151 +440,151 @@ username
 
 log_out 
 
-​	
+​		
 
 anonymize 
 
-​	
+​		
 
 suspend 
 
-​	
+​		
 
 delete 
 
-​	
+​		
 
 list 
 
-​	
+​		
 user_status			
 
 read 
 
-​	
+​		
 
 update 
 
-​	
+​		
 email			
 
 receive_emails 
 
-​	
+​		
 invites			
 
 create 
 
-​	
+​		
 badges			
 
 create 
 
-​	
+​		
 
 show 
 
-​	
+​		
 
 update 
 
-​	
+​		
 
 delete 
 
-​	
+​		
 
 list_user_badges 
 
-​	
+​		
 username
 
 assign_badge_to_user 
 
-​	
+​		
 username
 
 revoke_badge_from_user 
 
-​	
+​		
 groups			
 
 manage_groups 
 
-​	
+​		
 id
 
 administer_groups 
 
-​	
+​		
 search			
 
 show 
 
-​	
+​		
 q
 page
 
 query 
 
-​	
+​		
 term
 wordpress			
 
 publishing 
 
-​	
+​		
 
 commenting 
 
-​	
+​		
 
 discourse_connect 
 
-​	
+​		
 
 utilities 
 
-​	
+​		
 logs			
 
 messages 
 
-​	
+​		
 automations_trigger			
 
 post 
 
-​	
+​		
 context
 chat			
 
 create_message 
 
-​	
+​		
 chat_channel_id
 discourse_ai			
 
 search 
 
-​	
+​		
 
 stream_completion 
 
-​	
+​		
 
 update_personas 
 
-​	
+​		
 discourse_data_explorer			
 
 run_queries 
 
-​	
+​		
 id
 solved			
 
-​	
+​		
 
 ---
 
@@ -1476,3 +1476,21 @@ function uid() { return Math.random().toString(36).slice(2); }
 END of CODE Redesign TEMPLATE. 
 
 ---
+
+Implemented (v1) UI notes
+
+- Navigation
+  - Added Discourse (SSO‑gated) and Admin tabs to the main nav; also reachable from Win95 Suite via standard nav.
+  - Routes: /discourse (read‑only latest/topics), /admin (BYOK/provider config, feature toggles, import/export JSON).
+
+- Auth & Security
+  - Discourse SSO (Discourse Connect) via hub.bitwiki.org; secret remains server‑side only.
+  - Session cookie sf_session is httpOnly; sf_csrf is readable for double‑submit CSRF. Logout requires x‑csrf‑token.
+  - BYOK preserved: user keys are encrypted in sessionStorage only; none stored server‑side.
+
+- Styling & Build
+  - Tailwind v3 pinned; PostCSS .cjs retained; Vite css.postcss uses inline plugins to avoid ESM/CJS conflicts.
+  - No postinstall patching; dependencies stabilized.
+
+- Testing
+  - Unit tests cover SSO/proxy/logout; e2e smokes use Vite preview web server on 8081 and role‑based selectors.

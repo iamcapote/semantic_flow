@@ -15,29 +15,37 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/use-toast";
 import SemanticNode from "./SemanticNode";
-import WorkflowExecutionModal from "./WorkflowExecutionModal";
+import WorkflowExecutionModal95 from "./WorkflowExecutionModal95";
 import { createNode, createEdge, generateId } from "@/lib/graphSchema";
 import { NODE_TYPES, CLUSTER_COLORS } from "@/lib/ontology";
 import { Save, Download, Upload, Play, RotateCcw, FileJson, FileText, FileCode, FileX2 } from "lucide-react";
 import { exportWorkflow } from "@/lib/exportUtils";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
-// Custom node types for React Flow
-const nodeTypes = {
-  semantic: SemanticNode,
-};
+// Default custom node types for React Flow (can be overridden via props)
+const defaultNodeTypes = { semantic: SemanticNode };
 
 const LabCanvas = ({ 
   workflow, 
   onWorkflowChange, 
   onExecuteWorkflow,
-  isExecuting = false 
+  isExecuting = false,
+  nodeTypes: overrideNodeTypes
 }) => {
   const reactFlowWrapper = useRef(null);
   const [nodes, setNodes, onNodesChange] = useNodesState(workflow?.nodes || []);
   const [edges, setEdges, onEdgesChange] = useEdgesState(workflow?.edges || []);
   const [reactFlowInstance, setReactFlowInstance] = useState(null);
   const { toast } = useToast();
+
+  // central updater injected into each node data so custom nodes can commit edits
+  const updateNodeData = useCallback((id, patch) => {
+    setNodes((nds) => nds.map((n) => (
+      n.id === id
+        ? { ...n, data: { ...n.data, ...patch } }
+        : n
+    )));
+  }, [setNodes]);
   
   const createWorkflowMutation = {
     mutate: (data) => {
@@ -51,7 +59,7 @@ const LabCanvas = ({
   // Update parent workflow when nodes/edges change
   React.useEffect(() => {
     if (onWorkflowChange) {
-      onWorkflowChange({
+      const updated = {
         ...workflow,
         nodes,
         edges,
@@ -59,7 +67,12 @@ const LabCanvas = ({
           ...workflow?.metadata,
           updatedAt: new Date().toISOString()
         }
-      });
+      };
+      onWorkflowChange(updated);
+      try {
+        localStorage.setItem('current-workflow', JSON.stringify(updated));
+        window.dispatchEvent(new CustomEvent('workflow:updated', { detail: { source: 'Builder', workflow: updated } }));
+      } catch {}
     }
   }, [nodes, edges]);
   
@@ -95,11 +108,20 @@ const LabCanvas = ({
       const newNode = createNode(nodeType, position);
       newNode.type = 'semantic'; // React Flow node type
       newNode.data.type = nodeType; // Our semantic type
+      newNode.data._onUpdate = (nodeId, patch) => updateNodeData(nodeId, patch);
       
       setNodes((nds) => nds.concat(newNode));
     },
     [reactFlowInstance, setNodes]
   );
+
+  // ensure nodes always carry the update callback (e.g., after load)
+  React.useEffect(() => {
+    setNodes((nds) => nds.map((n) => (
+      n.data && typeof n.data._onUpdate === 'function' ? n : { ...n, data: { ...n.data, _onUpdate: (nodeId, patch) => updateNodeData(nodeId, patch) } }
+    )));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   
   const onSaveWorkflow = useCallback(async () => {
     if (reactFlowInstance) {
@@ -171,6 +193,18 @@ const LabCanvas = ({
     setEdges([]);
   }, [setNodes, setEdges]);
 
+  const onAddBlankNode = useCallback(() => {
+    if (!reactFlowInstance || !reactFlowWrapper.current) return;
+    const bounds = reactFlowWrapper.current.getBoundingClientRect();
+    const center = reactFlowInstance.project({ x: bounds.width / 2, y: bounds.height / 2 });
+    const node = createNode('UTIL-BLANK', center);
+    node.type = 'semantic';
+    node.data.type = 'UTIL-BLANK';
+    node.data.isNew = true;
+    node.data._onUpdate = (nodeId, patch) => updateNodeData(nodeId, patch);
+    setNodes((nds) => nds.concat(node));
+  }, [reactFlowInstance, updateNodeData, setNodes]);
+
   const handleExport = useCallback((format) => {
     if (!workflow) return;
     
@@ -225,7 +259,7 @@ const LabCanvas = ({
         onInit={setReactFlowInstance}
         onDrop={onDrop}
         onDragOver={onDragOver}
-        nodeTypes={nodeTypes}
+        nodeTypes={overrideNodeTypes || defaultNodeTypes}
         fitView
         proOptions={{ hideAttribution: true }}
         className="bg-background dark:bg-gray-900 w-full h-full"
@@ -246,7 +280,10 @@ const LabCanvas = ({
         
         {/* Top Panel - Controls */}
         <Panel position="top-right" className="flex gap-2">
-          <WorkflowExecutionModal 
+          <Button onClick={onAddBlankNode} variant="outline" className="bg-card border-border">
+            + New
+          </Button>
+          <WorkflowExecutionModal95 
             workflow={workflow} 
             trigger={
               <Button

@@ -5,6 +5,8 @@ import App from './App.jsx';
 import './index.css';
 import './env-config.js'; // Import environment configuration
 import { SESSION_SECURITY } from './lib/security.js';
+// Import navigation fixes CSS last to override any other styles
+import './nav-fixes.css';
 
 SESSION_SECURITY.setupSessionClearance();
 

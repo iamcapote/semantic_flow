@@ -3,19 +3,22 @@
 A living checklist for refactors, GUI redesign, and build fixes. Append new entries at the bottom with UTC timestamps.
 
 ## Open Tasks
-- [ ] Restore stable build (Tailwind/PostCSS) and blank page fix
-- [ ] Win95 Suite: Flow Builder, Flow IDE, Console, Win95 Chat — polish and integrate
-- [ ] Admin panel for configuration (providers, SSO, Discourse settings)
-- [ ] SSO (Discourse) wiring and gated Discourse tab
-- [ ] Ontology updates: add crypto node types, keep templates generic
-- [ ] Theme controls: background/node color customization in Flow builder
-- [ ] Tests: smoke + unit coverage for new modules
+- [ ] Tests: smoke + unit coverage for new modules (Builder95, DiscourseConfig)
+- [ ] Bridge Builder95 workflow <-> IDE/Console DSL (import/export mapping)
+- [ ] CSV export option in Export Modal and exportUtils (table views for audits)
+- [ ] Provider-integrated Chat (replace local mock with provider-backed chat route)
+- [ ] Template gallery for common schemas (personas, API packs, research kits)
+- [ ] Importers for popular prompt libraries
+- [ ] Optional local persistence adapters and export jobs
+- [ ] Tool registry UI and connector templates
+- [ ] Access‑controlled sharing of schemas (read‑only links)
+
+## In-Process Validating Tasks
+- [X] Theme controls: background/node color customization in Flow (Win95) builder
 
 ## Notes
 - Do not remove existing features; reorganize safely.
 - BYOK remains: keys only in session storage (encrypted), never persisted.
 
 ## Log
-- 2025-09-01T19:45:00Z — Fixed Tailwind/PostCSS build by switching to postcss.config.cjs and pinning tailwindcss 3.x.
-- 2025-09-01T19:56:00Z — Patched missing npm package files (dlv, extend) via postinstall script to stabilize build environment.
-- 2025-09-01T20:05:00Z — Added Win95 Suite page and route (/win95) and navigation entry.
+

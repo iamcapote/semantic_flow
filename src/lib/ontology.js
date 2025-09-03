@@ -18,10 +18,23 @@ export const ONTOLOGY_CLUSTERS = {
   MND: { name: 'Mind Constructs', icon: '🧘', description: 'Mental constructs' },
   NCL: { name: 'Non-Classical Logic', icon: '🔀', description: 'Alternative logic systems' },
   DYN: { name: 'Dynamic Semantics', icon: '⚡', description: 'Dynamic meaning' },
-  UTIL: { name: 'Utility', icon: '🛠️', description: 'Utility nodes (blank, metadata)' }
+  UTIL: { name: 'Utility', icon: '🛠️', description: 'Utility nodes (blank, metadata)' },
+  CRY: { name: 'Crypto/Web3', icon: '🪙', description: 'Wallets, tokens, DEX, lending, bridges, oracles' }
 };
 
 export const NODE_TYPES = {
+  // Crypto/Web3 Cluster CRY-*
+  'CRY-WALLET': { label: 'Wallet', icon: '👛', tags: ['crypto','account'], description: 'Represents a user or system wallet/account. Holds keys and manages on-chain actions.', cluster: 'CRY' },
+  'CRY-TOKEN': { label: 'Token', icon: '🪙', tags: ['crypto','asset'], description: 'Fungible or non-fungible asset reference. Use to model inputs/outputs and balances.', cluster: 'CRY' },
+  'CRY-DEX-SWAP': { label: 'DEX Swap', icon: '🔄', tags: ['dex','swap'], description: 'Swaps one token for another using a DEX. Parameters: pool, fee, slippage.', cluster: 'CRY' },
+  'CRY-LEND': { label: 'Lend/Deposit', icon: '🏦', tags: ['lending','deposit'], description: 'Deposits collateral into a lending protocol or vault.', cluster: 'CRY' },
+  'CRY-BORROW': { label: 'Borrow', icon: '📉', tags: ['lending','borrow'], description: 'Borrows a token against collateral. Parameters: LTV, thresholds.', cluster: 'CRY' },
+  'CRY-RISK': { label: 'Risk Guard', icon: '🛡️', tags: ['risk','health'], description: 'Monitors health factor and routes either to loop or exit based on thresholds.', cluster: 'CRY' },
+  'CRY-ORACLE': { label: 'Price Oracle', icon: '📈', tags: ['oracle','price'], description: 'Provides price data for tokens. Use for simulation and validation.', cluster: 'CRY' },
+  'CRY-BRIDGE': { label: 'Bridge', icon: '🌉', tags: ['bridge','chain'], description: 'Transfers tokens across chains. Parameters: source, destination, bridge.', cluster: 'CRY' },
+  'CRY-VAULT': { label: 'Vault', icon: '🗄️', tags: ['vault','strategy'], description: 'Aggregates deposits with a strategy (auto-compound, yield).', cluster: 'CRY' },
+  'CRY-STRAT': { label: 'Strategy', icon: '🧭', tags: ['yield','automation'], description: 'Defines a multi-step automated plan (e.g., leverage loop).', cluster: 'CRY' },
+
   // Speech-Act Markers Cluster SPA-*
   'SPA-REQ': { label: 'Request', icon: '🙏', tags: ['speech-act','request'], description: 'Initiates an action or asks for information from another agent or node. Used to drive workflow steps and inter-node communication.', cluster: 'SPA' },
   'SPA-ACK': { label: 'Acknowledgment', icon: '👍', tags: ['speech-act','ack'], description: 'Confirms receipt or understanding of a message or action. Useful for workflow synchronization and error handling.', cluster: 'SPA' },
@@ -311,7 +324,8 @@ export const CLUSTER_COLORS = {
   MND: '#DB2777',  // Dark Pink - Mind Constructs
   NCL: '#0891B2',  // Sky - Non-Classical Logic
   DYN: '#65A30D',  // Dark Lime - Dynamic Semantics
-  UTIL: '#64748B'  // Slate - Utility nodes
+  UTIL: '#64748B', // Slate - Utility nodes
+  CRY: '#0EA5E9'   // Light blue - Crypto/Web3
 };
 
 // Get nodes by cluster for palette organization

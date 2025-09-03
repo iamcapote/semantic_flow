@@ -4,6 +4,17 @@
  
 @layer base {
   :root {
+  /* Win95 palette and scaling */
+  --w95-bg: #C0C0C0;
+  --w95-light: #FFFFFF;
+  --w95-mid: #BDBDBD;
+  --w95-shadow: #808080;
+  --w95-dark: #404040;
+  --w95-title: #000080;
+  --w95-text: #000000;
+  --w95-disabled: #6D6D6D;
+  --scale: 1;
+
     /* Ivory and sophisticated light greys for the "super AI hyper machine" aesthetic */
     --background: 48 20% 98%; /* Warm ivory white */
     --foreground: 222.2 84% 4.9%;
@@ -73,6 +84,248 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+/* Win95 3D primitives and navbar styles (no gradients, sharp 1px borders) */
+@layer components {
+  .w95-font {
+    font-family: Tahoma, "Segoe UI", "MS Sans Serif", system-ui, sans-serif;
+    letter-spacing: 0;
+    color: var(--w95-text);
+  }
+  :root {
+    --h-title: 30px;
+    --h-tabs: 26px;
+  }
+
+  .w95-bevel-out { /* raised */
+    border-top: 1px solid var(--w95-light);
+    border-left: 1px solid var(--w95-light);
+    border-bottom: 1px solid var(--w95-shadow);
+    border-right: 1px solid var(--w95-shadow);
+    box-sizing: border-box;
+  }
+  .w95-bevel-in { /* sunken */
+    border-top: 1px solid var(--w95-dark);
+    border-left: 1px solid var(--w95-dark);
+    border-bottom: 1px solid var(--w95-light);
+    border-right: 1px solid var(--w95-light);
+    box-sizing: border-box;
+  }
+  .w95-bevel-outline { /* outer dark hairline */
+    box-shadow: 0 0 0 1px var(--w95-dark) inset;
+  }
+
+  .w95-sep-x { /* vertical separator: dark with light to its left */
+    position: relative;
+    width: 1px;
+    align-self: stretch;
+    background: var(--w95-dark);
+  }
+  .w95-sep-x::before {
+    content: "";
+    position: absolute;
+    left: -1px;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: var(--w95-light);
+  }
+
+  .w95-focus { /* 1px dotted black inside box */
+    outline: 1px dotted #000;
+    outline-offset: -3px;
+  }
+
+  .w95-nav {
+    height: calc(28px * var(--scale));
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: stretch;
+    background: var(--w95-bg);
+    border-bottom: 1px solid var(--w95-shadow);
+    box-shadow: 0 -1px 0 var(--w95-light) inset;
+  }
+  .w95-titleband {
+    display: flex;
+    align-items: center;
+    gap: calc(6px * var(--scale));
+    padding: 0 calc(8px * var(--scale));
+    background: var(--w95-title);
+    color: #fff;
+  }
+  .w95-titleband .w95-title {
+    font-weight: 700;
+    font-size: calc(12px * var(--scale));
+    line-height: 1;
+    color: #fff;
+    white-space: nowrap;
+  }
+  .w95-titleband .w95-icon {
+    width: calc(16px * var(--scale));
+    height: calc(16px * var(--scale));
+    image-rendering: pixelated;
+  }
+
+  .w95-menubar {
+    display: flex;
+    align-items: center;
+    gap: calc(4px * var(--scale));
+    padding: 0 calc(8px * var(--scale));
+    overflow: hidden;
+  }
+
+  .w95-menubtn {
+    position: relative;
+    background: var(--w95-bg);
+    padding: calc(6px * var(--scale)) calc(10px * var(--scale));
+    font-size: calc(12px * var(--scale));
+    line-height: 1;
+    user-select: none;
+    cursor: default;
+    color: var(--w95-text);
+  }
+  .w95-menubtn[aria-disabled="true"] {
+    color: var(--w95-disabled);
+    pointer-events: none;
+  }
+  .w95-menubtn:not([data-active="true"]) {
+    /* raised base */
+    border: none;
+  }
+  .w95-menubtn::before { /* base frame: raised with outer dark */
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-top: 1px solid var(--w95-light);
+    border-left: 1px solid var(--w95-light);
+    border-bottom: 1px solid var(--w95-shadow);
+    border-right: 1px solid var(--w95-shadow);
+    box-shadow: 0 0 0 1px var(--w95-dark) inset;
+    pointer-events: none;
+  }
+  .w95-menubtn:hover::after { /* hot raised: inner mid */
+    content: "";
+    position: absolute;
+    inset: 1px;
+    border: 1px solid var(--w95-mid);
+    pointer-events: none;
+  }
+  .w95-menubtn[data-pressed="true"],
+  .w95-menubtn[data-active="true"] {
+    background: var(--w95-mid);
+  }
+  .w95-menubtn[data-pressed="true"]::before,
+  .w95-menubtn[data-active="true"]::before { /* sunken */
+    border-top: 1px solid var(--w95-dark);
+    border-left: 1px solid var(--w95-dark);
+    border-bottom: 1px solid var(--w95-light);
+    border-right: 1px solid var(--w95-light);
+    box-shadow: 0 0 0 1px var(--w95-dark) inset;
+  }
+
+  .w95-window-controls {
+    display: flex;
+    align-items: center;
+    gap: calc(4px * var(--scale));
+    padding: 0 calc(6px * var(--scale));
+  }
+  .w95-winbtn {
+    width: calc(18px * var(--scale));
+    height: calc(18px * var(--scale));
+    display: grid;
+    place-items: center;
+    background: var(--w95-bg);
+    color: var(--w95-text);
+    user-select: none;
+  }
+  .w95-winbtn::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-top: 1px solid var(--w95-light);
+    border-left: 1px solid var(--w95-light);
+    border-bottom: 1px solid var(--w95-shadow);
+    border-right: 1px solid var(--w95-shadow);
+    box-shadow: 0 0 0 1px var(--w95-dark) inset;
+    pointer-events: none;
+  }
+  .w95-winbtn:active::before { /* sunken on press */
+    border-top: 1px solid var(--w95-dark);
+    border-left: 1px solid var(--w95-dark);
+    border-bottom: 1px solid var(--w95-light);
+    border-right: 1px solid var(--w95-light);
+  }
+  .w95-winbtn span {
+    font-size: calc(10px * var(--scale));
+    line-height: 1;
+  }
+
+  /* Title bar (Win95) */
+  .w95-title {
+    height: var(--h-title);
+    background: var(--w95-title);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 6px;
+    position: sticky;
+    top: 0;
+    z-index: 1001;
+  }
+  .w95-title .left { display:flex; align-items:center; gap:6px; font-weight:700; font-size:13px; }
+  .w95-title .w95-icon { width:16px; height:16px; image-rendering: pixelated; }
+  .caps { display:flex; gap:4px; }
+  .cap { 
+    width:13px; 
+    height:13px; 
+    background: var(--w95-bg); 
+    border:1px solid #000; 
+    box-shadow: inset 1px 1px 0 var(--w95-light), inset -1px -1px 0 var(--w95-dark);
+    cursor: pointer; 
+  }
+  .cap:active { box-shadow: inset 1px 1px 0 var(--w95-dark), inset -1px -1px 0 var(--w95-light); background: var(--w95-mid); }
+
+  /* Property-sheet tabstrip for primary nav */
+  .w95-tabs {
+    display: flex;
+    gap: 2px;
+    height: var(--h-tabs);
+    padding: 2px 4px;
+    background: var(--w95-bg);
+    border: 1px solid #000;
+    box-shadow: inset 1px 1px 0 var(--w95-light), inset -1px -1px 0 var(--w95-dark);
+    overflow: auto;
+    scrollbar-width: thin;
+    box-sizing: border-box;
+    position: relative;
+    z-index: 1000;
+  }
+  .w95-tabs .tab {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 12px;
+    color: var(--w95-text);
+    text-decoration: none;
+    background: var(--w95-bg);
+    border: 1px solid #000;
+    box-shadow: inset 1px 1px 0 var(--w95-light), inset -1px -1px 0 var(--w95-shadow);
+    height: 20px;
+    line-height: 20px;
+    white-space: nowrap;
+    box-sizing: border-box;
+    cursor: pointer;
+    z-index: 1002;
+  }
+  .w95-tabs .tab:hover { background: var(--w95-mid); }
+  .w95-tabs .tab:focus { outline: 1px dotted #000; outline-offset: -4px; }
+  .w95-tabs .tab.is-active {
+    background: var(--w95-mid);
+    box-shadow: inset 1px 1px 0 var(--w95-dark), inset -1px -1px 0 var(--w95-light);
+    border-bottom-color: var(--w95-mid);
   }
 }
 
@@ -146,3 +399,44 @@
   background: hsl(var(--card));
   border: 1px solid hsl(var(--border));
 }
+
+/* Critical z-index layering - this should fix the navigation issues */
+#root {
+  isolation: isolate;
+}
+
+/* Force the pointer-events and make sure navigation works */
+button, a {
+  pointer-events: auto !important;
+}
+
+/* Content area must always be below navigation */
+.content-area {
+  isolation: isolate;
+  z-index: 10;
+}
+
+/* Nav container fixes */
+.nav-container {
+  pointer-events: all !important;
+  z-index: 1000;
+  position: relative;
+  isolation: isolate;
+}
+
+/* Make sure tabs are clickable */
+.w95-tabs .tab {
+  pointer-events: auto !important;
+  position: relative;
+  z-index: 1002;
+  cursor: pointer !important;
+}
+
+/* Fix any pointer-events issues in the main content area */
+.main-content {
+  pointer-events: auto !important;
+  position: relative;
+  z-index: 1;
+}
+
+/* Simple Nav95 styles removed; using TopNav95Plus exclusively */

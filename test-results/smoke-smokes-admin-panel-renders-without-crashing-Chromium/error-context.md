@@ -1,0 +1,41 @@
+# Page snapshot
+
+```yaml
+- region "Notifications alt+T"
+- navigation "Application top bar":
+  - text: Semantic Flow — Win95 Suite
+  - button "Minimize"
+  - button "Maximize"
+  - button "Close"
+  - tablist "Primary":
+    - tab "Builder"
+    - tab "IDE"
+    - tab "Console"
+    - tab "API"
+    - tab "Admin" [selected]
+    - tab "Chat"
+- text: Admin — Win95+ Providers (BYOK) Active Provider
+- combobox:
+  - option "OpenAI" [selected]
+  - option "OpenRouter"
+  - option "Venice AI"
+- text: API Key (session-only, encrypted)
+- textbox "sk-..."
+- button "Save Provider Settings"
+- text: "SSO & Discourse Discourse Base URL:"
+- code: https://hub.bitwiki.org
+- text: "SSO Provider Enabled:"
+- strong: "yes"
+- text: "App Base URL:"
+- code: http://localhost:8081
+- text: Server-only secrets are not shown. Session uses httpOnly cookie + CSRF. Feature Toggles
+- checkbox "Enable Discourse tab" [checked]
+- text: Enable Discourse tab
+- checkbox "Experimental features"
+- text: Experimental features
+- button "Save"
+- text: Import / Export
+- button "Export JSON"
+- text: Import JSON Notes
+- textbox "Optional notes for this config"
+```

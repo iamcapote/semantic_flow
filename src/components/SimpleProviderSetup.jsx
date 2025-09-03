@@ -1,10 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Settings, TestTube2, CheckCircle, AlertCircle, ArrowRight, Eye, EyeOff, Plus } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { SecureKeyManager } from '@/lib/security';
@@ -19,6 +13,21 @@ const SimpleProviderSetup = ({ userId, onComplete }) => {
   const [selectedProviderId, setSelectedProviderId] = useState('openai');
 
   const isLoading = false;
+
+  // Win95 styles
+  const win95 = {
+    window: { background: '#c0c0c0', color: '#000', border: '2px solid #808080', boxShadow: '2px 2px 0 #000' },
+    title: { height: 24, background: '#000080', color: '#fff', display: 'flex', alignItems: 'center', gap: 8, padding: '0 8px', fontWeight: 700 },
+    body: { padding: 10 },
+    field: { display: 'grid', gap: 6, marginBottom: 8 },
+    label: { fontSize: 12 },
+    input: { background: '#fff', color: '#000', border: '2px solid #808080', padding: '6px 8px', width: '100%' },
+    select: { background: '#fff', color: '#000', border: '2px solid #808080', padding: '4px 6px', width: '100%' },
+    btn: { background: '#C0C0C0', border: '1px solid #808080', boxShadow: 'inset -1px -1px 0 #FFF, inset 1px 1px 0 #000', padding: '4px 8px', cursor: 'pointer' },
+    group: { border: '2px solid #808080', background: '#fff', padding: 8, marginTop: 8 },
+    row: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 },
+    badge: (color) => ({ display:'inline-flex', alignItems:'center', gap:6, border:'1px solid #808080', padding:'2px 6px', background: color || '#EEE', fontSize: 12 }),
+  };
 
   // Default providers configuration with updated models
   const defaultProviders = [
@@ -203,164 +212,123 @@ const SimpleProviderSetup = ({ userId, onComplete }) => {
   }
 
   return (
-    <div className="max-w-2xl mx-auto p-6 space-y-6">
-      <div className="text-center mb-8">
-        <div className="flex items-center justify-center w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full mx-auto mb-4">
-          <Settings className="h-8 w-8 text-white" />
+    <div style={{ maxWidth: 720, margin: '0 auto' }}>
+      <div style={{ ...win95.window }}>
+        <div style={win95.title}>
+          <Settings className="h-4 w-4" />
+          <span>Configure AI Providers</span>
         </div>
-        <h2 className="text-2xl font-semibold mb-2 text-white">Configure AI Providers</h2>
-        <p className="text-blue-100 text-sm">
-          Set up your AI providers to start building semantic workflows
-        </p>
-      </div>
+        <div style={win95.body}>
+          <div style={{ marginBottom: 8 }}>
+            <div style={win95.label}>Select Provider</div>
+            <select style={win95.select} value={selectedProviderId} onChange={(e)=>setSelectedProviderId(e.target.value)}>
+              {providers.map(p => (<option key={p.providerId} value={p.providerId}>{p.name}</option>))}
+            </select>
+          </div>
 
-      <div className="space-y-4">
-        <div>
-          <Label className="text-white">Select Provider</Label>
-          <Select value={selectedProviderId} onValueChange={setSelectedProviderId}>
-            <SelectTrigger className="bg-white/10 border-white/20 text-white">
-              <SelectValue placeholder="Choose provider" />
-            </SelectTrigger>
-            <SelectContent>
-              {providers.map(p => (
-                <SelectItem key={p.providerId} value={p.providerId}>{p.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {(() => {
-          const provider = providers.find(p => p.providerId === selectedProviderId);
-          if (!provider) return null;
-          const status = getProviderStatus(provider);
-          return (
-            <Card className="bg-white/10 backdrop-blur-md border-white/20">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
+          {(() => {
+            const provider = providers.find(p => p.providerId === selectedProviderId);
+            if (!provider) return null;
+            const status = getProviderStatus(provider);
+            return (
+              <div style={{ ...win95.group }}>
+                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom: 8 }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:8 }}>
                     {getStatusIcon(status)}
                     <div>
-                      <CardTitle className="text-white text-lg">{provider.name}</CardTitle>
-                      <p className="text-sm text-blue-100">{provider.description}</p>
+                      <div style={{ fontWeight: 700 }}>{provider.name}</div>
+                      <div style={{ fontSize: 12, opacity: 0.8 }}>{provider.description}</div>
                     </div>
                   </div>
                   {status === 'active' && (
-                    <Badge variant="outline" className="text-green-400 border-green-400">Active</Badge>
+                    <div style={win95.badge('#CFF5CF')}>Active</div>
                   )}
                 </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                <div style={win95.row}>
                   <div>
-                    <Label className="text-white">Base URL</Label>
-                    <Input
-                      className="bg-white/10 border-white/20 text-white placeholder-white/50"
+                    <div style={win95.label}>Base URL</div>
+                    <input
+                      style={win95.input}
                       value={provider.baseURL}
                       onChange={(e) => handleProviderUpdate(provider.providerId, 'baseURL', e.target.value)}
                       placeholder="https://api.example.com/v1"
                     />
                   </div>
-
                   <div>
-                    <Label className="text-white">API Key</Label>
-                    <div className="relative">
-                      <Input
-                        className="bg-white/10 border-white/20 text-white placeholder-white/50 pr-10"
+                    <div style={win95.label}>API Key</div>
+                    <div style={{ position:'relative' }}>
+                      <input
+                        style={{ ...win95.input, paddingRight: 32 }}
                         type={showApiKeys[provider.providerId] ? 'text' : 'password'}
                         value={provider.apiKey}
                         onChange={(e) => handleProviderUpdate(provider.providerId, 'apiKey', e.target.value)}
                         placeholder="Enter your API key..."
                       />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="absolute right-2 top-1/2 transform -translate-y-1/2 text-white/70 hover:text-white"
-                        onClick={() => toggleApiKeyVisibility(provider.providerId)}
-                      >
+                      <button type="button" onClick={() => toggleApiKeyVisibility(provider.providerId)} title="Toggle"
+                        style={{ ...win95.btn, position:'absolute', right: 4, top: 4 }}>
                         {showApiKeys[provider.providerId] ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </Button>
+                      </button>
                     </div>
                   </div>
                 </div>
 
-                <div>
-                  <Label className="text-white">Default Model</Label>
-                  <Select
-                    value={provider.defaultModel}
-                    onValueChange={(value) => handleProviderUpdate(provider.providerId, 'defaultModel', value)}
-                  >
-                    <SelectTrigger className="bg-white/10 border-white/20 text-white">
-                      <SelectValue placeholder="Select default model" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {provider.models.map(model => (
-                        <SelectItem key={model} value={model}>{model}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <div style={{ marginTop: 8 }}>
+                  <div style={win95.label}>Default Model</div>
+                  <select style={win95.select} value={provider.defaultModel}
+                    onChange={(e)=>handleProviderUpdate(provider.providerId, 'defaultModel', e.target.value)}>
+                    {provider.models.map(model => (<option key={model} value={model}>{model}</option>))}
+                  </select>
                 </div>
 
-                <div>
-                  <Label className="text-white">Add Custom Model</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      className="bg-white/10 border-white/20 text-white placeholder-white/50"
+                <div style={{ marginTop: 8 }}>
+                  <div style={win95.label}>Add Custom Model</div>
+                  <div style={{ display:'flex', gap:6 }}>
+                    <input
+                      style={win95.input}
                       value={customModels[provider.providerId] || ''}
                       onChange={(e) => handleCustomModelChange(provider.providerId, e.target.value)}
                       placeholder="e.g., gpt-4o-2024-08-06"
                     />
-                    <Button
-                      variant="outline"
+                    <button
+                      style={win95.btn}
                       onClick={() => handleAddCustomModel(provider.providerId)}
                       disabled={!customModels[provider.providerId]?.trim()}
-                      className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+                      title="Add model"
                     >
                       <Plus className="h-4 w-4" />
-                    </Button>
+                    </button>
                   </div>
                 </div>
 
-                <div className="flex gap-2 pt-4 border-t border-white/10">
+                <div style={{ display:'flex', gap:8, marginTop: 10, paddingTop: 8, borderTop: '1px solid #808080' }}>
                   {provider.apiKey && (
-                    <Button
-                      variant="outline"
-                      onClick={() => handleTestProvider(provider.providerId)}
-                      disabled={isSaving}
-                      className="bg-white/10 border-white/20 text-white hover:bg-white/20"
-                    >
-                      <TestTube2 className="h-4 w-4 mr-2" />
-                      Test with {provider.defaultModel || provider.models[0]}
-                    </Button>
+                    <button style={win95.btn} onClick={() => handleTestProvider(provider.providerId)} disabled={isSaving}>
+                      <span style={{ display:'inline-flex', alignItems:'center', gap:6 }}>
+                        <TestTube2 className="h-4 w-4" /> Test with {provider.defaultModel || provider.models[0]}
+                      </span>
+                    </button>
                   )}
 
                   {provider.apiKey && !provider.isActive && (
-                    <Button
-                      onClick={() => handleActivateProvider(provider.providerId)}
-                      className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600"
-                    >
+                    <button style={win95.btn} onClick={() => handleActivateProvider(provider.providerId)}>
                       Set as Active
-                    </Button>
+                    </button>
                   )}
                 </div>
-              </CardContent>
-            </Card>
-          );
-        })()}
-      </div>
+              </div>
+            );
+          })()}
 
-      <div className="flex justify-between items-center pt-6 border-t border-white/10">
-        <p className="text-blue-100 text-sm">
-          {isValid ? "✓ Ready to proceed" : "Please configure at least one provider"}
-        </p>
-        <Button
-          onClick={handleSaveAndContinue}
-          disabled={!isValid || isSaving}
-          className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600"
-        >
-          {isSaving ? "Saving..." : "Save & Continue"}
-          <ArrowRight className="ml-2 h-4 w-4" />
-        </Button>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginTop: 12, paddingTop: 8, borderTop: '1px solid #808080' }}>
+            <div style={{ fontSize: 12 }}>{isValid ? '✓ Ready to proceed' : 'Please configure at least one provider'}</div>
+            <button style={win95.btn} onClick={handleSaveAndContinue} disabled={!isValid || isSaving}>
+              <span style={{ display:'inline-flex', alignItems:'center', gap:6 }}>
+                {isSaving ? 'Saving…' : 'Save & Continue'} <ArrowRight className="h-4 w-4" />
+              </span>
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -1,147 +1,115 @@
-import React from 'react';
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { GitBranch, Brain, Workflow, Sparkles, Zap, Network, ArrowRight, Lock } from 'lucide-react';
 import SimpleProviderSetup from '@/components/SimpleProviderSetup';
+import { useAuth } from '@/lib/auth';
 
-const LandingPage = ({ onApiKeySet }) => {
+const win98 = {
+  app: { minHeight: '100vh', background: '#008080', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 },
+  window: { width: 920, maxWidth: '95vw', background: '#c0c0c0', color: '#000', border: '2px solid #808080', boxShadow: '4px 4px 0 #000' },
+  title: { height: 28, background: '#000080', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 8px', fontWeight: 700 },
+  menu: { height: 28, display: 'flex', alignItems: 'center', gap: 12, padding: '0 8px', borderTop: '2px solid #fff', borderLeft: '2px solid #fff', borderRight: '2px solid #6d6d6d', borderBottom: '2px solid #6d6d6d', background: '#c0c0c0' },
+  body: { padding: 12, display: 'grid', gap: 12, gridTemplateColumns: '1fr 1fr' },
+  panel: { background: '#fff', border: '2px solid #808080', boxShadow: '2px 2px 0 #000', padding: 12, minHeight: 220 },
+  btn: { background: '#C0C0C0', border: '1px solid #808080', boxShadow: 'inset -1px -1px 0 #FFF, inset 1px 1px 0 #000', padding: '6px 10px', cursor: 'pointer' },
+  head: { background: '#000080', color: '#fff', padding: '4px 6px', fontWeight: 700, margin: '-12px -12px 12px -12px' },
+  field: { display: 'grid', gap: 6 },
+  foot: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 8, borderTop: '1px solid #808080' }
+};
+
+export default function LandingPage({ onApiKeySet }) {
   const [showProviderSetup, setShowProviderSetup] = useState(false);
+  const { user, loading, login } = useAuth();
   const navigate = useNavigate();
 
-  const handleGetStarted = () => {
-    setShowProviderSetup(true);
-  };
-
   const handleProviderSetupComplete = () => {
-    if (onApiKeySet) onApiKeySet(); // Notify parent component
+    onApiKeySet && onApiKeySet();
     navigate('/');
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-600 via-purple-700 to-indigo-900 relative overflow-hidden">
-      {/* Animated background elements */}
-      <div className="absolute inset-0 opacity-20">
-        <div className="absolute top-1/4 left-1/4 w-72 h-72 bg-blue-400 rounded-full mix-blend-multiply filter blur-xl animate-pulse"></div>
-        <div className="absolute top-3/4 right-1/4 w-72 h-72 bg-purple-400 rounded-full mix-blend-multiply filter blur-xl animate-pulse animation-delay-2000"></div>
-        <div className="absolute bottom-1/4 left-1/3 w-72 h-72 bg-indigo-400 rounded-full mix-blend-multiply filter blur-xl animate-pulse animation-delay-4000"></div>
-      </div>
-      
-      <div className="relative z-10 flex flex-col items-center justify-center min-h-screen text-white p-4">
-        <div className="max-w-4xl mx-auto text-center mb-12">
-          {/* Hero Icon */}
-          <div className="flex items-center justify-center gap-4 mb-8">
-            <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-purple-400 rounded-full blur opacity-75 animate-pulse"></div>
-              <GitBranch className="relative h-16 w-16 text-white" />
-            </div>
-            <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-r from-purple-400 to-indigo-400 rounded-full blur opacity-75 animate-pulse animation-delay-1000"></div>
-              <Brain className="relative h-16 w-16 text-white" />
-            </div>
-            <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-r from-indigo-400 to-blue-400 rounded-full blur opacity-75 animate-pulse animation-delay-2000"></div>
-              <Workflow className="relative h-16 w-16 text-white" />
-            </div>
-          </div>
-
-          {/* Main heading */}
-          <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold mb-6 bg-gradient-to-r from-white via-blue-100 to-purple-100 bg-clip-text text-transparent leading-tight">
-            Semantic Canvas
-            <span className="block text-3xl sm:text-4xl md:text-5xl lg:text-6xl mt-2">Visual Knowledge Mapping</span>
-          </h1>
-          
-          <p className="text-xl md:text-2xl mb-12 text-blue-100 leading-relaxed max-w-3xl mx-auto">
-            Transform complex knowledge into elegant visual maps. 
-            Build sophisticated semantic networks with our interactive node canvas.
-          </p>
-          
-          {/* Feature grid */}
-          <div className="grid md:grid-cols-3 gap-8 mb-12">
-            <div className="group relative">
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-400/20 to-purple-400/20 rounded-2xl blur-sm group-hover:blur-none transition-all duration-300"></div>
-              <div className="relative bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20 hover:border-white/40 transition-all duration-300">
-                <div className="flex items-center justify-center w-12 h-12 bg-blue-500/30 rounded-lg mb-4 mx-auto">
-                  <Network className="h-6 w-6 text-blue-200" />
-                </div>
-                <h3 className="font-semibold text-lg mb-3">Visual Workflow Canvas</h3>
-                <p className="text-sm text-blue-100 leading-relaxed">
-                  Drag-and-drop semantic nodes to build complex reasoning chains with intuitive visual connections
-                </p>
-              </div>
-            </div>
-            
-            <div className="group relative">
-              <div className="absolute inset-0 bg-gradient-to-r from-purple-400/20 to-indigo-400/20 rounded-2xl blur-sm group-hover:blur-none transition-all duration-300"></div>
-              <div className="relative bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20 hover:border-white/40 transition-all duration-300">
-                <div className="flex items-center justify-center w-12 h-12 bg-purple-500/30 rounded-lg mb-4 mx-auto">
-                  <Sparkles className="h-6 w-6 text-purple-200" />
-                </div>
-                <h3 className="font-semibold text-lg mb-3">Semantic Ontology</h3>
-                <p className="text-sm text-blue-100 leading-relaxed">
-                  Rich library of logic primitives: hypotheses, evidence, reasoning types, and semantic relationships
-                </p>
-              </div>
-            </div>
-            
-            <div className="group relative">
-              <div className="absolute inset-0 bg-gradient-to-r from-indigo-400/20 to-blue-400/20 rounded-2xl blur-sm group-hover:blur-none transition-all duration-300"></div>
-              <div className="relative bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20 hover:border-white/40 transition-all duration-300">
-                <div className="flex items-center justify-center w-12 h-12 bg-indigo-500/30 rounded-lg mb-4 mx-auto">
-                  <Zap className="h-6 w-6 text-indigo-200" />
-                </div>
-                <h3 className="font-semibold text-lg mb-3">AI Execution Engine</h3>
-                <p className="text-sm text-blue-100 leading-relaxed">
-                  Execute workflows with GPT-4 and witness step-by-step semantic reasoning in action
-                </p>
-              </div>
-            </div>
+    <div style={win98.app}>
+      <div style={win98.window} role="dialog" aria-label="Semantic Flow Setup">
+        <div style={win98.title}>
+          <span>Semantic Flow — Windows 95 Setup</span>
+          <div style={{ display: 'flex', gap: 4 }}>
+            <button style={win98.btn} aria-label="min">_</button>
+            <button style={win98.btn} aria-label="max">□</button>
+            <button style={win98.btn} aria-label="close">X</button>
           </div>
         </div>
-        
-        {/* Provider Setup or Get Started */}
-        {showProviderSetup ? (
-          <SimpleProviderSetup 
-            userId="demo-user" // In a real app, this would come from auth
-            onComplete={handleProviderSetupComplete}
-          />
-        ) : (
-          <div className="relative group">
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-400/30 to-purple-400/30 rounded-3xl blur-lg group-hover:blur-xl transition-all duration-300"></div>
-            <div className="relative bg-white/15 backdrop-blur-xl rounded-3xl p-8 max-w-md w-full border border-white/20 shadow-2xl">
-              <div className="text-center mb-6">
-                <div className="flex items-center justify-center w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full mx-auto mb-4">
-                  <Lock className="h-8 w-8 text-white" />
+        <div style={win98.menu}>
+          <span>File</span>
+          <span>Edit</span>
+          <span>View</span>
+          <span>Help</span>
+          <span style={{ marginLeft: 'auto', fontSize: 12, opacity: 0.7 }}>{user ? `Signed in as ${user.username}` : 'Not signed in'}</span>
+        </div>
+        <div style={win98.body}>
+          {/* Brand / App info (spans two columns) */}
+          <div style={{ ...win98.panel, gridColumn: '1 / -1' }}>
+            <div style={win98.head}>Semantic Flow — Win95+</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '96px 1fr', gap: 12, alignItems: 'center' }}>
+              <img src="/logo.svg" alt="Semantic Flow" width={96} height={96} style={{ border: '2px solid #808080', background:'#fff' }} />
+              <div>
+                <div style={{ fontWeight: 800, fontSize: 18, marginBottom: 6 }}>Build a contextual engine that understands your data</div>
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+                  <div style={{ background:'#f7f7f7', border:'1px solid #808080', padding:8 }}>
+                    <div style={{ fontWeight:700, marginBottom:4 }}>Visual Builder</div>
+                    <div style={{ fontSize:13 }}>Design workflows on a semantic canvas. Use a single palette of modular nodes, or start with a blank node and add fields as you go.</div>
+                  </div>
+                  <div style={{ background:'#f7f7f7', border:'1px solid #808080', padding:8 }}>
+                    <div style={{ fontWeight:700, marginBottom:4 }}>Format‑aware</div>
+                    <div style={{ fontSize:13 }}>Every node and the IDE speak Markdown, YAML, XML, and JSON. Convert between formats inline to keep context consistent.</div>
+                  </div>
+                  <div style={{ background:'#f7f7f7', border:'1px solid #808080', padding:8 }}>
+                    <div style={{ fontWeight:700, marginBottom:4 }}>AI on every field</div>
+                    <div style={{ fontSize:13 }}>Use “Text → Workflow”, enhance any field with AI, and execute workflows with provider models you control.</div>
+                  </div>
+                  <div style={{ background:'#f7f7f7', border:'1px solid #808080', padding:8 }}>
+                    <div style={{ fontWeight:700, marginBottom:4 }}>Discourse as control plane</div>
+                    <div style={{ fontSize:13 }}>Keep personas, seeds, and API calls in Discourse. Chat is your agent backed by that context.</div>
+                  </div>
                 </div>
-                <h2 className="text-2xl font-semibold mb-2">Launch Workflow Builder</h2>
-                <p className="text-blue-100 text-sm">
-                  Configure your AI providers to unlock the power of semantic reasoning
-                </p>
-              </div>
-              
-              <Button 
-                onClick={handleGetStarted}
-                className="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-semibold py-3 transition-all duration-200 group"
-              >
-                <span className="flex items-center justify-center gap-2">
-                  Configure AI Providers
-                  <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform duration-200" />
-                </span>
-              </Button>
-              
-              <div className="mt-6 text-center">
-                <p className="text-xs text-blue-200/80 flex items-center justify-center gap-1">
-                  <Lock className="h-3 w-3" />
-                  Secure session storage - never persisted
-                </p>
               </div>
             </div>
           </div>
-        )}
+          {/* Discourse SSO */}
+          <div style={win98.panel}>
+            <div style={win98.head}>Sign in with Discourse (SSO)</div>
+            <div style={{ fontSize: 13, lineHeight: 1.4, marginBottom: 12 }}>
+              Use hub.bitwiki.org as SSO provider to unlock the Discourse tab, AI Personas, and context seeds.
+            </div>
+            <div style={win98.field}>
+              <div style={{ fontSize: 12, opacity: 0.8 }}>Provider: https://hub.bitwiki.org</div>
+              <button style={win98.btn} onClick={login}>Sign in with Discourse</button>
+            </div>
+            <div style={{ marginTop: 12, fontSize: 11, opacity: 0.7 }}>Secret is configured on the server and never exposed to the client.</div>
+          </div>
+
+      {/* BYOK */}
+          <div style={win98.panel}>
+            <div style={win98.head}>Bring Your Own Keys (OpenAI / OpenRouter / Venice)</div>
+            {!showProviderSetup ? (
+              <>
+                <div style={{ fontSize: 13, lineHeight: 1.4, marginBottom: 12 }}>
+                  Configure providers to run the canvas without Discourse SSO. Keys are session-only and encrypted.
+                </div>
+        <button style={win98.btn} onClick={() => setShowProviderSetup(true)}>Configure Providers…</button>
+              </>
+            ) : (
+              <div style={{ background: '#f5f5f5', border: '1px solid #808080', padding: 8 }}>
+                <SimpleProviderSetup userId="demo-user" onComplete={handleProviderSetupComplete} />
+              </div>
+            )}
+          </div>
+        </div>
+        <div style={win98.foot}>
+          <div style={{ fontSize: 12 }}>Tip: You can switch between SSO and BYOK anytime from the Admin tab.</div>
+          <div>
+            <button style={win98.btn} onClick={() => navigate('/')}>Enter App</button>
+          </div>
+        </div>
       </div>
     </div>
   );
-};
-
-export default LandingPage;
+}

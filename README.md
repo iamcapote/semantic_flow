@@ -1,128 +1,192 @@
+<div align="center"><a name="readme-top"></a>
 
-# 🧠 Semantic Flow: The Live Context Engineering Canvas
+[![][image-banner]][repo-link]
 
-> **Production-Ready, Live, and User-Focused**  
-> Architect, interact, and execute: build intelligent agentic workflows and systems with a powerful, ontology-driven visual language. 
+# 🧠 Semantic Flow
 
-![Project Status](https://img.shields.io/badge/Status-Live%20Product-green)
-![Version](https://img.shields.io/badge/Version-1.0.0-blue)
+An open‑source, production‑ready **Context Engineering Canvas** for AI. <br/>
+Visually design, connect, and export agentic knowledge structures with a rich semantic ontology and a nostalgic Win95‑style UI. <br/>
+One‑click **FREE** deployment of your private, BYOK, ontology‑driven workflow system.
 
----
+**English** · **[Docs][docs]** · **[Changelog][changelog]** · **[Issues][issues]** · **[Releases][github-release-link]**
 
-## ✨ What is Semantic Flow?
+<!-- SHIELD GROUP -->
 
-Semantic Flow is a live, production-ready **Context Engineering Canvas**—a creative environment for structuring complex ideas, systems, and worlds. It empowers you to visually design, connect, and execute intricate workflows using a rich semantic ontology and direct AI integration.
+\[![][status-shield]]\[status-link]
+[![][version-shield]][github-release-link]
+[![][license-shield]][license-link]
+[![][deployable-shield]][deploy-section]
+[![][discourse-shield]][discourse-link]
+[![][ci-shield]][ci-link]
+[![][coverage-shield]][coverage-link]
+[![][stars-shield]][stars-link]
+[![][forks-shield]][forks-link]<br/>
+[![][twitter-share]][twitter-share-link]
+[![][reddit-share]][reddit-share-link]
+[![][telegram-share]][telegram-share-link]
+[![][linkedin-share]][linkedin-share-link]
 
-**Key Features:**
-- **Three AI Providers:** Out-of-the-box support for OpenAI, OpenRouter, and Venice AI, with easy configuration and switching.
-- **Three Modes of AI Interaction:**
-  - Import workflows using AI API requests
-  - Interact and modify nodes with AI API requests
-  - Execute workflows with AI API inference
-- **Agentic Systems:** Design behaviors, interactions, and cognitive processes for AI agents and multi-agent worlds.
-- **Role-Playing & Scenario Design:** Create dynamic characters, rules, and logic for games, simulations, and collaborative storytelling.
+<sup>Pioneering the new age of thinking and creating. Built for you, the Super Individual.</sup>
 
-**Context Engineering** is the art and science of shaping, structuring, and managing the information context for agents, systems, and logic. With Semantic Flow, you architect not just prompts, but entire constructs, workflows, and schemas—turning imagination into machine-readable input.
-- **Code & Project Structuring:** Map out logic, architectures, and workflows for large codebases and technical projects.
-- **Schema Generation:** Instantly convert your thoughts into structured formats (JSON, YAML, XML, Markdown) for downstream use.
+![][image-overview]
 
-**Why Context Engineering?**
-Semantic Flow lets you sculpt the context that drives agents, systems, and logic. Whether you’re building a complex agent, a simulated world, a business process, or a legal argument, you’re engineering the context—making your ideas actionable, testable, and interoperable.
+</div>
 
-### 🎯 Who is Semantic Flow For?
-- **AI Engineers & Researchers:** Visually design, debug, and optimize agentic workflows and reasoning systems.
-- **Developers & Architects:** Scaffold applications, logic flows, and project structures in a visual environment.
-- **Writers, Game Masters, & Scenario Designers:** Create rich, structured narratives, interactive logic, and character-driven systems.
-- **Systems Thinkers:** Map, analyze, and optimize complex systems of any kind.
+<details>
+<summary><kbd>Table of contents</kbd></summary>
 
----
+#### TOC
 
+* [👋🏻 Getting Started](#-getting-started)
+* [✨ Highlights](#-highlights)
+* [🎨 Screens & Win95 Suite](#-screens--win95-suite)
+* [🧠 Semantic Ontology](#-semantic-ontology)
+* [🤝 Agentic Constructs](#-agentic-constructs)
+* [🔌 Providers, BYOK, and Discourse](#-providers-byok-and-discourse)
+* [🧪 Usage Examples](#-usage-examples)
+* [📤 Export & Interop](#-export--interop)
+* [📦 Ecosystem](#-ecosystem)
+* [🧩 Extensions & Integrations](#-extensions--integrations)
+* [⚙️ Architecture](#️-architecture)
+* [🗺️ Codebase Overview](#-codebase-overview)
+* [🏗️ Project Structure](#-project-structure)
+* [🚀 Quick Start](#-quick-start)
+* [🛳️ Self Hosting](#-self-hosting)
 
+  * [A. One‑Click Deploy](#a-oneclick-deploy)
+  * [B. Docker](#b-docker)
+  * [C. Manual / Node](#c-manual--node)
+  * [Environment Variables](#environment-variables)
+* [🔐 Security & Privacy](#-security--privacy)
+* [🧯 Troubleshooting](#-troubleshooting)
+* [🧭 Roadmap](#-roadmap)
+* [📈 Performance](#-performance)
+* [🧑‍⚖️ Governance](#-governance)
+* [🤝 Contributing](#-contributing)
+* [💖 Sponsor](#-sponsor)
+* [📝 License](#-license)
+* [🔗 Link Group](#-link-group)
 
-## 🎨 Features
+<br/>
 
-### 🧩 Semantic Ontology: 16+ Clusters, 100+ Node Types
-At the heart of Semantic Flow is a deep semantic ontology—organized into clusters representing every facet of logic, reasoning, cognition, and context. Each node type is a building block for your workflows, agents, worlds, or schemas.
+</details>
 
-| Cluster | Description |
-| :--- | :--- |
-| **Proposition (PROP)** | Basic truth assertions and statements |
-| **Inquiry (INQ)** | Information seeking and problem definition |
-| **Hypothesis/Evidence/Method (HEM)** | Scientific method and evidence |
-| **Reasoning (RSN)** | Deduction, induction, abduction, analogy |
-| **Evaluation Gates (EVL)** | Consistency, validity, and quality checks |
-| **Modal & Mental-State (MOD)** | Logic, beliefs, intentions, modalities |
-| **Speech-Act Markers (SPA)** | Communication intents and actions |
-| **Discourse Meta (DSC)** | Discourse management and annotation |
-| **Control & Meta Engines (CTL)** | Flow control, branching, merging |
-| **Error/Exception (ERR)** | Error handling, contradiction, recovery |
-| **Creative Operations (CRT)** | Brainstorming, combining, insight |
-| **Mathematical Reasoning (MTH)** | Mathematical logic, proofs, conjectures |
-| **Cognitive Mechanics (COG)** | Planning, goals, evaluation, schema |
-| **Mind Constructs (MND)** | Mental and philosophical concepts |
-| **Non-Classical Logic (NCL)** | Alternative logic systems |
-| **Dynamic Semantics (DYN)** | Context, meaning, and adaptation |
-| **Utility (UTIL)** | Metadata, blank nodes, scaffolding |
+## 👋🏻 Getting Started
 
-### 📤 Multi-Format Export
-* Instantly export your creations to JSON, YAML, Markdown, and XML—turning your thoughts into machine-readable input for any downstream system.
+Semantic Flow is a **Context Engineering Canvas**. Compose knowledge as connected nodes with explicit fields, link them with edges, and **export** your work as JSON, YAML, Markdown, or XML for downstream systems, prompts, and contracts. It’s
+**not** an automation engine; it’s where you *design* the context that other systems use.
 
-### 🛠️ Professional Tools
-* **Semantic Flow Canvas:** Drag-and-drop interface powered by React Flow—your imagination, structured.
-* **Rich Semantic Ontology:** 100+ node types across 16 clusters, grounded in logic and cognitive science.
-* **Multi-Format Export:** Export to JSON, YAML, Markdown, XML.
-* **Agent & World-Building Focus:** Design complex agents, worlds, and logic systems.
-* **AI Integration:** Connect to OpenAI, OpenRouter, Venice AI, and more.
-* **Secure:** BYOK model—your API keys never leave your local environment.
-* **Responsive Design:** Works on desktop, tablet, and mobile.
-
----
-
-## 🔐 Security & Privacy
-
-### BYOK (Bring Your Own Key) Model
-- **No API Key Storage**: Your API keys never leave your browser session
-- **Session-Only Persistence**: Keys cleared when you close the browser
-- **Encrypted Communication**: All API calls use HTTPS
-- **Provider Selection**: Choose your preferred AI provider once and the app remembers your choice for the session
-
-### Data Handling
-- **Workflows**: Stored in your browser only
-- **Session Data**: Browser sessionStorage only
-- **Export Control**: You own and control all your data
+> \[!IMPORTANT]
+> **Star** the repo to receive release notifications on GitHub.
 
 ---
 
+## ✨ Highlights
 
-## 📚 Usage Examples
+* **Win95 Suite**: Builder, IDE, Router/API Console, Admin, Chat, Learn — unified retro‑modern UI.
+* **Rich Ontology**: 16+ clusters, 100+ node types for logic, reasoning, cognition, discourse, and control.
+* **Agentic Constructs**: Compose Persona + Policies + Tools + Memory/Seeds → route into Chat.
+* **Three AI Providers**: OpenAI · OpenRouter · Venice AI. **BYOK** with session‑only storage.
+* **Discourse SSO**: Read topics/PMs, create and attach **Seeds**, leverage personas via server proxy.
+* **Multi‑Format Export**: JSON · YAML · Markdown · XML. Portable by design.
+* **Router/API Console**: Build and send provider requests, inspect streaming, and proxy Discourse AI personas.
+* **Security‑First**: BYOK, HttpOnly session cookies, double‑submit CSRF, webhook HMAC verification.
 
-### Example 1: Scientific Hypothesis Testing (Context Engineering for Research)
+> \[!NOTE]
+> Connections/edges **express reference**, not execution order. Semantic Flow is a *canvas for meaning*.
+
+---
+
+## 🎨 Screens & Win95 Suite
+
+* **Builder**: Visual schema canvas (React Flow). Drag nodes, colorize, connect, annotate.
+* **IDE**: Text‑first editing for the same schema; import/export round‑trips.
+* **Router/API Console**: Build requests for providers, stream responses, inspect payloads.
+* **Console**: Fast overrides, inspection, and export surface.
+* **Chat**: Prototype chat (local mock).
+* **Admin**: Providers, themes, SSO, and site options.
+* **Learn**: Built‑in guide mirroring the Win95 aesthetic.
+
+> The **Learn** page explains core concepts, navigation, pages, export, security, guardrails, creative uses, and glossary.
+
+---
+
+## 🧠 Semantic Ontology
+
+At the core is a typed ontology spanning reasoning and discourse. Clusters include:
+
+| Cluster                              | Purpose                                  |
+| :----------------------------------- | :--------------------------------------- |
+| **Proposition (PROP)**               | Assertions and statements                |
+| **Inquiry (INQ)**                    | Question, information seeking            |
+| **Hypothesis/Evidence/Method (HEM)** | Scientific method nodes                  |
+| **Reasoning (RSN)**                  | Deduction, induction, abduction, analogy |
+| **Evaluation Gates (EVL)**           | Consistency, validity, quality checks    |
+| **Modal & Mental‑State (MOD)**       | Beliefs, intentions, modalities          |
+| **Speech‑Act (SPA)**                 | Communicative intents and actions        |
+| **Discourse Meta (DSC)**             | Threading, annotation, discourse control |
+| **Control & Meta Engines (CTL)**     | Branching, merging, flow control         |
+| **Error/Exception (ERR)**            | Contradictions, recovery                 |
+| **Creative Ops (CRT)**               | Divergence, remix, synthesis             |
+| **Mathematical Reasoning (MTH)**     | Proof, conjecture, derivation            |
+| **Cognitive Mechanics (COG)**        | Planning, goals, evaluation, schema      |
+| **Mind Constructs (MND)**            | Mental and philosophical objects         |
+| **Non‑Classical Logic (NCL)**        | Alt logics and semantics                 |
+| **Dynamic Semantics (DYN)**          | Context shift and adaptation             |
+| **Utility (UTIL)**                   | Scaffolding, metadata, blanks            |
+
+Each node is a compact, typed form with fields (title, description, parameters, tags, examples, constraints, …). Assign a **Language Mode** per node: JSON/YAML/XML/Markdown.
+
+---
+
+## 🤝 Agentic Constructs
+
+Build **schemas that act like agents** by composing:
+
+1. **Persona/Role**
+2. **Policies/Constraints**
+3. **Tools/Integrations**
+4. **Memory & Seeds** (Discourse topics)
+
+**Flow**: Build in *Builder* → inspect in *IDE* → bind in *Router* → adjust in *Console* → test in *Chat*.
+
+> \[!TIP]
+> Edges define knowledge and reference, not execution. Use Router to assemble runtime context.
+
+---
+
+## 🔌 Providers, BYOK, and Discourse
+
+* **Providers**: OpenAI, OpenRouter, Venice AI. Switch easily; per‑session keys.
+* **BYOK**: Keys live **only** in browser sessionStorage (encrypted). No server‑side persistence.
+* **Discourse SSO**: Sign‑in unlocks topic/PM browse, seed creation, and persona leverage via secure proxy.
+
+> **Storage model**: Minimal app storage. When SSO is enabled, Discourse is the system of record. Local schema work remains local unless exported or synced.
+
+---
+
+## 🧪 Usage Examples
+
 ```
-[Research Question] → [Hypothesis] → [Evidence Collection] 
+[Research Question] → [Hypothesis] → [Evidence Collection]
      ↓                    ↓               ↓
 [Literature Review] → [Experimental Design] → [Data Analysis]
      ↓                    ↓               ↓
 [Peer Review] → [Publication] → [Replication Studies]
 ```
-*Structure and automate the scientific method: define research questions, generate hypotheses, collect evidence, design experiments, analyze data, and manage peer review and publication workflows. Useful for academic research, lab automation, and collaborative science projects.*
 
-### Example 2: Legal Argument Structure (Context Engineering for Law)
 ```
 [Legal Claim] → [Precedent Evidence] → [Statutory Analysis]
      ↓               ↓                    ↓
 [Counterarguments] → [Rebuttal] → [Judicial Decision]
 ```
-*Model legal reasoning: organize claims, precedents, statutes, and counterarguments to simulate courtroom logic, automate legal document generation, or support legal research and case analysis.*
 
-### Example 3: Business Decision Making (Context Engineering for Strategy)
 ```
 [Problem Definition] → [Stakeholder Analysis] → [Option Generation]
      ↓                    ↓                      ↓
-[Risk Assessment] → [Cost-Benefit Analysis] → [Implementation Plan]
+[Risk Assessment] → [Cost‑Benefit Analysis] → [Implementation Plan]
 ```
-*Visualize and optimize business processes: define problems, analyze stakeholders, generate options, assess risks, perform cost-benefit analysis, and plan implementations. Ideal for strategic planning, consulting, and operational management.*
 
-### Example 4: Roleplaying & Scenario Design (Context Engineering for Worlds)
 ```
 [Character Creation] → [World Setting] → [Rule Definition]
      ↓                    ↓               ↓
@@ -130,146 +194,320 @@ At the heart of Semantic Flow is a deep semantic ontology—organized into clust
      ↓                    ↓               ↓
 [Feedback Loops] → [Narrative Arcs] → [Endgame Scenarios]
 ```
-*Define characters, settings, and rules using semantic nodes. Create dynamic interactions and consequences for player actions. Ideal for D&D-style campaigns, collaborative storytelling, or simulation environments.*
 
-
----
-
-
-## 🚀 Quick Start Guide
-
-### For Non-Technical Users
-
-1. **Start the Application**
-   ```bash
-   # Clone and navigate to the project
-   git clone <repository-url>
-   cd semantic_flow
-   
-   # Install dependencies and start
-   npm install
-
-## 🛠️ Development
-
-### Available Scripts
-
-#### Frontend
-```bash
-npm run dev          # Start Vite development server (port 8081)
-
-npm run build:dev    # Development build
-npm run preview      # Preview production build
-npm run lint         # ESLint code checking
-```
-
-### Contributing
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-#### Production Build
-```bash
-npm run build:dev
-npm run preview
-```
+> \[!TIP]
+> Mix formats across a schema: e.g. **Markdown** narrative + **JSON** attributes + **YAML** routing.
 
 ---
 
+## 📤 Export & Interop
 
-## 🏗️ Architecture
+* Export to **JSON, YAML, Markdown, XML** for downstream tools and docs.
+* Designed for **portability**: commit to repos, paste into docs, feed CI/CD.
 
-### Tech Stack
-- **Frontend:** React 18, Vite, Tailwind CSS, React Flow
-- **AI Providers:** OpenAI, OpenRouter, Venice AI (Multi-provider support)
-- **Security:** BYOK (Bring Your Own Key) model, session-only storage
-- **UI Components:** shadcn/ui, Radix UI
-- **State Management:** React Query (TanStack Query)
+---
 
-### Project Structure
+## 📦 Ecosystem
+
+* **Win95 Suite UI**: unified application shell with TopNav95Plus.
+* **Discourse Integration Service**: SSO, proxy, seeds, webhook verification.
+* **Agents Reference**: BYOK, frontend‑only packs for rapid prototyping (see `AGENTS.md`).
+
+> \[!NOTE]
+> The on‑site **Learn** page complements this README with task‑oriented guidance.
+
+---
+
+## 🧩 Extensions & Integrations
+
+* **Tools & Connectors**: Register external tools and bind them in the **Router**.
+* **Models**: Select provider models per route; override in **Console**.
+* **Seeds**: Attach Discourse topic anchors for persistent context.
+
+Planned items are tracked in Docs → [`docs/to-do.md`](./docs/to-do.md).
+
+---
+
+## ⚙️ Architecture
+
+**Tech Stack**
+
+* **Frontend**: React 18 · Vite · Tailwind CSS · React Flow · shadcn/ui · Radix UI
+* **State**: React Query (TanStack Query)
+* **Security**: BYOK, session‑only storage, HttpOnly session cookies, CSRF double‑submit
+* **SSO**: Discourse SSO + webhook HMAC verification
+
+**Conceptual Flow**
+
+1. **Builder** creates typed nodes/edges →
+2. **IDE** refines text form →
+3. **Router** assembles context, roles, tools, models →
+4. **Console** provides quick overrides →
+5. **Chat** exercises the active route/context.
+
+---
+
+## 🗺️ Codebase Overview
+
+Authoritative map of key modules:
+
+* **Canvas & UX**
+
+  * `src/components/LabCanvas.jsx` — React Flow canvas (builder)
+  * `src/components/SemanticNode.jsx` — custom node renderer
+  * `src/components/NodePalette.jsx` — node palette
+* **Providers (BYOK)**
+
+  * `src/components/ProviderSetup.jsx`, `ProviderSettings.jsx` — provider selection and configuration
+* **AI orchestration**
+
+  * `src/lib/promptingEngine.js` — text→workflow, execute workflow, node enhancement
+* **Graph contracts**
+
+  * `src/lib/graphSchema.js` — node/edge/workflow schemas, creators, validators
+* **Ontology**
+
+  * `src/lib/ontology.js` — clusters, node types, colors
+* **Export**
+
+  * `src/lib/exportUtils.js` — JSON, Markdown, YAML, XML
+* **Execution UI**
+
+  * `src/components/WorkflowExecutionModal.jsx` (and 95 variant), `src/components/TextToWorkflow.jsx`
+* **Security (BYOK)**
+
+  * `src/lib/security.js` — session‑only encrypted storage via `SecureKeyManager`
+* **App entry**
+
+  * `src/App.jsx`, `src/pages/*`, `src/main.jsx`
+* **Tests**
+
+  * `tests/unit/*.test.*` — frontend/provider logic
+
+> **Tip**: Provider keys are stored only in **sessionStorage** (encrypted). Active provider/base URLs live under: `active_provider`, `base_url_{provider}`.
+
+---
+
+## 🏗️ Project Structure
+
 ```
 semantic_flow/
-├── src/                          # Frontend React application
-│   ├── components/               # Reusable UI components
-│   │   ├── ui/                   # Base UI components (shadcn)
-│   │   ├── NodePalette.jsx       # Semantic node library
-│   │   ├── LabCanvas.jsx         # Semantic Flow Canvas (React Flow)
-│   │   └── SemanticNode.jsx      # Custom workflow nodes
-│   ├── pages/                    # Main application pages
-│   │   ├── LandingPage.jsx       # API key entry & onboarding
-│   │   ├── WorkflowBuilderPage.jsx # Main workflow editor
-│   │   └── ChatPage.jsx          # Chat interface
-│   ├── lib/                      # Core libraries
-│   │   ├── ontology.js           # 100+ semantic node definitions
-│   │   ├── graphSchema.js        # Workflow data structures
-│   │   ├── exportUtils.js        # Multi-format export
-│   └── integrations/             # External service integrations
-└── public/                       # Static assets
+├── src/
+│   ├── components/
+│   │   ├── ui/                 # shadcn base components
+│   │   ├── NodePalette.jsx
+│   │   ├── LabCanvas.jsx
+│   │   └── SemanticNode.jsx
+│   ├── pages/
+│   │   ├── LandingPage.jsx
+│   │   ├── WorkflowBuilderPage.jsx
+│   │   └── ChatPage.jsx
+│   ├── lib/
+│   │   ├── ontology.js
+│   │   ├── graphSchema.js
+│   │   ├── exportUtils.js
+│   │   ├── promptingEngine.js
+│   │   └── security.js
+│   └── integrations/           # external integrations (if any)
+├── docs/
+│   ├── discourse-architecture.md
+│   ├── GUI_updates.md
+│   └── to-do.md
+└── public/
 ```
 
 ---
 
+## 🚀 Quick Start
+
+```bash
+# 1) Clone and install
+git clone https://github.com/iamcapote/semantic_flow.git
+cd semantic_flow
+npm install
+
+# 2) Configure environment
+cp .env.example .env
+# Edit .env as needed; defaults work for local preview
+
+# 3) Run in development (single port)
+npm run dev
+# → http://localhost:8081 (Node + Vite middleware)
+
+# 4) Build and preview
+npm run build:dev
+npm run preview
+# → http://localhost:8081
+```
+
 ---
 
+## 🛳️ Self Hosting
 
-## 🚀 API Reference
+Semantic Flow is designed to be self‑hosted on any modern Node host.
 
-## 🛠️ Development
+### A. One‑Click Deploy
 
-### Available Scripts
+<div align="center">
 
-#### Frontend
+|          Deploy with RepoCloud          |
+| :-------------------------------------: |
+| [![][repocloud-button]][repocloud-link] |
+
+</div>
+
+> \[!TIP]
+> Add your **BYOK** in the running instance. Keys are never persisted server‑side.
+
+### B. Docker
+
+```bash
+# WIP: Example compose for reverse proxy + Node app
+# version: '3.9'
+# services:
+#   semantic-flow:
+#     image: ghcr.io/bitwikiorg/semantic_flow:latest
+#     container_name: semantic-flow
+#     environment:
+#       - APP_BASE_URL=http://localhost:8081
+#       - DISCOURSE_BASE_URL=https://hub.bitwiki.org
+#       - DISCOURSE_SSO_SECRET=change-me
+#       - DISCOURSE_WEBHOOK_SECRET=change-me
+#     ports:
+#       - "8081:8081"
+#     restart: unless-stopped
+```
+
+### C. Manual / Node
+
+Use the Quick Start above.
+
+### Environment Variables
+
+| Variable                   | Required | Description                                            | Example                   |
+| -------------------------- | :------: | ------------------------------------------------------ | ------------------------- |
+| `DISCOURSE_BASE_URL`       |    Yes   | Base URL of your Discourse instance                    | `https://hub.bitwiki.org` |
+| `DISCOURSE_SSO_SECRET`     |    Yes   | Discourse SSO secret                                   | `test_123`              |
+| `DISCOURSE_WEBHOOK_SECRET` |    Yes   | Shared secret to verify Discourse webhooks             | `shared_webhook_secret`   |
+| `APP_BASE_URL`             |    Yes   | Base URL for this app                                  | `http://localhost:8081`   |
+| `API_KEY`                  |    No    | Optional API key to enable write endpoints for seeding | `change-me`               |
+| `PORT`                     |    No    | Server port                                            | `8081`                    |
+
+---
+
+## 🔐 Security & Privacy
+
+* **BYOK**: Keys stay in browser **sessionStorage** (encrypted). No server‑side key storage.
+* **Sessions**: HttpOnly cookies, double‑submit CSRF protection.
+* **Webhooks**: HMAC signature verification for Discourse.
+* **Least Storage**: Minimal app storage; Discourse becomes the record system when SSO is active.
+
+> \[!CAUTION]
+> Semantic Flow is **not** a workflow runner, job queue, or datastore for your keys.
+
+---
+
+## 🧯 Troubleshooting
+
+* **Landing title truncated on mobile** → Fixed with responsive typography (`text-4xl sm:text-5xl md:text-6xl lg:text-7xl`).
+* **Infinite loading during provider setup** → Resolved in provider configuration.
+* **Landing page not appearing** → Clear session: `sessionStorage.clear(); location.reload()`.
+* **Node palette white in dark mode** → Hard refresh (`Ctrl+F5`).
+* **Workflow execution fails** → Verify provider key validity and credits.
+* **Deprecated models (e.g., `gpt-4-turbo`)** → Use `gpt-4o`, `gpt-4o-mini`, or custom model names.
+
+---
+
+## 🧭 Roadmap
+
+See Docs → [`docs/to-do.md`](docs/to-do.md) for the active roadmap and task list.
+
+---
+
+## 📈 Performance
+
+Semantic Flow targets a lightweight client with Vite and React. Formal Lighthouse snapshots will be posted in `docs/`.
+
+---
+
+## 🧑‍⚖️ Governance
+
+* **License**: AGPL‑3.0
+* **CLA**: Not required for now; contributions are accepted under the project license.
+* **Security Reports**: Please open a private issue with minimal reproduction details.
+
+---
+
+## 🤝 Contributing
+
+Contributions of all types are welcome. See **Issues** to get started.
+
 ```bash
 npm run dev          # Start Vite development server (port 8081)
 npm run build        # Production build
 npm run build:dev    # Development build
 npm run preview      # Preview production build
-npm run lint         # ESLint code checking
+npm run lint         # ESLint checks
+npm run test         # Unit/integration tests (Jest)
+npm run test:e2e     # End‑to‑end tests (Playwright)
 ```
 
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+> Please follow conventional commits and include tests where reasonable.
 
 ---
 
-## 📋 Troubleshooting
+## 💖 Sponsor
 
-### Common Issues
-
-**Q: The landing page title appears truncated on mobile**
-A: This has been fixed with responsive typography scaling (text-4xl sm:text-5xl md:text-6xl lg:text-7xl)
-
-**Q: I get an infinite loading loop when setting up AI providers**
-A: This has been resolved by improving provider configuration in the provider setup
-
-**Q: The landing page doesn't appear**
-A: Clear your browser's sessionStorage: `sessionStorage.clear(); location.reload()`
-
-
-**Q: Node palette appears white in dark mode**
-A: Hard refresh your browser (Ctrl+F5) to reload the CSS
-
-**Q: Workflow execution fails**
-A: Verify your AI provider API key is valid and has sufficient credits
-
-**Q: Models like 'gpt-4-turbo' don't work**
-A: These models have been deprecated. Use the new defaults (GPT-4o, GPT-4o-mini) or enter custom model names
-
+If this project helps you, consider sponsorship to accelerate feature delivery and maintenance.
 
 ---
 
-## 📄 License
+## 📝 License
 
-This project is licensed under the GNU Affero General Public License v3.0 (AGPL-3.0)
+Copyright © 2025 [iamcapote][author-link].
+
+This project is licensed under **[AGPL‑3.0][license-link]**.
 
 ---
 
-## 🙏 Acknowledgments
+Built with ∞❤️∞ for the future of context engineering and AI reasoning
 
-- **React Flow** for the incredible workflow canvas library
-- **shadcn/ui** for the beautiful component system
-- **Tailwind CSS** for the utility-first styling approach
-- **OpenAI** for the powerful language models
+---
 
-**Built with ∞❤️∞ for the future of context engineering and AI reasoning**
+## 🔗 Link Group
+
+[back-to-top]: https://img.shields.io/badge/-BACK_TO_TOP-151515?style=flat-square
+[repo-link]: https://github.com/iamcapote/semantic_flow
+[docs]: ./docs/info.md
+[changelog]: ./CHANGELOG.md
+[issues]: https://github.com/iamcapote/semantic_flow/issues
+[license-link]: ./LICENSE
+[author-link]: https://github.com/iamcapote
+[image-banner]: ./public/og-image.svg
+[image-overview]: ./public/og-image.svg
+[status-shield]: https://img.shields.io/badge/Status-Live%20Product-55b467?labelColor=000000&style=flat-square
+[version-shield]: https://img.shields.io/github/v/release/iamcapote/semantic_flow?color=369eff&labelColor=000000&logo=github&style=flat-square
+[license-shield]: https://img.shields.io/badge/license-AGPL--3.0-white?labelColor=000000&style=flat-square
+[deployable-shield]: https://img.shields.io/badge/deploy-one--click-00bcd4?labelColor=000000&style=flat-square
+[discourse-shield]: https://img.shields.io/badge/SSO-Discourse-ff9800?labelColor=000000&style=flat-square
+[ci-shield]: https://img.shields.io/badge/CI-passing-4caf50?labelColor=000000&style=flat-square
+[coverage-shield]: https://img.shields.io/badge/coverage-~-%23bbbbbb?labelColor=000000&style=flat-square
+[stars-shield]: https://img.shields.io/github/stars/iamcapote/semantic_flow?color=ffcb47&labelColor=000000&style=flat-square
+[forks-shield]: https://img.shields.io/github/forks/iamcapote/semantic_flow?color=8ae8ff&labelColor=000000&style=flat-square
+[twitter-share]: https://img.shields.io/badge/-share%20on%20x-000000?labelColor=000000&logo=x&logoColor=white&style=flat-square
+[twitter-share-link]: https://x.com/intent/tweet?text=Check%20Semantic%20Flow%20%E2%80%94%20an%20open-source%20Context%20Engineering%20Canvas&url=https%3A%2F%2Fgithub.com%2Fiamcapote%2Fsemantic_flow
+[reddit-share]: https://img.shields.io/badge/-share%20on%20reddit-ff4500?labelColor=000000&logo=reddit&logoColor=white&style=flat-square
+[reddit-share-link]: https://www.reddit.com/submit?title=Semantic%20Flow%20%E2%80%94%20Context%20Engineering%20Canvas&url=https%3A%2F%2Fgithub.com%2Fiamcapote%2Fsemantic_flow
+[telegram-share]: https://img.shields.io/badge/-share%20on%20telegram-26a5e4?labelColor=000000&logo=telegram&logoColor=white&style=flat-square
+[telegram-share-link]: https://t.me/share/url?text=Semantic%20Flow%20Context%20Engineering%20Canvas&url=https%3A%2F%2Fgithub.com%2Fiamcapote%2Fsemantic_flow
+[linkedin-share]: https://img.shields.io/badge/-share%20on%20linkedin-0a66c2?labelColor=000000&logo=linkedin&logoColor=white&style=flat-square
+[linkedin-share-link]: https://www.linkedin.com/shareArticle?mini=true&url=https%3A%2F%2Fgithub.com%2Fiamcapote%2Fsemantic_flow
+[github-release-link]: https://github.com/iamcapote/semantic_flow/releases
+[stars-link]: https://github.com/iamcapote/semantic_flow/stargazers
+[forks-link]: https://github.com/iamcapote/semantic_flow/network/members
+[deploy-section]: #a-oneclick-deploy
+[discourse-link]: https://docs.discourse.org/
+[ci-link]: https://github.com/iamcapote/semantic_flow/actions
+[coverage-link]: https://github.com/iamcapote/semantic_flow/actions
+[repocloud-button]: https://d16t0pc4846x52.cloudfront.net/deploylobe.svg
+[repocloud-link]: https://repocloud.io/details/?app_id=248

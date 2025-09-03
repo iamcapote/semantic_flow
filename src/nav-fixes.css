@@ -1,0 +1,23 @@
+/* 
+ * Navigation fixes - ensuring TopNav tabs are always clickable
+ */
+
+/* Ensure navigation buttons/tabs are clickable */
+.w95-tabs .tab,
+.nav-container,
+.nav-container button {
+  pointer-events: auto !important;
+  cursor: pointer !important;
+  z-index: 9999 !important;
+  position: relative !important;
+}
+
+/* Push content container below the navigation without affecting inner layers */
+.content-area {
+  z-index: 1 !important;
+}
+
+/* Fix any possible pointer-events issues in the root elements */
+html, body, #root {
+  pointer-events: auto !important;
+}
