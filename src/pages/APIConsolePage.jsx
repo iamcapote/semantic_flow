@@ -75,8 +75,26 @@ export default function APIConsolePage() {
   // Pipeline
   const [pipelineLog, setPipelineLog] = useState('');
 
+  // Features (Advanced toggle)
+  const [features, setFeatures] = useState({ advanced: false, discourseTab: true });
+
   // Effects
   useEffect(() => {
+    // Load feature toggles (migrate from legacy experimental)
+    try {
+      const raw = localStorage.getItem('sf_local_settings_v1');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed?.features) {
+          const { experimental, advanced, discourseTab } = parsed.features;
+          setFeatures({
+            advanced: typeof advanced === 'boolean' ? advanced : !!experimental,
+            discourseTab: typeof discourseTab === 'boolean' ? discourseTab : true,
+          });
+        }
+      }
+    } catch {}
+
     const savedKey = SecureKeyManager.getApiKey(activeProvider);
     if (savedKey) setActiveKey(savedKey);
 
@@ -268,23 +286,25 @@ export default function APIConsolePage() {
                   </div>
                 </div>
               </div>
-              {/* Endpoints */}
-              <div className="mt-4">
-                <div className={win95.title}>Endpoints</div>
-                <div className="p-2 space-y-2">
-                  {endpoints.map((endpoint) => (
-                    <div key={endpoint.id} className="flex items-center">
-                      <div
-                        onClick={() => toggleEndpoint(endpoint.id)}
-                        className={`${win95.checkbox} ${win95.outset} w-3 h-3 flex items-center justify-center mr-2 cursor-pointer`}
-                      >
-                        {activeEndpoints.includes(endpoint.id) && <div className="w-1.5 h-1.5 bg-black" />}
+              {/* Endpoints (Advanced) */}
+              {features.advanced && (
+                <div className="mt-4">
+                  <div className={win95.title}>Endpoints</div>
+                  <div className="p-2 space-y-2">
+                    {endpoints.map((endpoint) => (
+                      <div key={endpoint.id} className="flex items-center">
+                        <div
+                          onClick={() => toggleEndpoint(endpoint.id)}
+                          className={`${win95.checkbox} ${win95.outset} w-3 h-3 flex items-center justify-center mr-2 cursor-pointer`}
+                        >
+                          {activeEndpoints.includes(endpoint.id) && <div className="w-1.5 h-1.5 bg-black" />}
+                        </div>
+                        <span className="text-sm">{endpoint.name}</span>
                       </div>
-                      <span className="text-sm">{endpoint.name}</span>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
               {/* Keys */}
               <div className="mt-4">
                 <div className={win95.title}>Keys</div>
@@ -324,6 +344,33 @@ export default function APIConsolePage() {
                         ))}
                       </tbody>
                     </table>
+                  </div>
+                </div>
+              </div>
+
+              {/* Settings */}
+              <div className="mt-4">
+                <div className={win95.title}>Settings</div>
+                <div className="p-2 space-y-2">
+                  <label className="flex items-center gap-2 text-[12px]">
+                    <input
+                      type="checkbox"
+                      checked={features.advanced}
+                      onChange={(e) => {
+                        const next = { ...features, advanced: e.target.checked };
+                        setFeatures(next);
+                        try {
+                          const raw = localStorage.getItem('sf_local_settings_v1');
+                          const parsed = raw ? JSON.parse(raw) : {};
+                          const updated = { ...parsed, features: { ...next } };
+                          localStorage.setItem('sf_local_settings_v1', JSON.stringify(updated));
+                        } catch {}
+                      }}
+                    />
+                    Advanced features
+                  </label>
+                  <div className="text-[11px] opacity-70">
+                    Advanced reduces clutter when off by hiding expert panels.
                   </div>
                 </div>
               </div>
@@ -428,63 +475,67 @@ export default function APIConsolePage() {
               </div>
             </div>
 
-            {/* Bottom: Conveyor */}
-            <div className={`col-span-12 md:col-span-9 ${win95.panel} ${win95.outset}`}>
-              <div className={win95.title}>Forge Conveyor · Call Timeline</div>
-              <div className={`${win95.inset} p-2 m-2`}>
-                <div className={`${win95.inset} p-1 font-mono text-xs mb-4 bg-white text-black`}>
-                  {pipelineLog || 'plan> POST /v1/chat/completions  provider=openai  stream=true'}
+            {/* Bottom: Conveyor (Advanced) */}
+            {features.advanced && (
+              <div className={`col-span-12 md:col-span-9 ${win95.panel} ${win95.outset}`}>
+                <div className={win95.title}>Forge Conveyor · Call Timeline</div>
+                <div className={`${win95.inset} p-2 m-2`}>
+                  <div className={`${win95.inset} p-1 font-mono text-xs mb-4 bg-white text-black`}>
+                    {pipelineLog || 'plan> POST /v1/chat/completions  provider=openai  stream=true'}
+                  </div>
+                  <div className="relative h-28 mb-4">
+                    <div className="absolute top-1/2 w-full border-t border-black" />
+                    <div className="absolute top-1/2 translate-y-14 w-full border-t border-black" />
+                    <div className="flex justify-between px-4">
+                      {[
+                        ['S1 · Build', 'headers + body'],
+                        ['S2 · Sign', 'keys + auth'],
+                        ['S3 · Dispatch', 'provider endpoint'],
+                        ['S4 · Stream', 'SSE chunks'],
+                        ['S5 · Emit', 'response → UI'],
+                      ].map(([title, desc]) => (
+                        <div key={title} className={`${win95.panel} ${win95.outset} w-32`}>
+                          <div className={win95.title + ' text-xs'}>{title}</div>
+                          <div className={`${win95.inset} p-1 text-xs h-12 flex items-center justify-center`}>{desc}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button className={`${win95.button} ${win95.outset} text-sm`}>Checkpoint</button>
+                    <button className={`${win95.button} ${win95.outset} text-sm`}>Rollback</button>
+                    <button className={`${win95.button} ${win95.outset} text-sm`}>Export</button>
+                  </div>
                 </div>
-                <div className="relative h-28 mb-4">
-                  <div className="absolute top-1/2 w-full border-t border-black" />
-                  <div className="absolute top-1/2 translate-y-14 w-full border-t border-black" />
-                  <div className="flex justify-between px-4">
+              </div>
+            )}
+
+            {/* Bottom right: Gauge Board (Advanced) */}
+            {features.advanced && (
+              <div className={`col-span-12 md:col-span-3 ${win95.panel} ${win95.outset}`}>
+                <div className={win95.title}>Gauge Board</div>
+                <div className={`${win95.inset} p-2 m-2`}>
+                  <div className="flex justify-around mb-4">
                     {[
-                      ['S1 · Build', 'headers + body'],
-                      ['S2 · Sign', 'keys + auth'],
-                      ['S3 · Dispatch', 'provider endpoint'],
-                      ['S4 · Stream', 'SSE chunks'],
-                      ['S5 · Emit', 'response → UI'],
-                    ].map(([title, desc]) => (
-                      <div key={title} className={`${win95.panel} ${win95.outset} w-32`}>
-                        <div className={win95.title + ' text-xs'}>{title}</div>
-                        <div className={`${win95.inset} p-1 text-xs h-12 flex items-center justify-center`}>{desc}</div>
+                      ['tps', 'h-1/3'],
+                      ['latency', 'h-1/2'],
+                      ['errors', 'h-1/12'],
+                    ].map(([label, height]) => (
+                      <div key={label} className="flex flex-col items-center">
+                        <div className={`${win95.panel} ${win95.outset} w-12 h-44 flex flex-col-reverse mb-1`}>
+                          <div className={`bg-[#1084d0] ${height} w-full`} />
+                        </div>
+                        <span className="text-xs">{label}</span>
                       </div>
                     ))}
                   </div>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <button className={`${win95.button} ${win95.outset} text-sm`}>Checkpoint</button>
-                  <button className={`${win95.button} ${win95.outset} text-sm`}>Rollback</button>
-                  <button className={`${win95.button} ${win95.outset} text-sm`}>Export</button>
-                </div>
-              </div>
-            </div>
-
-            {/* Bottom right: Gauge Board */}
-            <div className={`col-span-12 md:col-span-3 ${win95.panel} ${win95.outset}`}>
-              <div className={win95.title}>Gauge Board</div>
-              <div className={`${win95.inset} p-2 m-2`}>
-                <div className="flex justify-around mb-4">
-                  {[
-                    ['tps', 'h-1/3'],
-                    ['latency', 'h-1/2'],
-                    ['errors', 'h-1/12'],
-                  ].map(([label, height]) => (
-                    <div key={label} className="flex flex-col items-center">
-                      <div className={`${win95.panel} ${win95.outset} w-12 h-44 flex flex-col-reverse mb-1`}>
-                        <div className={`bg-[#1084d0] ${height} w-full`} />
-                      </div>
-                      <span className="text-xs">{label}</span>
-                    </div>
-                  ))}
-                </div>
-                <div className="flex gap-2">
-                  <button className={`${win95.button} ${win95.outset} text-sm flex-1`}>Calibrate</button>
-                  <button className={`${win95.button} ${win95.outset} text-sm flex-1`}>Reset</button>
+                  <div className="flex gap-2">
+                    <button className={`${win95.button} ${win95.outset} text-sm flex-1`}>Calibrate</button>
+                    <button className={`${win95.button} ${win95.outset} text-sm flex-1`}>Reset</button>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </div>

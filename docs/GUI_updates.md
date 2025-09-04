@@ -181,7 +181,7 @@ login we need to use the same byok standard with configuring ai provdiers.
 
 
 missing:
-admin panel with all configurations. make sure that the gui for this is interconnected with all site settings . to act as main control panel hub.
+Consolidated settings hub under Router (/api). Ensure the GUI is interconnected with all site settings and acts as the main control panel. Use the Advanced features toggle to reveal expert options.
 
 think of these as API calls to agents we are literally building the API calls to send to the agents and systems . 
 
@@ -1480,8 +1480,8 @@ END of CODE Redesign TEMPLATE.
 Implemented (v1) UI notes
 
 - Navigation
-  - Added Discourse (SSO‑gated) and Admin tabs to the main nav; also reachable from Win95 Suite via standard nav.
-  - Routes: /discourse (read‑only latest/topics), /admin (BYOK/provider config, feature toggles, import/export JSON).
+  - Added Discourse (SSO‑gated) tab to the main nav; settings consolidated under Router.
+  - Routes: /discourse (read‑only latest/topics), /api (Router: BYOK/provider config, feature toggles, import/export JSON).
 
 - Auth & Security
   - Discourse SSO (Discourse Connect) via hub.bitwiki.org; secret remains server‑side only.

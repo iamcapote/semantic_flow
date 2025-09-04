@@ -112,7 +112,6 @@ const App = () => {
               <Route path="/chat" element={<Win95Suite initialTab="chat" />} />
               <Route path="/api" element={<Win95Suite initialTab="api" />} />
               <Route path="/router" element={<Win95Suite initialTab="api" />} />
-              <Route path="/admin" element={<Win95Suite initialTab="admin" />} />
               <Route path="/discourse" element={<DiscoursePage />} />
               <Route path="/learn" element={<LearnPage />} />
               <Route path="/setup" element={<LandingPage onApiKeySet={refreshApiKeyState} />} />

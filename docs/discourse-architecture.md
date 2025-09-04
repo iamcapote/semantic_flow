@@ -505,14 +505,14 @@ Here’s how to approach a comprehensive Node.js/Discourse API integration for y
 
 - Client routes & nav:
   - /discourse (SSO‑gated read‑only view)
-  - /admin (local BYOK/provider settings + feature toggles)
-  - Links visible in main nav and discoverable from Win95 suite
+  - /api (Router: provider settings + feature toggles)
+  - Settings live under Router. Use the Advanced features toggle to show/hide expert panels.
 
 - Environment variables
   - DISCOURSE_BASE_URL=https://hub.bitwiki.org
   - DISCOURSE_SSO_SECRET=canvas_123
   - APP_BASE_URL=http://localhost:8081 (dev) / production origin
-  - API_KEY=optional_admin_key (read‑only proxy v1)
+  - API_KEY=optional_service_key (optional; enables seed write endpoints in early v1)
   - PORT=3001
 
 - Dev/E2E notes

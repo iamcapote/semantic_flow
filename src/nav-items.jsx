@@ -1,4 +1,4 @@
-import { MessageSquareIcon, GitBranchIcon, MonitorCogIcon, MessageCircleQuestionIcon, SettingsIcon } from "lucide-react";
+import { MessageSquareIcon, GitBranchIcon, MonitorCogIcon, MessageCircleQuestionIcon } from "lucide-react";
 import Win95Suite from "./pages/Win95Suite.jsx";
 import LearnPage from "./pages/LearnPage.jsx";
 
@@ -23,12 +23,6 @@ export const navItems = [
     to: "/discourse",
     icon: <MessageCircleQuestionIcon className="h-4 w-4" />,
   page: <Win95Suite initialTab="discourse" />,
-  },
-  {
-    title: "Admin",
-    to: "/admin",
-    icon: <SettingsIcon className="h-4 w-4" />,
-  page: <Win95Suite initialTab="admin" />,
   },
   {
     title: "Learn",

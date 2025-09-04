@@ -22,7 +22,7 @@ export default function DiscourseConfig() {
   const logRef = useRef(null);
   const [lines, setLines] = useState([
     'Discourse API Config. This tab configures API usage, not SSO.',
-    'SSO lives on Landing/Admin. Signed in: ' + (!!user),
+    'SSO lives on Landing. Signed in: ' + (!!user),
   ]);
 
   useEffect(() => { logRef.current?.scrollTo({ top: logRef.current.scrollHeight }); }, [lines]);
@@ -78,7 +78,7 @@ export default function DiscourseConfig() {
               <button style={styles.btn} onClick={refreshPMs} disabled={busy || !user}>Refresh PMs</button>
               <button style={styles.btn} onClick={listPersonas} disabled={busy}>List Personas</button>
             </div>
-            {!user && <div style={{ marginTop: 6, fontSize: 12, color: '#800' }}>Sign in from Landing/Admin to access protected endpoints.</div>}
+            {!user && <div style={{ marginTop: 6, fontSize: 12, color: '#800' }}>Sign in from Landing to access protected endpoints.</div>}
           </div>
           <div style={styles.panel}>
             <div style={{ display: 'grid', gap: 6 }}>

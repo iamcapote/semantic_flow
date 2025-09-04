@@ -8,14 +8,13 @@ import TopNav95Plus from '@/components/TopNav95Plus';
 export default function LearnPage() {
   const navigate = useNavigate();
 
-  // Keep sections consistent with Win95Suite and place Learn after Admin
+  // Keep sections consistent with Win95Suite
   const sections = [
     { id: 'builder', label: 'Builder', href: '/builder' },
     { id: 'ide', label: 'IDE', href: '/ide' },
     { id: 'api', label: 'Router', href: '/api' },
     { id: 'console', label: 'Console', href: '/console' },
     { id: 'chat', label: 'Chat', href: '/chat' },
-    { id: 'admin', label: 'Admin', href: '/admin' },
     { id: 'learn', label: 'Learn', href: '/learn' },
   ];
 
@@ -150,7 +149,7 @@ export default function LearnPage() {
                   <li>Router</li>
                   <li>Console</li>
                   <li>Chat</li>
-                  <li>Admin</li>
+                  <li>Advanced settings live under Router</li>
                 </ol>
               </div>
               <div className={`bg-white ${bevel.out} border-2 p-3`}>
@@ -161,7 +160,7 @@ export default function LearnPage() {
                   <li>Wire routes and bindings in Router</li>
                   <li>Adjust fast and inspect in Console</li>
                   <li>Test, refine, and finalize in Chat</li>
-                  <li>Manage providers, SSO, and site options in Admin</li>
+                  <li>Manage providers and site options in Router settings</li>
                 </ol>
                 <p className="mt-2 text-xs italic">Think of it as a small factory for context-building.</p>
               </div>
@@ -236,13 +235,7 @@ export default function LearnPage() {
               </div>
 
               {/* Admin */}
-              <div className={`bg-white ${bevel.out} border-2 p-3`}>
-                <h4 className="font-semibold mb-1">F. Admin (Settings & Configuration)</h4>
-                <ul className="list-disc pl-5 text-sm space-y-1">
-                  <li>Provider setup, appearance/theme controls, Discourse SSO, app-site toggles.</li>
-                  <li>BYOK keys live in session storage (encrypted); never stored server-side.</li>
-                </ul>
-              </div>
+              {/* Settings now live under Router */}
 
               {/* Discourse */}
               <div className={`bg-white ${bevel.out} border-2 p-3`}>

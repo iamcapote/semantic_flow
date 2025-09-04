@@ -8,7 +8,6 @@ const mockSections = [
   { id: 'ide', label: 'IDE', href: '/ide' },
   { id: 'console', label: 'Console', href: '/console' },
   { id: 'api', label: 'Router', href: '/api' },
-  { id: 'admin', label: 'Admin', href: '/admin' },
   { id: 'chat', label: 'Chat', href: '/chat' },
 ];
 
@@ -41,7 +40,6 @@ describe('TopNav95Plus Navigation', () => {
     expect(screen.getByRole('tab', { name: 'IDE' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Console' })).toBeInTheDocument();
   expect(screen.getByRole('tab', { name: 'Router' })).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: 'Admin' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Chat' })).toBeInTheDocument();
   });
 
@@ -74,7 +72,7 @@ describe('TopNav95Plus Navigation', () => {
     
     // Check all tabs have proper ARIA attributes
     const tabs = screen.getAllByRole('tab');
-    expect(tabs).toHaveLength(6);
+  expect(tabs).toHaveLength(5);
     
     tabs.forEach(tab => {
       expect(tab).toHaveAttribute('aria-selected');

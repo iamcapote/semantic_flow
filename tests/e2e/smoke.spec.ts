@@ -11,12 +11,13 @@ test.describe('smokes', () => {
     await expect(page.getByText('Palette')).toBeVisible();
   });
 
-  test('admin panel renders without crashing', async ({ page }) => {
+  test('router settings render without crashing', async ({ page }) => {
     await page.route('**/api/config', route => {
       route.fulfill({ json: { discourseBaseUrl: 'https://hub.bitwiki.org', ssoProvider: true, appBaseUrl: 'http://localhost:8081' } });
     });
-  await page.goto('/admin');
-  await expect(page.getByRole('heading', { name: /Admin Panel/i })).toBeVisible();
+    await page.goto('/api');
+    await expect(page.getByText('Providers')).toBeVisible();
+    await expect(page.getByText('Settings')).toBeVisible();
   });
 
   test('discourse page shows login CTA when unauthenticated', async ({ page }) => {

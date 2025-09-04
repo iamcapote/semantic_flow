@@ -42,7 +42,6 @@ Important: Semantic Flow is not an automation runner. It does not execute flows.
   3) Router
   4) Console
   5) Chat
-  6) Admin
 
 - Shared State (Assembly-Line Model)
   All tabs operate on the same schema:
@@ -51,7 +50,7 @@ Important: Semantic Flow is not an automation runner. It does not execute flows.
   3) Wire routes and bindings in Router
   4) Adjust fast and inspect in Console
   5) Test, refine, and finalize in Chat
-  6) Manage providers, SSO, and site options in Admin
+  Manage providers and site options in Router settings (Advanced)
   Think of it as a small factory for context-building.
 
 ## 3) Pages and Features
@@ -110,13 +109,10 @@ What it is not: an automation or workflow engine. Connections indicate context a
 - SSO: when signed in via Discourse, your chat can leverage Discourse personas and content as the foundation for responses.
 - Use Chat to validate schema intent, tone, constraints, and examples before publishing/exporting.
 
-### F. Admin (Settings and Configuration)
-- Central control panel for:
-  - Provider setup (OpenAI, OpenRouter, Venice)
-  - Appearance and theme controls for Builder
-  - Discourse SSO and related options
-  - App-site settings and feature toggles
-- Keys follow the BYOK principle: stored only in session storage (encrypted), never persisted server-side.
+### F. Advanced Features & Settings
+- Settings now live under Router.
+- Toggle "Advanced features" to reveal expert panels (Endpoints, Conveyor, Gauge Board) and additional options.
+- Provider setup (BYOK), appearance/theme, and site options remain available; keys are stored only in session storage (encrypted).
 
 ### G. Discourse-Powered Features (SSO Only)
 - When you sign in via Discourse SSO:

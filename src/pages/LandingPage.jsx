@@ -104,7 +104,7 @@ export default function LandingPage({ onApiKeySet }) {
           </div>
         </div>
         <div style={win98.foot}>
-          <div style={{ fontSize: 12 }}>Tip: You can switch between SSO and BYOK anytime from the Admin tab.</div>
+          <div style={{ fontSize: 12 }}>Tip: You can switch between SSO and BYOK anytime from Router settings.</div>
           <div>
             <button style={win98.btn} onClick={() => navigate('/')}>Enter App</button>
           </div>

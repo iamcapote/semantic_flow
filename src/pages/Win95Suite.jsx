@@ -1,5 +1,5 @@
 // @ts-nocheck
-// WinGPT 95 — Unified Suite (Builder, IDE, Router, Console, Admin, Chat)
+// WinGPT 95 — Unified Suite (Builder, IDE, Router, Console, Chat)
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Builder95 from '@/components/Builder95';
@@ -7,7 +7,6 @@ import SemanticFlowBuilder from '@/components/SemanticFlowBuilder';
 import IDE95 from '@/components/IDE95';
 import Console95 from '@/components/Console95';
 import APIConsolePage from './APIConsolePage';
-import AdminPanel from './AdminPanel';
 import TopNav95Plus from '@/components/TopNav95Plus';
 
 function uid() { return Math.random().toString(36).slice(2); }
@@ -119,7 +118,7 @@ function Win95Chat({ embedded = false }) {
 }
 
 export default function Win95Suite({ initialTab }) {
-  const [tab, setTab] = useState(initialTab || 'builder'); // builder | ide | console | chat | api | admin
+  const [tab, setTab] = useState(initialTab || 'builder'); // builder | ide | console | chat | api
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -148,7 +147,6 @@ export default function Win95Suite({ initialTab }) {
     { id: 'api', label: 'Router', href: '/api' },
     { id: 'console', label: 'Console', href: '/console' },
     { id: 'chat', label: 'Chat', href: '/chat' },
-    { id: 'admin', label: 'Admin', href: '/admin' },
   { id: 'learn', label: 'Learn', href: '/learn' },
   ];
 
@@ -194,11 +192,6 @@ export default function Win95Suite({ initialTab }) {
           {tab === 'api' && (
             <div style={{ height: '100%', overflow: 'auto' }}>
               <APIConsolePage />
-            </div>
-          )}
-          {tab === 'admin' && (
-            <div style={{ height: '100%', overflow: 'auto' }}>
-              <AdminPanel />
             </div>
           )}
           {tab === 'chat' && <Win95Chat embedded />}
