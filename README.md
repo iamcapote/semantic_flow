@@ -510,4 +510,4 @@ Built with ∞❤️∞ for the future of context engineering and AI reasoning
 [ci-link]: https://github.com/iamcapote/semantic_flow/actions
 [coverage-link]: https://github.com/iamcapote/semantic_flow/actions
 [repocloud-button]: https://d16t0pc4846x52.cloudfront.net/deploylobe.svg
-[repocloud-link]: https://repocloud.io/details/?app_id=248
+[repocloud-link]: https://repocloud.io/

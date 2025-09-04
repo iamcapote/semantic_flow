@@ -117,9 +117,13 @@ const LabCanvas = ({
 
   // ensure nodes always carry the update callback (e.g., after load)
   React.useEffect(() => {
-    setNodes((nds) => nds.map((n) => (
-      n.data && typeof n.data._onUpdate === 'function' ? n : { ...n, data: { ...n.data, _onUpdate: (nodeId, patch) => updateNodeData(nodeId, patch) } }
-    )));
+    setNodes((nds) => nds.map((n) => {
+      const withCb = n.data && typeof n.data._onUpdate === 'function' ? n : { ...n, data: { ...n.data, _onUpdate: (nodeId, patch) => updateNodeData(nodeId, patch) } };
+      if (!withCb.width || !withCb.height) {
+        return { ...withCb, width: withCb.width || 320, height: withCb.height || 220 };
+      }
+      return withCb;
+    }));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   

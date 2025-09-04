@@ -1,11 +1,12 @@
 import React, { memo, useState } from 'react';
 import { Handle, Position } from 'reactflow';
+import { NodeResizer } from '@reactflow/node-resizer';
+import '@reactflow/node-resizer/dist/style.css';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Edit3, Save, X, Play, Pause, Info, Sparkles } from "lucide-react";
+import { Edit3, Save, X, Play, Pause, Sparkles } from "lucide-react";
 import { NODE_TYPES, CLUSTER_COLORS } from "@/lib/ontology";
 import NodeEnhancementModal from './NodeEnhancementModal';
 
@@ -71,12 +72,34 @@ const SemanticNode = ({ id, data, isConnectable, selected, onNodeUpdate }) => {
   return (
     <Card 
       data-testid="semantic-node"
-      className={`min-w-[200px] max-w-[300px] transition-all duration-200 bg-white dark:bg-gray-800 ${selected ? 'ring-2 ring-blue-500 ring-offset-2' : ''}`}
+      className="w-full h-full min-w-[280px] min-h-[180px] transition-all duration-200"
       style={{ 
         borderLeftColor: clusterColor,
-        borderLeftWidth: '4px'
+        borderLeftWidth: '4px',
+        background: '#C0C0C0',
+        border: '2px outset #C0C0C0',
+        boxShadow: selected ? '0 0 0 2px #FF69B4, 2px 2px 4px rgba(0,0,0,0.3)' : '2px 2px 4px rgba(0,0,0,0.3)',
+        fontFamily: '"MS Sans Serif", Tahoma, Arial, sans-serif',
+        fontSize: '11px',
+        borderRadius: 0
       }}
     >
+      <NodeResizer
+        color={clusterColor}
+        minWidth={280}
+        minHeight={180}
+        handleStyle={{ 
+          width: 10, 
+          height: 10, 
+          borderRadius: 0,
+          background: '#C0C0C0',
+          border: '1px outset #C0C0C0'
+        }}
+        lineStyle={{ 
+          strokeWidth: 1,
+          stroke: '#808080'
+        }}
+      />
       {/* Input Handle */}
       <Handle
         type="target"
@@ -90,48 +113,23 @@ const SemanticNode = ({ id, data, isConnectable, selected, onNodeUpdate }) => {
         isConnectable={isConnectable}
       />
       
-      <CardHeader className="pb-2">
+      <CardHeader className="pb-2" style={{ 
+        background: 'linear-gradient(90deg, #000080 0%, #0000FF 100%)', 
+        color: '#FFFFFF',
+        padding: '6px 8px',
+        margin: 0,
+        borderBottom: '1px solid #404040'
+      }}>
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-lg">{nodeType?.icon || '📦'}</span>
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <span className="text-sm">{nodeType?.icon || '📦'}</span>
             <div 
-              className="w-3 h-3 rounded-full"
+              className="w-2 h-2 border border-white"
               style={{ backgroundColor: clusterColor }}
             />
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+            <h3 className="text-xs font-bold text-white truncate flex-1">
               {data.label}
             </h3>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-4 w-4 p-0 opacity-60 hover:opacity-100"
-                  >
-                    <Info className="h-3 w-3" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="top" className="max-w-xs">
-                  <div className="space-y-1">
-                    <p className="font-medium">{nodeType?.label || data.label}</p>
-                    <p className="text-xs text-gray-600 dark:text-gray-400">
-                      {nodeType?.description || 'Semantic node description'}
-                    </p>
-                    <div className="flex items-center gap-1 mt-1">
-                      <span className="text-xs text-gray-500">Cluster:</span>
-                      <span className="text-xs font-mono">{data.metadata?.cluster}</span>
-                    </div>
-                    {nodeType?.tags && nodeType.tags.length > 0 && (
-                      <div className="flex items-center gap-1">
-                        <span className="text-xs text-gray-500">Tags:</span>
-                        <span className="text-xs">{nodeType.tags.join(', ')}</span>
-                      </div>
-                    )}
-                  </div>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
           </div>
           <div className="flex items-center gap-1">
             {data.config?.isExecutable && (
@@ -139,38 +137,84 @@ const SemanticNode = ({ id, data, isConnectable, selected, onNodeUpdate }) => {
                 size="sm"
                 variant="ghost"
                 onClick={handleExecute}
-                className="h-6 w-6 p-0"
+                className="h-4 w-4 p-0"
+                style={{
+                  background: '#C0C0C0',
+                  border: '1px outset #C0C0C0',
+                  borderRadius: 0
+                }}
               >
-                <Play className="h-3 w-3" />
+                <Play className="h-2.5 w-2.5" />
               </Button>
             )}
             <Button
               size="sm"
               variant="ghost"
               onClick={() => setIsEditing(!isEditing)}
-              className="h-6 w-6 p-0"
+              className="h-4 w-4 p-0"
+              style={{
+                background: '#C0C0C0',
+                border: '1px outset #C0C0C0',
+                borderRadius: 0
+              }}
             >
-              <Edit3 className="h-3 w-3" />
+              <Edit3 className="h-2.5 w-2.5" />
             </Button>
           </div>
         </div>
         
         {/* Node type and tags */}
-        <div className="flex flex-wrap gap-1 mt-1">
-          <Badge variant="outline" className="text-xs dark:border-gray-600 dark:text-gray-400">
+        <div className="flex flex-wrap gap-1 mt-2">
+          <Badge variant="outline" className="text-xs border-0" style={{
+            background: '#E0E0E0',
+            color: '#000080',
+            fontSize: '9px',
+            padding: '1px 4px',
+            border: '1px inset #C0C0C0'
+          }}>
             {data.type}
           </Badge>
           {data.metadata?.tags?.slice(0, 2).map((tag) => (
-            <Badge key={tag} variant="secondary" className="text-xs dark:bg-gray-700 dark:text-gray-300">
+            <Badge key={tag} variant="secondary" className="text-xs border-0" style={{
+              background: '#E0E0E0',
+              color: '#000080',
+              fontSize: '9px',
+              padding: '1px 4px',
+              border: '1px inset #C0C0C0'
+            }}>
               {tag}
             </Badge>
           ))}
         </div>
       </CardHeader>
       
-      <CardContent className="pt-0">
+      <CardContent className="pt-0" style={{
+        background: '#F0F0F0',
+        padding: '8px',
+        borderTop: '1px inset #C0C0C0'
+      }}>
+        {/* Inline description (replaces tooltip) */}
+        {(data.metadata?.description || nodeType?.description) && (
+          <div className="mb-2" style={{
+            fontSize: '10px',
+            color: '#000080',
+            fontStyle: 'italic',
+            padding: '4px 6px',
+            background: '#FFFBF0',
+            border: '1px solid #E0E0E0',
+            borderRadius: '2px'
+          }}>
+            💡 {data.metadata?.description || nodeType?.description}
+          </div>
+        )}
+
         {isEditing ? (
-          <div className="space-y-2">
+          <div className="space-y-2" style={{
+            background: '#FFFFFF',
+            border: '1px inset #C0C0C0',
+            padding: '6px',
+            borderRadius: '2px'
+          }}>
             {isBlankNode && (
               <div className="space-y-2">
                 <input
@@ -178,21 +222,42 @@ const SemanticNode = ({ id, data, isConnectable, selected, onNodeUpdate }) => {
                   value={editLabel}
                   onChange={e => setEditLabel(e.target.value)}
                   placeholder="Node name"
-                  className="w-full px-2 py-1 border rounded text-sm mb-1"
+                  className="w-full border-0"
+                  style={{
+                    padding: '4px 6px',
+                    border: '1px inset #C0C0C0',
+                    background: '#FFFFFF',
+                    fontFamily: '"MS Sans Serif", sans-serif',
+                    fontSize: '11px'
+                  }}
                 />
                 <input
                   type="text"
                   value={editType}
                   onChange={e => setEditType(e.target.value)}
                   placeholder="Node type (e.g. UTIL-BLANK)"
-                  className="w-full px-2 py-1 border rounded text-sm mb-1"
+                  className="w-full border-0"
+                  style={{
+                    padding: '4px 6px',
+                    border: '1px inset #C0C0C0',
+                    background: '#FFFFFF',
+                    fontFamily: '"MS Sans Serif", sans-serif',
+                    fontSize: '11px'
+                  }}
                 />
                 <input
                   type="text"
                   value={Array.isArray(editTags) ? editTags.join(', ') : ''}
                   onChange={e => setEditTags(e.target.value.split(',').map(tag => tag.trim()).filter(Boolean))}
                   placeholder="Tags (comma separated)"
-                  className="w-full px-2 py-1 border rounded text-sm mb-1"
+                  className="w-full border-0"
+                  style={{
+                    padding: '4px 6px',
+                    border: '1px inset #C0C0C0',
+                    background: '#FFFFFF',
+                    fontFamily: '"MS Sans Serif", sans-serif',
+                    fontSize: '11px'
+                  }}
                 />
               </div>
             )}
@@ -200,7 +265,17 @@ const SemanticNode = ({ id, data, isConnectable, selected, onNodeUpdate }) => {
               value={editContent}
               onChange={(e) => setEditContent(e.target.value)}
               placeholder="Enter node content..."
-              className="min-h-[60px] text-sm bg-white dark:bg-gray-700 dark:text-gray-200"
+              className="w-full border-0 resize"
+              style={{
+                minHeight: '100px',
+                fontSize: '11px',
+                fontFamily: '"MS Sans Serif", Consolas, monospace',
+                background: '#FFFFFF',
+                color: '#000000',
+                border: '1px inset #C0C0C0',
+                padding: '6px',
+                resize: 'both'
+              }}
               autoFocus
             />
             <div className="flex justify-between gap-2">
@@ -209,16 +284,27 @@ const SemanticNode = ({ id, data, isConnectable, selected, onNodeUpdate }) => {
                   size="sm"
                   variant="ghost"
                   onClick={handleCancelEdit}
-                  className="h-6 px-2"
+                  className="h-6 px-2 border-0"
+                  style={{
+                    background: '#C0C0C0',
+                    border: '1px outset #C0C0C0',
+                    borderRadius: 0
+                  }}
                 >
-                  <X className="h-3 w-3" />
+                  <X className="h-2.5 w-2.5" />
                 </Button>
                 <Button
                   size="sm"
                   onClick={handleSaveEdit}
-                  className="h-6 px-2"
+                  className="h-6 px-2 border-0"
+                  style={{
+                    background: '#90EE90',
+                    border: '1px outset #C0C0C0',
+                    borderRadius: 0,
+                    color: '#000000'
+                  }}
                 >
-                  <Save className="h-3 w-3" />
+                  <Save className="h-2.5 w-2.5" />
                 </Button>
               </div>
               
@@ -229,9 +315,15 @@ const SemanticNode = ({ id, data, isConnectable, selected, onNodeUpdate }) => {
                   <Button
                     size="sm"
                     variant="outline"
-                    className="h-6 px-2"
+                    className="h-6 px-2 border-0"
+                    style={{
+                      background: '#FFE4B5',
+                      border: '1px outset #C0C0C0',
+                      borderRadius: 0,
+                      color: '#000000'
+                    }}
                   >
-                    <Sparkles className="h-3 w-3" />
+                    <Sparkles className="h-2.5 w-2.5" />
                   </Button>
                 }
               />
@@ -240,33 +332,59 @@ const SemanticNode = ({ id, data, isConnectable, selected, onNodeUpdate }) => {
         ) : (
           <div className="min-h-[60px]">
             {data.content ? (
-              <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+              <div style={{
+                fontSize: '11px',
+                color: '#000000',
+                whiteSpace: 'pre-wrap',
+                background: '#FFFFFF',
+                border: '1px inset #C0C0C0',
+                padding: '6px',
+                borderRadius: '2px',
+                fontFamily: 'Consolas, "Courier New", monospace'
+              }}>
                 {data.content}
-              </p>
+              </div>
             ) : (
-              <p className="text-sm text-gray-400 dark:text-gray-500 italic">
-                {data.metadata?.description || 'Click edit to add content...'}
-              </p>
+              <div style={{
+                fontSize: '11px',
+                color: '#808080',
+                fontStyle: 'italic',
+                textAlign: 'center',
+                padding: '20px',
+                border: '1px dashed #C0C0C0'
+              }}>
+                {data.metadata?.description || 'Double-click to edit...'}
+              </div>
             )}
           </div>
         )}
         
         {/* Execution status indicator */}
         {data.executionState && (
-          <div className="mt-2 pt-2 border-t border-gray-100">
-            <div className="flex items-center gap-2">
-              <div 
-                className={`w-2 h-2 rounded-full ${
-                  data.executionState === 'completed' ? 'bg-green-500' :
-                  data.executionState === 'running' ? 'bg-blue-500 animate-pulse' :
-                  data.executionState === 'failed' ? 'bg-red-500' :
-                  'bg-gray-400 dark:bg-gray-600'
-                }`}
-              />
-              <span className="text-xs text-gray-600 dark:text-gray-400 capitalize">
-                {data.executionState}
-              </span>
-            </div>
+          <div className="mt-2 pt-2" style={{
+            borderTop: '1px inset #C0C0C0',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            fontSize: '10px',
+            color: '#000080',
+            background: '#F8F8F8',
+            padding: '4px 6px',
+            borderRadius: '2px'
+          }}>
+            <div 
+              className={`w-2 h-2 rounded-full border border-black`}
+              style={{
+                backgroundColor:
+                  data.executionState === 'completed' ? '#00FF00' :
+                  data.executionState === 'running' ? '#0000FF' :
+                  data.executionState === 'failed' ? '#FF0000' :
+                  '#808080'
+              }}
+            />
+            <span className="capitalize font-bold">
+              {data.executionState}
+            </span>
           </div>
         )}
       </CardContent>

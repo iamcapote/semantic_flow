@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { Sparkles, Repeat } from 'lucide-react';
-import { convertContent, detectFormat } from '@/lib/formatUtils';
+import { Sparkles } from 'lucide-react';
 import NodeEnhancementModal from './NodeEnhancementModal';
 
 // Win95 look-and-feel helpers
@@ -16,23 +15,9 @@ const ui = {
 };
 
 const FieldRow = ({ idx, field, onChange, onRemove }) => {
-	const [aiOpen, setAiOpen] = useState(false);
-	const fmt = field.type || detectFormat(field.value);
-
-	const onConvert = (to) => {
-		try {
-			const converted = convertContent(field.value, fmt, to);
-			onChange(idx, { ...field, value: converted, type: to });
-		} catch (e) {
-			// noop; conversion errors can be surfaced later via toast if desired
-			console.error('convert failed', e);
-		}
-	};
-
 	const onAiApply = (updatedNode) => {
 		const content = updatedNode?.data?.content ?? '';
 		onChange(idx, { ...field, value: content });
-		setAiOpen(false);
 	};
 
 	return (
@@ -50,12 +35,12 @@ const FieldRow = ({ idx, field, onChange, onRemove }) => {
 				onChange={(e)=>onChange(idx, { ...field, type: e.target.value })}
 				style={ui.select}
 			>
-				{['text','markdown','json','yaml','xml','number','boolean'].map(t => (
+				{['text','longText','number','boolean','enum','multiEnum','date','object','array','tags','file'].map(t => (
 					<option key={t} value={t}>{t}</option>
 				))}
 			</select>
 			<div>
-				{['json','yaml','xml','markdown','text'].includes(field.type) ? (
+				{field.type === 'longText' || field.type === 'text' ? (
 					<textarea
 						aria-label={`Field ${idx} value`}
 						value={field.value}
@@ -70,15 +55,22 @@ const FieldRow = ({ idx, field, onChange, onRemove }) => {
 						<option value="true">true</option>
 						<option value="false">false</option>
 					</select>
+				) : field.type === 'enum' ? (
+					<input aria-label={`Field ${idx} value`} value={field.value ?? ''} onChange={(e)=>onChange(idx, { ...field, value: e.target.value })} placeholder="option id" style={ui.input} />
+				) : field.type === 'multiEnum' ? (
+					<input aria-label={`Field ${idx} value`} value={Array.isArray(field.value) ? field.value.join(', ') : ''} onChange={(e)=>onChange(idx, { ...field, value: e.target.value.split(',').map(x=>x.trim()).filter(Boolean) })} placeholder="id1, id2" style={ui.input} />
+				) : field.type === 'tags' ? (
+					<input aria-label={`Field ${idx} value`} value={Array.isArray(field.value) ? field.value.join(', ') : ''} onChange={(e)=>onChange(idx, { ...field, value: e.target.value.split(',').map(x=>x.trim()).filter(Boolean) })} placeholder="tag1, tag2" style={ui.input} />
+				) : field.type === 'object' ? (
+					<textarea aria-label={`Field ${idx} value`} value={typeof field.value === 'string' ? field.value : JSON.stringify(field.value ?? {}, null, 2)} onChange={(e)=>onChange(idx, { ...field, value: e.target.value })} placeholder="{}" style={ui.ta} />
+				) : field.type === 'array' ? (
+					<textarea aria-label={`Field ${idx} value`} value={typeof field.value === 'string' ? field.value : JSON.stringify(Array.isArray(field.value) ? field.value : [], null, 2)} onChange={(e)=>onChange(idx, { ...field, value: e.target.value })} placeholder="[]" style={ui.ta} />
+				) : field.type === 'file' ? (
+					<input aria-label={`Field ${idx} value`} value={Array.isArray(field.value) ? field.value.join('\n') : (field.value || '')} onChange={(e)=>onChange(idx, { ...field, value: e.target.value.split(/\n+/).map(x=>x.trim()).filter(Boolean) })} placeholder="One URL per line" style={ui.ta} />
 				) : (
 					<input value={field.value ?? ''} onChange={(e)=>onChange(idx, { ...field, value: e.target.value })} style={ui.input} />
 				)}
-				<div style={{ display: 'flex', gap: 6, marginTop: 4, alignItems: 'center' }}>
-					<span style={ui.small}>Convert:</span>
-					{['text','markdown','json','yaml','xml'].filter(t => t !== field.type).map(t => (
-						<button key={t} onClick={()=>onConvert(t)} title={`Convert to ${t}`} style={ui.btn}><Repeat size={12} /> {t}</button>
-					))}
-				</div>
+				{/* No language conversion buttons in fields */}
 			</div>
 			<div style={{ display: 'grid', gap: 6 }}>
 				<NodeEnhancementModal

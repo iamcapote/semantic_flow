@@ -43,12 +43,17 @@ export const createNodeSchema = () => ({
   type: '', // Node type code from ontology (e.g., 'PROP-STM')
   position: { x: 0, y: 0 }, // Canvas position
   data: {
-    label: '', // Display label
+    label: '', // Display label (derived from title when present)
+    title: '', // Node title (primary display)
+    tags: [], // Node tags
+    description: '', // Node description
     content: '', // Node content/value
+    language: 'markdown', // Preferred content/fields language per node
+    fields: [], // Custom key/value pairs only
     metadata: {
       cluster: '', // Ontology cluster (PROP, INQ, etc.)
-      tags: [], // Semantic tags
-      description: '', // Node description
+      tags: [], // Deprecated: use data.tags
+      description: '', // Deprecated: use data.description
       createdAt: '', // ISO timestamp
       updatedAt: '' // ISO timestamp
     },
@@ -66,8 +71,8 @@ export const createNodeSchema = () => ({
   style: {
     backgroundColor: '', // Cluster color
     borderColor: '',
-    width: 200,
-    height: 100
+  width: 320,
+  height: 220
   }
 });
 
@@ -234,16 +239,32 @@ export const createNode = (type, position, content = '') => {
   if (!nodeTypeData) {
     throw new Error(`Unknown node type: ${type}`);
   }
-  
+  // Build canonical array-of-fields (core first)
+  const coreFields = [
+    { name: 'title', type: 'text', value: nodeTypeData.label || 'Node' },
+    { name: 'tags', type: 'tags', value: Array.isArray(nodeTypeData.tags) ? nodeTypeData.tags : [] },
+    { name: 'description', type: 'longText', value: nodeTypeData.description || '' },
+    { name: 'content', type: 'longText', value: content || '' },
+    { name: 'icon', type: 'text', value: nodeTypeData.icon || '📦' }
+  ];
+
   return {
     ...nodeSchema,
     id: generateId(),
     type,
     position,
+  width: 320,
+  height: 220,
     data: {
       ...nodeSchema.data,
-      label: nodeTypeData.label,
-      content,
+  label: nodeTypeData.label,
+  title: nodeTypeData.label,
+  tags: nodeTypeData.tags || [],
+  description: nodeTypeData.description || '',
+  content: content || '',
+  language: 'markdown',
+  // Canonical storage (array of pairs including core keys)
+  fields: coreFields,
       metadata: {
         ...nodeSchema.data.metadata,
         cluster: nodeTypeData.cluster,

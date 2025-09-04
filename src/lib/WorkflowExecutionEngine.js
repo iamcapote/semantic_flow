@@ -1,5 +1,6 @@
 import PromptingEngine from './promptingEngine.js';
 import { SecureKeyManager } from './security.js';
+import { buildNodeContext } from './nodeModel.js';
 
 class WorkflowExecutionEngine {
   constructor(userId, toast) {
@@ -62,8 +63,9 @@ class WorkflowExecutionEngine {
           });
         }
 
-        // Prepare input by combining node content with outputs from connected nodes
-        const nodeInput = this.prepareNodeInput(node, nodeStates, workflow);
+  // Prepare contextual input from node's fields/content, then add upstream outputs
+  const baseContext = buildNodeContext(node);
+  const nodeInput = this.prepareNodeInput(node, nodeStates, workflow, baseContext);
 
     // Execute node using the active provider
     const result = await this.engine.callProvider(
@@ -138,8 +140,8 @@ class WorkflowExecutionEngine {
     };
   }
 
-  prepareNodeInput(node, nodeStates, workflow) {
-    let input = node.data.content || '';
+  prepareNodeInput(node, nodeStates, workflow, baseContext = '') {
+    let input = baseContext || node.data.content || '';
 
     // Find incoming edges to this node
     const incomingEdges = workflow.edges.filter(edge => edge.target === node.id);
@@ -154,7 +156,7 @@ class WorkflowExecutionEngine {
         })
         .join('\n');
 
-      input = `${input}\n\nContext from connected nodes:\n${inputContext}`;
+  input = `${input}\n\n---\nUpstream Context:\n${inputContext}`;
     }
 
     return input;

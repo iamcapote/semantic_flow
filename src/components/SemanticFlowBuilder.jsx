@@ -106,6 +106,8 @@ const SemanticFlowBuilder = () => {
       const normalized = {
         ...n,
         type: 'semantic',
+  width: n.width || 320,
+  height: n.height || 220,
         data: {
           ...(n.data || {}),
           ...(semanticType ? { type: semanticType } : {}),
