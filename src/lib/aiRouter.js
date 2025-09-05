@@ -14,6 +14,14 @@ const DEFAULTS = {
     base: 'https://api.venice.ai/api/v1',
     headers: {},
   },
+  nous: {
+    base: 'https://inference-api.nousresearch.com/v1',
+    headers: {},
+  },
+  morpheus: {
+    base: 'https://api.mor.org/api/v1',
+    headers: {},
+  },
 };
 
 function getBase(providerId) {
@@ -101,6 +109,20 @@ function adaptBodyAndPath(providerId, body, explicitPath) {
   }
 
   if (providerId === 'venice') {
+    return { path: '/chat/completions', payload: body };
+  }
+
+  if (providerId === 'nous') {
+    // OpenAI compatible: supports /chat/completions and /completions
+    if (Array.isArray(body?.messages)) return { path: '/chat/completions', payload: body };
+    if (body?.prompt) return { path: '/completions', payload: body };
+    return { path: '/chat/completions', payload: body };
+  }
+
+  if (providerId === 'morpheus') {
+    // Observed endpoint: /chat/completions for chat
+    if (Array.isArray(body?.messages)) return { path: '/chat/completions', payload: body };
+    if (body?.prompt) return { path: '/completions', payload: body };
     return { path: '/chat/completions', payload: body };
   }
 

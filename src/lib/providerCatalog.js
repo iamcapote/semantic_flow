@@ -23,6 +23,29 @@ export const PROVIDER_CATALOG = {
     name: 'Venice AI',
     models: ['venice-uncensored', 'mistral-31-24b', 'llama-3.2-3b'],
     defaultModel: 'venice-uncensored'
+  },
+  nous: {
+    name: 'Nous Research',
+    models: [
+      'Hermes-4-70B',
+      'Hermes-4-405B',
+      'Hermes-3-Llama-3.1-70B',
+      'Hermes-3-Llama-3.1-405B',
+      'DeepHermes-3-Llama-3-8B-Preview',
+      'DeepHermes-3-Mistral-24B-Preview'
+    ],
+    defaultModel: 'Hermes-4-70B'
+  },
+  morpheus: {
+    name: 'Morpheus',
+    models: [
+      'llama-3.3-70b',
+      'llama-3.3-70b-web',
+      'venice-uncensored-web',
+      'qwen3-235b-web',
+      'mistral-31-24b-web'
+    ],
+    defaultModel: 'llama-3.3-70b'
   }
 };
 

@@ -89,7 +89,7 @@ Semantic Flow is a **Context Engineering Canvas**. Compose knowledge as connecte
 * **Win95 Suite**: Builder, IDE, Router/API Console, Admin, Chat, Learn — unified retro‑modern UI (a visual reasoning engine for context design).
 * **Rich Ontology**: 16+ clusters, 100+ node types for logic, reasoning, cognition, discourse, and control.
 * **Agentic Constructs**: Compose Persona + Policies + Tools + Memory/Seeds → route into Chat.
-* **Three AI Providers**: OpenAI · OpenRouter · Venice AI. **BYOK** with session‑only storage.
+* **Five AI Providers**: OpenAI · OpenRouter · Venice AI · Nous · Morpheus. **BYOK** with session‑only storage.
 * **Discourse SSO**: Read topics/PMs, create and attach **Seeds**, leverage personas via server proxy.
 * **Multi‑Format Export**: JSON · YAML · Markdown · XML. Portable by design.
 * **Router/API Console**: Build and send provider requests, inspect streaming, and proxy Discourse AI personas.
@@ -160,7 +160,7 @@ Build **schemas that act like agents** by composing:
 
 ## 🔌 Providers, BYOK, and Discourse
 
-* **Providers**: OpenAI, OpenRouter, Venice AI. Switch easily; per‑session keys.
+* **Providers**: OpenAI, OpenRouter, Venice AI, Nous, Morpheus. Switch easily; per‑session keys.
 * **BYOK**: Keys live **only** in browser sessionStorage (encrypted). No server‑side persistence.
 * **Discourse SSO**: Sign‑in unlocks topic/PM browse, seed creation, and persona leverage via secure proxy.
 

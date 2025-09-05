@@ -40,6 +40,33 @@ const defaultProviders = [
     models: ['venice-uncensored', 'mistral-31-24b', 'llama-3.2-3b'],
     isActive: false,
   },
+  {
+    providerId: 'nous',
+    name: 'Nous Research',
+    baseURL: 'https://inference-api.nousresearch.com/v1',
+    models: [
+      'Hermes-4-70B',
+      'Hermes-4-405B',
+      'Hermes-3-Llama-3.1-70B',
+      'Hermes-3-Llama-3.1-405B',
+      'DeepHermes-3-Llama-3-8B-Preview',
+      'DeepHermes-3-Mistral-24B-Preview'
+    ],
+    isActive: false,
+  },
+  {
+    providerId: 'morpheus',
+    name: 'Morpheus',
+    baseURL: 'https://api.mor.org/api/v1',
+    models: [
+      'llama-3.3-70b',
+      'llama-3.3-70b-web',
+      'venice-uncensored-web',
+      'qwen3-235b-web',
+      'mistral-31-24b-web'
+    ],
+    isActive: false,
+  },
 ];
 
 const ProviderSetup = ({ userId, onComplete }) => {
@@ -204,6 +231,59 @@ const ProviderSetup = ({ userId, onComplete }) => {
         });
         return;
       }
+      if (providerId === 'nous') {
+        response = await fetch('https://inference-api.nousresearch.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model,
+            messages: [
+              { role: 'user', content: 'Hello, this is a test prompt to verify the connection.' }
+            ],
+            max_tokens: 50,
+            temperature: 0.7
+          })
+        });
+        data = await response.json();
+        if (!response.ok) throw new Error(data.error?.message || response.statusText);
+        toast({
+          title: 'Test Successful',
+          description: `Nous responded: "${data.choices?.[0]?.message?.content?.substring(0,50) || 'No response'}..."`
+        });
+        // eslint-disable-next-line no-console
+        console.log('[ProviderSetup][Nous] Response:', data);
+        return;
+      }
+
+      if (providerId === 'morpheus') {
+        response = await fetch('https://api.mor.org/api/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model,
+            messages: [
+              { role: 'system', content: 'You are a helpful assistant.' },
+              { role: 'user', content: 'Hello, this is a test prompt to verify the connection.' }
+            ],
+            stream: false
+          })
+        });
+        data = await response.json();
+        if (!response.ok) throw new Error(data.error?.message || response.statusText);
+        toast({
+          title: 'Test Successful',
+          description: `Morpheus responded: "${data.choices?.[0]?.message?.content?.substring(0,50) || 'No response'}..."`
+        });
+        // eslint-disable-next-line no-console
+        console.log('[ProviderSetup][Morpheus] Response:', data);
+        return;
+  }
       toast({ title: 'Unsupported provider', description: providerId });
     } catch (error) {
       toast({ title: "Test Failed", description: error.message, variant: "destructive" });

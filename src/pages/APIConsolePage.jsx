@@ -20,6 +20,8 @@ const providers = [
   { id: 'openai', name: 'OpenAI' },
   { id: 'openrouter', name: 'OpenRouter' },
   { id: 'venice', name: 'Venice AI' },
+  { id: 'nous', name: 'Nous Research' },
+  { id: 'morpheus', name: 'Morpheus' },
   { id: 'discourse', name: 'Discourse AI' },
 ];
 
@@ -104,11 +106,13 @@ export default function APIConsolePage() {
     { label: 'svc-openai', lastUsed: '' },
     { label: 'svc-openrouter', lastUsed: '' },
     { label: 'svc-venice', lastUsed: '' },
+  { label: 'svc-nous', lastUsed: '' },
+  { label: 'svc-morph', lastUsed: '' },
   ]);
   const [activeKey, setActiveKey] = useState('');
   const [keyManagerOpen, setKeyManagerOpen] = useState(false);
-  const [keyInputs, setKeyInputs] = useState({ openai: '', openrouter: '', venice: '' });
-  const [showKeyFields, setShowKeyFields] = useState({ openai: false, openrouter: false, venice: false });
+  const [keyInputs, setKeyInputs] = useState({ openai: '', openrouter: '', venice: '', nous: '', morpheus: '' });
+  const [showKeyFields, setShowKeyFields] = useState({ openai: false, openrouter: false, venice: false, nous: false, morpheus: false });
 
   // Pipeline
   const [pipelineLog, setPipelineLog] = useState('');
@@ -158,6 +162,13 @@ export default function APIConsolePage() {
     ],
     venice: [
       { label: 'Chat Completions', method: 'POST', base: 'https://api.venice.ai/api/v1', path: '/chat/completions', streaming: true },
+    ],
+    nous: [
+      { label: 'Chat Completions', method: 'POST', base: 'https://inference-api.nousresearch.com/v1', path: '/chat/completions', streaming: true },
+      { label: 'Completions', method: 'POST', base: 'https://inference-api.nousresearch.com/v1', path: '/completions', streaming: false },
+    ],
+    morpheus: [
+      { label: 'Chat Completions', method: 'POST', base: 'https://api.mor.org/api/v1', path: '/chat/completions', streaming: true },
     ],
     discourse: [
       { label: 'Personas (proxy)', method: 'GET', base: 'https://hub.bitwiki.org/api', path: '/discourse_ai/personas' },
@@ -305,6 +316,8 @@ export default function APIConsolePage() {
       openai: SecureKeyManager.getApiKey('openai') || '',
       openrouter: SecureKeyManager.getApiKey('openrouter') || '',
       venice: SecureKeyManager.getApiKey('venice') || '',
+      nous: SecureKeyManager.getApiKey('nous') || '',
+      morpheus: SecureKeyManager.getApiKey('morpheus') || '',
     });
     setKeyManagerOpen(true);
   };
@@ -590,7 +603,7 @@ export default function APIConsolePage() {
   };
 
   const testAllProviders = async () => {
-    for (const p of ['openai', 'openrouter', 'venice']) {
+  for (const p of ['openai', 'openrouter', 'venice', 'nous', 'morpheus']) {
       // eslint-disable-next-line no-await-in-loop
       await testProvider(p);
     }
@@ -1214,7 +1227,7 @@ export default function APIConsolePage() {
             <div className={`${win95.panel} ${win95.outset} w-full max-w-lg bg-[#c0c0c0]`}>
               <div className={win95.title}>Manage Provider Keys</div>
               <div className="p-3 space-y-3">
-                {['openai','openrouter','venice'].map((pid) => (
+                {['openai','openrouter','venice','nous','morpheus'].map((pid) => (
                   <div key={pid} className={`${win95.panel} ${win95.outset}`}>
                     <div className={win95.title + ' text-xs'}>{pid.toUpperCase()}</div>
                     <div className={`${win95.inset} p-2`}>

@@ -33,7 +33,12 @@ function Bevel({ children, style, inset = false }) {
 
 export default function Console95() {
   // line items: { kind: 'plain'|'ok'|'err'|'cmd', text: string }
-  const [lines, setLines] = useState([{ kind: 'ok', text: 'PowerShell++ ready. Type "help".' }]);
+  // Added under-construction placeholder banner lines.
+  const [lines, setLines] = useState([
+    { kind: 'ok', text: 'Console tab under construction – expect limited functionality.' },
+    { kind: 'ok', text: 'Planned: interactive workflow scripting, live node logs, session diffs.' },
+    { kind: 'ok', text: 'Type "help" for current commands.' },
+  ]);
   const [cmd, setCmd] = useState('');
   const [status, setStatus] = useState('ready');
   const [exitCode, setExitCode] = useState(0);

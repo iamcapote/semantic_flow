@@ -88,7 +88,7 @@ export default function LandingPage({ onApiKeySet }) {
 
       {/* BYOK */}
           <div style={win98.panel}>
-            <div style={win98.head}>Bring Your Own Keys (OpenAI / OpenRouter / Venice)</div>
+            <div style={win98.head}>Bring Your Own Keys (OpenAI / OpenRouter / Venice / Nous / Morpheus)</div>
             {!showProviderSetup ? (
               <>
                 <div style={{ fontSize: 13, lineHeight: 1.4, marginBottom: 12 }}>

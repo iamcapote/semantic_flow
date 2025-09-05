@@ -120,6 +120,7 @@ export default function LearnPage() {
     { id: 'nav', label: 'How Navigation Works', icon: BookOpenTextIcon },
     { id: 'pages', label: 'Pages & Features', icon: BoxesIcon },
     { id: 'ai-features', label: 'AI Features', icon: LightbulbIcon },
+  { id: 'providers', label: 'Providers', icon: Key },
     { id: 'export', label: 'Export & Interop', icon: FileCode2Icon },
     { id: 'security', label: 'Security & Access', icon: ShieldCheckIcon },
     { id: 'creative', label: 'Creative Uses', icon: LightbulbIcon },
@@ -283,10 +284,6 @@ export default function LearnPage() {
               <div className={`bg-white ${bevel.out} border-2 p-3`}>
                 <h4 className="font-semibold mb-1 flex items-center gap-2"><MessageSquare className="h-4 w-4 opacity-80" aria-hidden /> Seed (Discourse)</h4>
                 <p>A Seed is a Discourse Topic that anchors context and collaboration. Useful for PM workflows and shared briefs.</p>
-              </div>
-              <div className={`bg-white ${bevel.out} border-2 p-3`}>
-                <h4 className="font-semibold mb-1 flex items-center gap-2"><ShieldCheckIcon className="h-4 w-4 opacity-80" aria-hidden /> Provider</h4>
-                <p>AI or data source used in the app. Supported: OpenAI, OpenRouter, Venice AI. Discourse via SSO can power context and personas.</p>
               </div>
               <div className={`bg-white ${bevel.out} border-2 p-3`}>
                 <h4 className="font-semibold mb-1 flex items-center gap-2"><UserCircle2 className="h-4 w-4 opacity-80" aria-hidden /> Persona</h4>
@@ -532,6 +529,57 @@ export default function LearnPage() {
                 </ul>
               </div>
             </div>
+          </Section>
+
+          <Section id="providers" title="Providers (BYOK Options)" icon={Key}>
+            <div className="grid md:grid-cols-3 gap-3">
+              {[{
+                name:'OpenAI', href:'https://openai.com/', bullets:[
+                  'GPT‑4o & o1 reasoning + multimodal',
+                  'Structured outputs & tool calls',
+                  'Stable latency ecosystem',
+                  'Auto endpoint adapt (/chat vs /responses)'
+                ]
+              },{
+                name:'OpenRouter', href:'https://openrouter.ai/', bullets:[
+                  'Multi‑model marketplace gateway',
+                  'Vendor‑prefixed model names',
+                  'Custom headers auto‑applied',
+                  'Easy A/B across families'
+                ]
+              },{
+                name:'Venice AI', href:'https://venice.ai/chat', bullets:[
+                  'Client‑side encrypted / private',
+                  'Uncensored exploration focus',
+                  'Latest OSS (DeepSeek, Llama, Qwen...)',
+                  'Fast no‑account onboarding'
+                ]
+              },{
+                name:'Nous Research', href:'https://nousresearch.com/', bullets:[
+                  'Hermes reasoning model family',
+                  'Test‑time scaling research',
+                  'Transparent open blog updates',
+                  'Focus on instruction quality'
+                ]
+              },{
+                name:'Morpheus', href:'https://mor.org/', bullets:[
+                  'Decentralized peer‑to‑peer network',
+                  'MOR token aligned incentives',
+                  'Lumerin‑style privacy routing',
+                  'Permissionless agent infra'
+                ]
+              }].map(p => (
+                <div key={p.name} className={`bg-white ${bevel.out} border-2 p-3 md:col-span-1`}>
+                  <h4 className="font-semibold mb-1" style={{fontFamily: FONT_STACK}}>{p.name}</h4>
+                  <ul className="list-disc pl-4 text-[11px] leading-5 space-y-1">
+                    {p.bullets.map(b => <li key={b}>{b}</li>)}
+                  </ul>
+                  <a className="text-[10px] underline mt-2 inline-block" href={p.href} target="_blank" rel="noreferrer">Visit →</a>
+                </div>
+              ))}
+            </div>
+            <div className="mt-3 text-xs opacity-80">BYOK only: keys encrypted in sessionStorage, never sent to server.</div>
+            <div className="mt-2 text-[10px] opacity-60 leading-4">Summaries are derived from public marketing material; check official docs for current terms & usage limits.</div>
           </Section>
 
           <Section id="export" title="Export and Interop" icon={FileCode2Icon}>

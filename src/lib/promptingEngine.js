@@ -39,6 +39,33 @@ export class PromptingEngine {
         models: ['venice-uncensored', 'mistral-31-24b', 'llama-3.2-3b'],
         headers: {},
       },
+      {
+        providerId: 'nous',
+        name: 'Nous Research',
+        baseURL: 'https://inference-api.nousresearch.com/v1',
+        models: [
+          'Hermes-4-70B',
+          'Hermes-4-405B',
+          'Hermes-3-Llama-3.1-70B',
+          'Hermes-3-Llama-3.1-405B',
+          'DeepHermes-3-Llama-3-8B-Preview',
+          'DeepHermes-3-Mistral-24B-Preview'
+        ],
+        headers: {},
+      },
+      {
+        providerId: 'morpheus',
+        name: 'Morpheus',
+        baseURL: 'https://api.mor.org/api/v1',
+        models: [
+          'llama-3.3-70b',
+          'llama-3.3-70b-web',
+          'venice-uncensored-web',
+          'qwen3-235b-web',
+          'mistral-31-24b-web'
+        ],
+        headers: {},
+      },
     ];
   }
 

@@ -429,7 +429,15 @@ const ChatPage = ({ embedded = false }) => {
             </div>
             <form onSubmit={handleSubmit} className="flex gap-2" aria-label="Message input form">
               <div className={`flex-1 bg-white ${bevel.in} border-2 flex items-center px-2`}>
-                <input aria-label="Message" className="w-full outline-none bg-transparent text-sm py-1" value={input} onChange={(e) => setInput(e.target.value)} placeholder="Type message (Ctrl+Enter to send)" disabled={isStreaming} onKeyDown={(e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { handleSubmit(e); } }} />
+                <input
+                  aria-label="Message"
+                  className="w-full outline-none bg-transparent text-sm py-1 text-black placeholder:text-gray-500 caret-black disabled:text-gray-500"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  placeholder="Type message (Ctrl+Enter to send)"
+                  disabled={isStreaming}
+                  onKeyDown={(e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { handleSubmit(e); } }}
+                />
               </div>
               <button type="submit" disabled={isStreaming} className={`px-4 text-sm bg-[var(--w95-face)] ${bevel.out} border-2 disabled:opacity-50`}>{isStreaming ? 'Sending' : 'Send'}</button>
               {isStreaming && (

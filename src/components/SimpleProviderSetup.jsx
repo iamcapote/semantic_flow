@@ -65,6 +65,39 @@ const SimpleProviderSetup = ({ userId, onComplete }) => {
       defaultModel: 'venice-uncensored',
       isActive: false,
       description: 'Privacy-focused AI inference with no data retention'
+    },
+    {
+      providerId: 'nous',
+      name: 'Nous Research',
+      baseURL: 'https://inference-api.nousresearch.com/v1',
+      models: [
+        'Hermes-4-70B',
+        'Hermes-4-405B',
+        'Hermes-3-Llama-3.1-70B',
+        'Hermes-3-Llama-3.1-405B',
+        'DeepHermes-3-Llama-3-8B-Preview',
+        'DeepHermes-3-Mistral-24B-Preview'
+      ],
+      defaultModel: 'Hermes-4-70B',
+      apiKey: '',
+      isActive: false,
+      description: 'Open research lab producing Hermes reasoning model family'
+    },
+    {
+      providerId: 'morpheus',
+      name: 'Morpheus',
+      baseURL: 'https://api.mor.org/api/v1',
+      models: [
+        'llama-3.3-70b',
+        'llama-3.3-70b-web',
+        'venice-uncensored-web',
+        'qwen3-235b-web',
+        'mistral-31-24b-web'
+      ],
+      defaultModel: 'llama-3.3-70b',
+      apiKey: '',
+      isActive: false,
+      description: 'Gateway for fast chat/completions with popular open models'
     }
   ];
 
