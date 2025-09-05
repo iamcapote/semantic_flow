@@ -1,13 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ChevronDown, ChevronUp, Settings, TestTube2, CheckCircle, AlertCircle, ArrowRight, Eye, EyeOff, Plus } from "lucide-react";
-import { useToast } from "@/components/ui/use-toast";
+import React, { useState } from 'react';
+import { ChevronDown, ChevronUp, CheckCircle, AlertCircle, Eye, EyeOff, Plus } from 'lucide-react';
 
 // ProviderSettings manages the configuration and testing of AI providers for the semantic flow canvas.
 const defaultProviders = [
@@ -49,8 +41,12 @@ const defaultProviders = [
   }
 ];
 
-const ProviderSettings = ({ userId }) => {
-  const { toast } = useToast();
+const bevel = {
+  out: 'border-t-white border-l-white border-b-[#6d6d6d] border-r-[#6d6d6d]',
+  in: 'border-t-[#6d6d6d] border-l-[#6d6d6d] border-b-white border-r-white'
+};
+
+const ProviderSettings = () => {
   const [providers, setProviders] = useState(defaultProviders);
   const [expandedProvider, setExpandedProvider] = useState(null);
   const [showApiKeys, setShowApiKeys] = useState({});
@@ -112,130 +108,47 @@ const ProviderSettings = ({ userId }) => {
   };
 
   return (
-    <div className="space-y-4">
-      {providers.map((provider) => {
+    <div className="flex flex-col gap-3">
+      {providers.map(provider => {
         const status = getProviderStatus(provider);
         const isExpanded = expandedProvider === provider.providerId;
         return (
-          <Card key={provider.providerId} className="bg-white/10 backdrop-blur-md border-white/20">
-            <Collapsible
-              open={isExpanded}
-              onOpenChange={(open) => setExpandedProvider(open ? provider.providerId : null)}
-            >
-              <CollapsibleTrigger asChild>
-                <CardHeader className="cursor-pointer hover:bg-white/5 transition-colors">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      {getStatusIcon(status)}
-                      <div>
-                        <CardTitle className="text-white text-lg">{provider.name}</CardTitle>
-                        <p className="text-sm text-blue-100">{provider.description}</p>
-                      </div>
-                    </div>
+          <div key={provider.providerId} className="w95-provider-group">
+            <button onClick={() => setExpandedProvider(isExpanded ? null : provider.providerId)} className="w95-provider-header">
+              <span>{provider.name}<span className="status">{status}</span></span>
+              {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </button>
+            {isExpanded && (
+              <div className="w95-provider-body text-[11px] space-y-3">
+                <div className="text-[10px] leading-4 italic opacity-80">{provider.description}</div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <label className="flex flex-col gap-1">Base URL
+                    <input value={provider.baseURL} onChange={(e)=>handleProviderUpdate(provider.providerId,'baseURL',e.target.value)} className={`text-xs px-2 py-1 bg-white ${bevel.in} border-2 outline-none`} />
+                  </label>
+                  <label className="flex flex-col gap-1">API Key
                     <div className="flex items-center gap-2">
-                      {status === 'active' && (
-                        <Badge variant="outline" className="text-green-400 border-green-400">
-                          Active
-                        </Badge>
-                      )}
-                      {status === 'configured' && (
-                        <Badge variant="outline" className="text-blue-400 border-blue-400">
-                          Configured
-                        </Badge>
-                      )}
-                      {isExpanded ?
-                        <ChevronUp className="h-4 w-4 text-white" /> :
-                        <ChevronDown className="h-4 w-4 text-white" />
-                      }
+                      <input type={showApiKeys[provider.providerId] ? 'text':'password'} value={provider.apiKey} onChange={(e)=>handleProviderUpdate(provider.providerId,'apiKey',e.target.value)} className={`flex-1 text-xs px-2 py-1 bg-white ${bevel.in} border-2 outline-none`} />
+                      <button type="button" onClick={()=>toggleApiKeyVisibility(provider.providerId)} className={`px-2 py-1 text-[10px] bg-[var(--w95-face)] ${bevel.out} border-2`}>{showApiKeys[provider.providerId] ? 'Hide' : 'Show'}</button>
                     </div>
-                  </div>
-                </CardHeader>
-              </CollapsibleTrigger>
-              <CollapsibleContent>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label className="text-white">Base URL</Label>
-                      <Input
-                        className="bg-white/10 border-white/20 text-white placeholder-white/50"
-                        value={provider.baseURL}
-                        onChange={(e) => handleProviderUpdate(provider.providerId, 'baseURL', e.target.value)}
-                        placeholder="https://api.example.com/v1"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-white">API Key</Label>
-                      <div className="relative">
-                        <Input
-                          className="bg-white/10 border-white/20 text-white placeholder-white/50 pr-10"
-                          type={showApiKeys[provider.providerId] ? "text" : "password"}
-                          value={provider.apiKey}
-                          onChange={(e) => handleProviderUpdate(provider.providerId, 'apiKey', e.target.value)}
-                          placeholder="Enter your API key..."
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="absolute right-2 top-1/2 transform -translate-y-1/2 text-white/70 hover:text-white"
-                          onClick={() => toggleApiKeyVisibility(provider.providerId)}
-                        >
-                          {showApiKeys[provider.providerId] ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                  <div>
-                    <Label className="text-white">Default Model</Label>
-                    <Select
-                      value={provider.defaultModel}
-                      onValueChange={(value) => handleProviderUpdate(provider.providerId, 'defaultModel', value)}
-                    >
-                      <SelectTrigger className="bg-white/10 border-white/20 text-white">
-                        <SelectValue placeholder="Select default model" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {provider.models.map(model => (
-                          <SelectItem key={model} value={model}>
-                            {model}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label className="text-white">Add Custom Model</Label>
+                  </label>
+                  <label className="flex flex-col gap-1 md:col-span-2">Default Model
+                    <select value={provider.defaultModel} onChange={(e)=>handleProviderUpdate(provider.providerId,'defaultModel',e.target.value)} className={`text-xs px-2 py-1 bg-white ${bevel.in} border-2 outline-none`}>
+                      {provider.models.map(m => <option key={m} value={m}>{m}</option>)}
+                    </select>
+                  </label>
+                  <label className="flex flex-col gap-1 md:col-span-2">Add Custom Model
                     <div className="flex gap-2">
-                      <Input
-                        className="bg-white/10 border-white/20 text-white placeholder-white/50"
-                        value={customModels[provider.providerId] || ''}
-                        onChange={(e) => handleCustomModelChange(provider.providerId, e.target.value)}
-                        placeholder="e.g., gpt-4o-2024-08-06, claude-3-5-sonnet-20241022"
-                      />
-                      <Button
-                        variant="outline"
-                        onClick={() => handleAddCustomModel(provider.providerId)}
-                        disabled={!customModels[provider.providerId]?.trim()}
-                        className="bg-white/10 border-white/20 text-white hover:bg-white/20"
-                      >
-                        <Plus className="h-4 w-4" />
-                      </Button>
+                      <input value={customModels[provider.providerId] || ''} onChange={(e)=>handleCustomModelChange(provider.providerId,e.target.value)} className={`flex-1 text-xs px-2 py-1 bg-white ${bevel.in} border-2 outline-none`} placeholder="model-id" />
+                      <button disabled={!customModels[provider.providerId]?.trim()} onClick={()=>handleAddCustomModel(provider.providerId)} className={`px-2 py-1 text-[10px] bg-[var(--w95-face)] ${bevel.out} border-2 disabled:opacity-40`}><Plus className="w-3 h-3" /></button>
                     </div>
-                  </div>
-                  <div className="flex gap-2 pt-4 border-t border-white/10">
-                    {provider.apiKey && !provider.isActive && (
-                      <Button
-                        onClick={() => handleActivateProvider(provider.providerId)}
-                        className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600"
-                      >
-                        Set as Active
-                      </Button>
-                    )}
-                  </div>
-                </CardContent>
-              </CollapsibleContent>
-            </Collapsible>
-          </Card>
+                  </label>
+                </div>
+                {provider.apiKey && !provider.isActive && (
+                  <button onClick={()=>handleActivateProvider(provider.providerId)} className={`px-3 py-1 text-[11px] bg-[var(--w95-face)] ${bevel.out} border-2`}>Set Active</button>
+                )}
+              </div>
+            )}
+          </div>
         );
       })}
     </div>

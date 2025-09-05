@@ -3,9 +3,9 @@ import { test, expect } from '@playwright/test';
 // These smokes assume both client (Vite) and server are running locally via `npm run dev`
 
 test.describe('smokes', () => {
-  test('loads unified home (Win95 Suite)', async ({ page }) => {
+  test('loads unified home (Core Layer for Composable Inference)', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByText('Semantic Flow — Win95 Suite')).toBeVisible();
+  await expect(page.getByText('Semantic Flow — The Core Layer for Composable Inference')).toBeVisible();
   // Switch to Builder tab and see palette/logs
   await page.getByRole('tab', { name: 'Builder' }).click();
     await expect(page.getByText('Palette')).toBeVisible();

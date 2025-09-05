@@ -4,9 +4,12 @@
 
 # 🧠 Semantic Flow
 
+<strong>The Core Layer for Composable Inference.</strong><br/>
 An open‑source, production‑ready **Context Engineering Canvas** for AI. <br/>
 Visually design, connect, and export agentic knowledge structures with a rich semantic ontology and a nostalgic Win95‑style UI. <br/>
 One‑click **FREE** deployment of your private, BYOK, ontology‑driven workflow system.
+
+<div align="center"><em>Core Canvas for Structured Hyper Inference.</em></div>
 
 **English** · **[Docs][docs]** · **[Changelog][changelog]** · **[Issues][issues]** · **[Releases][github-release-link]**
 
@@ -83,7 +86,7 @@ Semantic Flow is a **Context Engineering Canvas**. Compose knowledge as connecte
 
 ## ✨ Highlights
 
-* **Win95 Suite**: Builder, IDE, Router/API Console, Admin, Chat, Learn — unified retro‑modern UI.
+* **Win95 Suite**: Builder, IDE, Router/API Console, Admin, Chat, Learn — unified retro‑modern UI (a visual reasoning engine for context design).
 * **Rich Ontology**: 16+ clusters, 100+ node types for logic, reasoning, cognition, discourse, and control.
 * **Agentic Constructs**: Compose Persona + Policies + Tools + Memory/Seeds → route into Chat.
 * **Three AI Providers**: OpenAI · OpenRouter · Venice AI. **BYOK** with session‑only storage.

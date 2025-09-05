@@ -486,6 +486,95 @@
   margin-right: 16px;
 }
 
+/* --- Chat Page Enhancements (Win95+☉∞) --- */
+.w95-chat-bubble {
+  border: 1px solid var(--w95-shadow);
+  box-shadow: inset -1px -1px 0 var(--w95-highlight), inset 1px 1px 0 var(--w95-dark-shadow);
+  background: #ffffff;
+  border-radius: 0;
+  font-family: 'MS Sans Serif', Tahoma, Arial, sans-serif;
+  font-size: 12px;
+  line-height: 1.45;
+  max-width: 100%;
+  word-break: break-word;
+}
+.w95-chat-bubble-user {
+  /* Recolored for readability: lighter shell with dark text to avoid white-on-grey conflicts */
+  background: #d6dae8; /* soft blue-grey reminiscent of Win95 selection but lighter */
+  color: #000000;
+  box-shadow: inset -1px -1px 0 #ffffff, inset 1px 1px 0 #808080;
+}
+.w95-chat-bubble-user code { background: #c2c6d4; padding: 0 3px; color:#000; }
+.w95-chat-bubble-assistant { background: #ffffff; color: #000; }
+.w95-chat-bubble-assistant code { background: #f2f2f2; padding: 0 3px; }
+
+/* Chat config subpanel headers */
+.w95-subpanel-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .25px;
+  padding: 2px 4px;
+  background: linear-gradient(#e2e2e2,#cfcfcf); /* subtle light band */
+  color: #000; /* dark readable text */
+  box-shadow: inset 1px 1px 0 #fff, inset -1px -1px 0 #808080;
+}
+.w95-subpanel-header svg { stroke: currentColor; }
+
+/* Right panel explicit text color enforcement */
+.w95-right-panel, .w95-right-panel * { color: #000 !important; }
+.w95-right-panel .w95-subpanel-header { color:#000 !important; }
+.w95-statusline span { color:#000; }
+.w95-chat-container button, .w95-chat-container .w95-button { color:#000; }
+.w95-chat-container button:disabled { color:#555; }
+
+/* Send/Input specific adjustments */
+.w95-chat-container .send-button, .w95-chat-container .submit-button { color:#000 !important; }
+
+/* Keep assistant bubble explicitly dark text */
+.w95-chat-bubble-assistant { color:#000; }
+
+/* High contrast inputs on grey panels */
+.w95-chat-container textarea, .w95-chat-container select { color:#000; }
+.w95-chat-container ::placeholder { color:#2f2f2f; opacity:.8; }
+
+/* Settings modal (Win95 styled) */
+.w95-modal * { font-family: 'MS Sans Serif', Tahoma, Arial, sans-serif; color: #000; }
+.w95-modal button { color:#000; }
+
+/* High contrast info panels inside settings */
+.w95-panel-info {
+  background: #FFFFFF;
+  border: 2px solid var(--w95-shadow);
+  box-shadow: inset 1px 1px 0 #fff, inset -1px -1px 0 #404040;
+}
+.w95-panel-info h4 { margin:0 0 6px; font-size:12px; font-weight:700; }
+.w95-panel-info p, .w95-panel-info li { font-size:11px; line-height:1.4; }
+.w95-panel-info ul { margin:4px 0 0 18px; padding:0; }
+
+/* Provider collapsible */
+.w95-provider-group { background: var(--w95-face); border:2px solid var(--w95-shadow); box-shadow: inset -1px -1px 0 #fff, inset 1px 1px 0 #404040; }
+.w95-provider-header { background: linear-gradient(#d9d9d9,#c3c3c3); padding:4px 8px; font-size:12px; font-weight:700; display:flex; align-items:center; justify-content:space-between; cursor:pointer; }
+.w95-provider-header span.status { font-size:10px; font-weight:400; margin-left:6px; }
+.w95-provider-body { background:#FFFFFF; border-top:1px solid #808080; box-shadow: inset 1px 1px 0 #fff, inset -1px -1px 0 #404040; padding:10px; }
+.w95-provider-body label { font-size:11px; font-weight:600; }
+.w95-provider-body input, .w95-provider-body select { font-size:11px; }
+.w95-provider-badge { font-size:10px; padding:2px 6px; border:1px solid #000; background:#fff; margin-left:8px; }
+
+/* Scrollbar subtle retro feel */
+.w95-chat-container ::-webkit-scrollbar { width: 12px; }
+.w95-chat-container ::-webkit-scrollbar-track { background: #c0c0c0; box-shadow: inset 1px 1px 0 #fff, inset -1px -1px 0 #808080; }
+.w95-chat-container ::-webkit-scrollbar-thumb { background: #e0e0e0; border: 1px solid #808080; box-shadow: inset -1px -1px 0 #fff, inset 1px 1px 0 #404040; }
+.w95-chat-container ::-webkit-scrollbar-thumb:hover { background: #d0d0d0; }
+
+/* Inputs focus ring mimic (accessible) */
+.w95-chat-container input:focus, .w95-chat-container textarea:focus, .w95-chat-container select:focus {
+  outline: 1px dotted #000080;
+  outline-offset: 1px;
+}
+
 /* Inspector Panel */
 .w95-inspector {
   width: 220px;

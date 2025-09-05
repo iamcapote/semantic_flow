@@ -13,7 +13,7 @@ const mockSections = [
 
 function renderNavigation(props = {}) {
   const defaultProps = {
-    appTitle: 'Semantic Flow — Win95 Suite',
+    appTitle: 'Semantic Flow — The Core Layer for Composable Inference',
     iconSrc: '/logo.svg',
     sections: mockSections,
     activeId: 'builder',
@@ -33,7 +33,7 @@ describe('TopNav95Plus Navigation', () => {
     renderNavigation();
     
     // Check title
-    expect(screen.getByText('Semantic Flow — Win95 Suite')).toBeInTheDocument();
+  expect(screen.getByText('Semantic Flow — The Core Layer for Composable Inference')).toBeInTheDocument();
     
     // Check all tabs are rendered
     expect(screen.getByRole('tab', { name: 'Builder' })).toBeInTheDocument();
