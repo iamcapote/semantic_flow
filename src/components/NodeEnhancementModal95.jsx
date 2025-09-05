@@ -4,7 +4,7 @@ import { SecureKeyManager } from '@/lib/security';
 
 const ui = {
   overlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 },
-  win: { width: 820, maxWidth: '95vw', maxHeight: '92vh', background: '#C0C0C0', color: '#000', border: '2px solid #808080', boxShadow: '4px 4px 0 #000', display: 'grid', gridTemplateRows: '28px 24px 1fr 36px' },
+  win: { width: 900, maxWidth: '96vw', maxHeight: '94vh', background: '#C0C0C0', color: '#000', border: '2px solid #808080', boxShadow: '4px 4px 0 #000', display: 'grid', gridTemplateRows: '28px 24px 1fr 36px' },
   title: { height: 28, background: '#000080', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 8px', fontWeight: 700 },
   menu: { height: 24, display: 'flex', alignItems: 'center', gap: 12, padding: '0 8px', borderTop: '2px solid #fff', borderLeft: '2px solid #fff', borderRight: '2px solid #6d6d6d', borderBottom: '2px solid #6d6d6d', background: '#c0c0c0' },
   body: { padding: 8, display: 'grid', gap: 8, gridTemplateColumns: '1fr 1fr' },
@@ -27,6 +27,8 @@ export default function NodeEnhancementModal95({ node, onNodeUpdate, trigger }) 
   const [temperature, setTemperature] = useState(0.7);
   const [maxTokens, setMaxTokens] = useState(800);
   const [result, setResult] = useState(null);
+  // When node content is empty, allow manual input
+  const [manualInput, setManualInput] = useState('');
   const [engine] = useState(() => new PromptingEngine('demo-user'));
 
   useEffect(() => {
@@ -51,16 +53,22 @@ export default function NodeEnhancementModal95({ node, onNodeUpdate, trigger }) 
   }, [engine]);
 
   const enhance = async () => {
-    if (!node || !node.data?.content) {
-      alert('This node has no content to enhance.');
-      return;
-    }
+    if (!node) { alert('No node selected.'); return; }
     const apiKey = SecureKeyManager.getApiKey(providerId);
     if (!apiKey) { alert(`Missing API key for ${providerId}. Configure it in settings.`); return; }
     setIsEnhancing(true);
     setResult(null);
     try {
-      const res = await engine.enhanceNode(node, enhancementType, {
+      // Build a temporary node if no content is present
+      const target = node?.data?.content
+        ? node
+        : { ...node, data: { ...(node.data||{}), content: manualInput || '' } };
+      if (!target.data.content || !target.data.content.trim()) {
+        alert('Enter some text to enhance.');
+        setIsEnhancing(false);
+        return;
+      }
+      const res = await engine.enhanceNode(target, enhancementType, {
         temperature, maxTokens, providerId, model, apiKey,
       });
       if (res.success) {
@@ -140,7 +148,7 @@ export default function NodeEnhancementModal95({ node, onNodeUpdate, trigger }) 
                       <input type="range" min={128} max={4096} step={64} value={maxTokens} onChange={(e)=>setMaxTokens(Number(e.target.value))} />
                     </label>
                   </div>
-                  <button onClick={enhance} disabled={isEnhancing || !node?.data?.content} style={{ ...ui.btn, marginTop: 4 }}>
+                  <button onClick={enhance} disabled={isEnhancing || (!node?.data?.content && !(manualInput && manualInput.trim()))} style={{ ...ui.btn, marginTop: 4 }}>
                     {isEnhancing ? 'Enhancing…' : 'Enhance'}
                   </button>
                 </div>
@@ -148,7 +156,14 @@ export default function NodeEnhancementModal95({ node, onNodeUpdate, trigger }) 
               <div style={{ display: 'grid', gap: 8 }}>
                 <div style={ui.panel}>
                   <div style={ui.head}>Current Content</div>
-                  <textarea readOnly value={node?.data?.content || ''} style={ui.ta} />
+                  {node?.data?.content ? (
+                    <textarea readOnly value={node.data.content} style={ui.ta} />
+                  ) : (
+                    <>
+                      <div style={{ marginBottom: 6, ...ui.small }}>This node has no content. Enter text to enhance:</div>
+                      <textarea value={manualInput} onChange={(e)=>setManualInput(e.target.value)} placeholder="Type text to enhance…" style={ui.ta} />
+                    </>
+                  )}
                 </div>
                 {result && (
                   <div style={ui.panel}>

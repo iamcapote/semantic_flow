@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { SecureKeyManager } from '@/lib/security';
 import aiRouter, { publishSettings as publishAIRouterSettings } from '@/lib/aiRouter';
+import PromptingEngine from '@/lib/promptingEngine';
 
 // Win95 UI tokens
 const win95 = {
@@ -115,6 +116,35 @@ export default function APIConsolePage() {
   // Features (Advanced toggle)
   const [features, setFeatures] = useState({ advanced: false, discourseTab: true });
 
+  // AI Functions (PromptingEngine) state
+  const [aiTab, setAiTab] = useState('text2wf'); // 'text2wf' | 'execute' | 'enhance'
+  const [aiInput, setAiInput] = useState('Outline a semantic workflow for building a todo app.');
+  const [aiTemp, setAiTemp] = useState(0.7);
+  const [aiMax, setAiMax] = useState(800);
+  const [aiExecFormat, setAiExecFormat] = useState('json');
+  const [aiRunning, setAiRunning] = useState(false);
+  const [aiOutput, setAiOutput] = useState('');
+  const [aiWorkflowInfo, setAiWorkflowInfo] = useState({ nodes: 0, edges: 0, title: '' });
+  const [engine] = useState(() => new PromptingEngine('router-user'));
+  const [availableProviders, setAvailableProviders] = useState([]);
+  const providerModels = useMemo(() => (availableProviders.find(p => p.providerId === activeProvider)?.models) || [], [availableProviders, activeProvider]);
+  const [customModel, setCustomModel] = useState('');
+  const effectiveModel = useMemo(() => (customModel && customModel.trim()) ? customModel.trim() : model, [customModel, model]);
+  // Enhance: choose node+field from saved workflow
+  const [aiWf, setAiWf] = useState(null);
+  const [selNodeId, setSelNodeId] = useState('');
+  const selNode = useMemo(() => (aiWf?.nodes || []).find(n => n.id === selNodeId) || null, [aiWf, selNodeId]);
+  const nodeFields = useMemo(() => {
+    const fs = Array.isArray(selNode?.data?.fields) ? selNode.data.fields : [];
+    // Also expose top-level content/description if not in fields array
+    const extras = [];
+    if (typeof selNode?.data?.content === 'string' && !fs.some(f=>f.name==='content')) extras.push({ name: 'content', type: 'longText', value: selNode.data.content });
+    if (typeof selNode?.data?.description === 'string' && !fs.some(f=>f.name==='description')) extras.push({ name: 'description', type: 'longText', value: selNode.data.description });
+    return [...fs, ...extras];
+  }, [selNode]);
+  const [selField, setSelField] = useState('');
+  const selFieldValue = useMemo(() => (nodeFields.find(f => f.name === selField)?.value) ?? '', [nodeFields, selField]);
+
   // Known provider routes (exposed in UI)
   const providerRoutes = useMemo(() => ({
     openai: [
@@ -170,6 +200,22 @@ export default function APIConsolePage() {
       SecureKeyManager.storeApiKey(activeProvider, activeKey);
     }
   }, [activeKey, activeProvider]);
+
+  // Load available providers/models for AI Functions
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const ps = await engine.getAvailableProviders();
+        setAvailableProviders(ps);
+        // If current model empty, pick a suggested model for the active provider
+        const ap = ps.find(p => p.providerId === activeProvider);
+        if (ap && (!model || !model.trim())) {
+          setModel(ap.models?.[0] || model);
+        }
+      } catch {}
+    };
+    load();
+  }, [engine, activeProvider]);
 
   // Keep model/stream fields in sync with body JSON
   useEffect(() => {
@@ -428,6 +474,96 @@ export default function APIConsolePage() {
     }
   };
 
+  // --- AI Functions handlers ---
+  const loadWorkflowFromLocal = () => {
+    try {
+      const raw = localStorage.getItem('current-workflow');
+      if (!raw) { alert('No workflow found. Open the Builder and save a workflow first.'); return null; }
+      const wf = JSON.parse(raw);
+      const nodes = Array.isArray(wf?.nodes) ? wf.nodes.length : 0;
+      const edges = Array.isArray(wf?.edges) ? wf.edges.length : 0;
+      const title = wf?.metadata?.title || 'Untitled Workflow';
+      setAiWorkflowInfo({ nodes, edges, title });
+  setAiWf(wf);
+  if (!selNodeId && wf.nodes?.[0]?.id) setSelNodeId(wf.nodes[0].id);
+      return wf;
+    } catch (e) { alert('Failed to load workflow: ' + (e.message || String(e))); return null; }
+  };
+
+  const aiTextToWorkflow = async () => {
+    const prov = activeProvider;
+    const key = activeKey || SecureKeyManager.getApiKey(prov);
+    if (!key) { alert(`Missing API key for ${prov}`); return; }
+    setAiRunning(true); setAiOutput('');
+    try {
+  const res = await engine.convertTextToWorkflow(aiInput, key, prov, effectiveModel);
+      if (!res.success) throw new Error(res.error || 'Failed');
+      setAiOutput(JSON.stringify(res.workflow, null, 2));
+    } catch (e) { setAiOutput('Error: ' + (e.message || String(e))); }
+    finally { setAiRunning(false); }
+  };
+
+  const aiExecuteWorkflow = async () => {
+    const prov = activeProvider;
+    const key = activeKey || SecureKeyManager.getApiKey(prov);
+    if (!key) { alert(`Missing API key for ${prov}`); return; }
+  const wf = aiWf || loadWorkflowFromLocal();
+    if (!wf || !wf.nodes?.length) { alert('Workflow has no nodes.'); return; }
+    setAiRunning(true); setAiOutput('');
+    try {
+  const res = await engine.executeWorkflowWithFormat(wf, aiExecFormat, { temperature: aiTemp, maxTokens: Math.max(256, aiMax), providerId: prov, model: effectiveModel, apiKey: key });
+      if (!res.success) throw new Error(res.error || 'Failed');
+      setAiOutput(String(res.execution?.result || ''));
+    } catch (e) { setAiOutput('Error: ' + (e.message || String(e))); }
+    finally { setAiRunning(false); }
+  };
+
+  const aiEnhance = async () => {
+    const prov = activeProvider;
+    const key = activeKey || SecureKeyManager.getApiKey(prov);
+    if (!key) { alert(`Missing API key for ${prov}`); return; }
+    let node;
+    if (selNode && selField) {
+      const content = String(selFieldValue || '');
+      if (!content.trim()) { alert('Selected field is empty.'); return; }
+      node = { id: selNode.id, data: { ...(selNode.data || {}), content } };
+    } else {
+      node = { id: 'ad-hoc', data: { type: 'UTIL-BLANK', content: String(aiInput || '') } };
+      if (!node.data.content.trim()) { alert('Enter text to enhance.'); return; }
+    }
+    setAiRunning(true); setAiOutput('');
+    try {
+      const res = await engine.enhanceNode(node, 'improve', { temperature: aiTemp, maxTokens: Math.max(256, aiMax), providerId: prov, model: effectiveModel, apiKey: key });
+      if (!res.success) throw new Error(res.error || 'Failed');
+      setAiOutput(String(res.enhancement?.enhancedContent || ''));
+    } catch (e) { setAiOutput('Error: ' + (e.message || String(e))); }
+    finally { setAiRunning(false); }
+  };
+
+  const applyEnhancedToWorkflow = () => {
+    if (!aiWf || !selNode || !selField) { alert('Select node and field first.'); return; }
+    if (!aiOutput || aiOutput.startsWith('Error:')) { alert('No enhanced output to apply.'); return; }
+    try {
+      const wf = JSON.parse(JSON.stringify(aiWf));
+      const idx = wf.nodes.findIndex(n => n.id === selNode.id);
+      if (idx < 0) throw new Error('Node not found');
+      const n = wf.nodes[idx];
+      const fs = Array.isArray(n.data?.fields) ? [...n.data.fields] : [];
+      const fIdx = fs.findIndex(f => f.name === selField);
+      if (fIdx >= 0) fs[fIdx] = { ...fs[fIdx], value: aiOutput };
+      if (selField === 'content') n.data.content = aiOutput;
+      if (selField === 'description') n.data.description = aiOutput;
+      n.data.fields = fs;
+      wf.nodes[idx] = n;
+      localStorage.setItem('current-workflow', JSON.stringify(wf));
+      setAiWf(wf);
+      setAiWorkflowInfo({ nodes: wf.nodes.length, edges: wf.edges.length, title: wf?.metadata?.title || '' });
+      alert('Applied enhanced text to workflow.');
+    } catch (e) {
+      alert('Failed to apply: ' + (e.message || String(e)));
+    }
+  };
+
   // Test helpers
   const smallTestBody = (m) => JSON.stringify({
     model: m,
@@ -680,7 +816,7 @@ export default function APIConsolePage() {
               </div>
             </div>
 
-            {/* Center: Request Builder */}
+            {/* Center: Request Builder + AI Functions */}
             <div className={`col-span-12 md:col-span-6 ${win95.panel} ${win95.outset}`}>
               <div className={win95.title}>Request Builder</div>
               <div className={`${win95.inset} p-2 m-2`}>
@@ -782,6 +918,129 @@ export default function APIConsolePage() {
                       <pre className="whitespace-pre-wrap">{bodyContent}</pre>
                     </>
                   )}
+                </div>
+              </div>
+
+              {/* AI Functions */}
+              <div className={`${win95.panel} ${win95.outset} m-2`}>
+                <div className={win95.title}>AI Functions</div>
+                <div className={`${win95.inset} p-2`}>
+                  <div className="flex gap-2 mb-2">
+                    {[
+                      ['text2wf','Text → Workflow'],
+                      ['execute','Execute Workflow'],
+                      ['enhance','Enhance Content'],
+                    ].map(([id,label]) => (
+                      <button key={id} onClick={()=>setAiTab(id)} className={`${win95.miniButton} ${win95.outset} text-xs ${aiTab===id?'bg-[#000080] text-white':''}`}>{label}</button>
+                    ))}
+                  </div>
+                  {/* Config row */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-2 text-sm">
+                    <div>
+                      <div className="mb-1">Model (suggested)</div>
+                      <select value={providerModels.includes(model)? model : (providerModels[0]||'')} onChange={(e)=>setModel(e.target.value)} className={`${win95.inset} ${win95.inputField} w-full text-sm`}>
+                        {providerModels.length === 0 && (<option value="">(none)</option>)}
+                        {providerModels.map(m => (<option key={m} value={m}>{m}</option>))}
+                      </select>
+                    </div>
+                    <div>
+                      <div className="mb-1">Temperature</div>
+                      <input type="number" step="0.1" min="0" max="2" value={aiTemp} onChange={(e)=>setAiTemp(Number(e.target.value))} className={`${win95.inset} ${win95.inputField} w-full text-sm`} />
+                    </div>
+                    <div>
+                      <div className="mb-1">Max tokens</div>
+                      <input type="number" min="128" step="64" value={aiMax} onChange={(e)=>setAiMax(Number(e.target.value))} className={`${win95.inset} ${win95.inputField} w-full text-sm`} />
+                    </div>
+                    {aiTab==='execute' && (
+                      <div>
+                        <div className="mb-1">Format</div>
+                        <select value={aiExecFormat} onChange={(e)=>setAiExecFormat(e.target.value)} className={`${win95.inset} ${win95.inputField} w-full text-sm`}>
+                          <option value="json">json</option>
+                          <option value="markdown">markdown</option>
+                          <option value="yaml">yaml</option>
+                          <option value="xml">xml</option>
+                        </select>
+                      </div>
+                    )}
+                  </div>
+                  {features.advanced && (
+                    <div className="grid grid-cols-2 gap-2 mb-3 text-sm">
+                      <div>
+                        <div className="mb-1">Custom model (optional)</div>
+                        <input value={customModel} onChange={(e)=>setCustomModel(e.target.value)} placeholder="override model id" className={`${win95.inset} ${win95.inputField} w-full text-sm`} />
+                      </div>
+                      <div className="text-[11px] opacity-70 flex items-end">If set, custom model overrides suggested list.</div>
+                    </div>
+                  )}
+
+                  {/* Body/Input and actions */}
+                  {aiTab !== 'execute' && (
+                    <div className="mb-2">
+                      <div className="mb-1 text-sm">Input</div>
+                      <textarea value={aiInput} onChange={(e)=>setAiInput(e.target.value)} className={`${win95.inset} w-full h-28 p-2 font-mono text-xs resize-none bg-white text-black`} />
+                    </div>
+                  )}
+                  {aiTab === 'execute' && (
+                    <div className="mb-2 text-xs opacity-80">
+                      <div className="mb-1">Workflow</div>
+                      <div className={`${win95.inset} p-2 bg-white`}>
+                        <div>Title: <b>{aiWorkflowInfo.title || '—'}</b></div>
+                        <div>Nodes: <b>{aiWorkflowInfo.nodes}</b> · Edges: <b>{aiWorkflowInfo.edges}</b></div>
+                      </div>
+                      <div className="flex gap-2 mt-2">
+                        <button onClick={loadWorkflowFromLocal} className={`${win95.button} ${win95.outset} text-sm`}>Refresh from Builder</button>
+                      </div>
+                    </div>
+                  )}
+                  {aiTab === 'enhance' && (
+                    <div className="mb-2 text-xs">
+                      <div className="mb-1">Pick Node & Field (optional)</div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <select value={selNodeId} onChange={(e)=>setSelNodeId(e.target.value)} className={`${win95.inset} ${win95.inputField} text-xs`}>
+                          <option value="">— ad‑hoc —</option>
+                          {(aiWf?.nodes||[]).map(n => (
+                            <option key={n.id} value={n.id}>{(n.data?.label || n.id).slice(0,64)}</option>
+                          ))}
+                        </select>
+                        <select value={selField} onChange={(e)=>setSelField(e.target.value)} className={`${win95.inset} ${win95.inputField} text-xs`} disabled={!selNodeId}>
+                          <option value="">— choose field —</option>
+                          {nodeFields.map(f => (<option key={f.name} value={f.name}>{f.name}</option>))}
+                        </select>
+                      </div>
+                      {!aiWf && (
+                        <div className="flex gap-2 mt-2">
+                          <button onClick={loadWorkflowFromLocal} className={`${win95.button} ${win95.outset} text-sm`}>Load workflow</button>
+                        </div>
+                      )}
+                      {(selNodeId && selField) && (
+                        <div className="mt-2">
+                          <div className="mb-1">Selected field value</div>
+                          <div className={`${win95.inset} p-2 bg-white text-black max-h-28 overflow-auto font-mono`}>{String(selFieldValue || '—')}</div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="flex gap-2 mb-2">
+                    {aiTab==='text2wf' && (
+                      <button onClick={aiTextToWorkflow} disabled={aiRunning} className={`${win95.button} ${win95.outset} text-sm bg-[#000080] text-white`}>{aiRunning ? 'Running…' : 'Convert'}</button>
+                    )}
+                    {aiTab==='execute' && (
+                      <button onClick={aiExecuteWorkflow} disabled={aiRunning} className={`${win95.button} ${win95.outset} text-sm bg-[#000080] text-white`}>{aiRunning ? 'Running…' : 'Execute'}</button>
+                    )}
+                    {aiTab==='enhance' && (
+                      <>
+                        <button onClick={aiEnhance} disabled={aiRunning} className={`${win95.button} ${win95.outset} text-sm bg-[#000080] text-white`}>{aiRunning ? 'Running…' : 'Enhance'}</button>
+                        <button onClick={applyEnhancedToWorkflow} disabled={!aiOutput || !selNodeId || !selField || aiRunning} className={`${win95.button} ${win95.outset} text-sm`}>Apply to Workflow</button>
+                      </>
+                    )}
+                    <button onClick={()=>setAiOutput('')} className={`${win95.button} ${win95.outset} text-sm`}>Clear</button>
+                  </div>
+
+                  <div className={`${win95.inset} p-2 bg-white text-black`}> 
+                    <div className="text-xs mb-1">Output</div>
+                    <pre className="whitespace-pre-wrap font-mono text-xs max-h-56 overflow-auto">{aiOutput || '—'}</pre>
+                  </div>
                 </div>
               </div>
 

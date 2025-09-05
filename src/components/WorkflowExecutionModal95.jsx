@@ -5,7 +5,7 @@ import { SecureKeyManager } from '@/lib/security';
 
 const ui = {
   overlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 },
-  win: { width: 920, maxWidth: '95vw', maxHeight: '92vh', background: '#C0C0C0', color: '#000', border: '2px solid #808080', boxShadow: '4px 4px 0 #000', display: 'grid', gridTemplateRows: '28px 28px 1fr 36px' },
+  win: { width: 980, maxWidth: '96vw', maxHeight: '94vh', background: '#C0C0C0', color: '#000', border: '2px solid #808080', boxShadow: '4px 4px 0 #000', display: 'grid', gridTemplateRows: '28px 28px 1fr 36px' },
   title: { height: 28, background: '#000080', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 8px', fontWeight: 700 },
   menu: { height: 28, display: 'flex', alignItems: 'center', gap: 12, padding: '0 8px', borderTop: '2px solid #fff', borderLeft: '2px solid #fff', borderRight: '2px solid #6d6d6d', borderBottom: '2px solid #6d6d6d', background: '#c0c0c0' },
   body: { padding: 8, display: 'grid', gap: 8, gridTemplateColumns: '1fr 1fr' },

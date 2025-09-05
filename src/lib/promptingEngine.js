@@ -181,10 +181,11 @@ Process the workflow systematically and provide detailed reasoning for each node
       apiKey
     } = context;
 
-    const nodeType = NODE_TYPES[node.data.type];
-    if (!nodeType) {
-      throw new Error(`Unknown node type: ${node.data.type}`);
-    }
+    // Tolerate non-ontology types (e.g., field types like "longText") by falling back
+    const nodeType = NODE_TYPES[node.data.type] || {
+      label: 'Freeform Content',
+      description: 'Generic text content provided by the user (not a canonical ontology type).',
+    };
 
     const enhancementPrompts = {
       improve: `Improve and refine this semantic node while maintaining its logical purpose and type.`,
@@ -197,9 +198,9 @@ Process the workflow systematically and provide detailed reasoning for each node
 
     const systemPrompt = `You are a semantic logic node enhancer. Your task is to ${enhancementType} semantic workflow nodes.
 
-Node Type: ${node.data.type} (${nodeType.label})
+Node Type: ${node.data.type || 'N/A'} (${nodeType.label})
 Purpose: ${nodeType.description}
-Cluster: ${node.data.metadata?.cluster || 'Unknown'}
+Cluster: ${node.data?.metadata?.cluster || 'Unknown'}
 
 Guidelines:
 1. Maintain the node's semantic type and logical purpose
