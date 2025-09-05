@@ -145,8 +145,8 @@ export default function Win95Suite({ initialTab }) {
     { id: 'builder', label: 'Builder', href: '/builder' },
     { id: 'ide', label: 'IDE', href: '/ide' },
     { id: 'api', label: 'Router', href: '/api' },
-    { id: 'console', label: 'Console', href: '/console' },
-    { id: 'chat', label: 'Chat', href: '/chat' },
+  { id: 'chat', label: 'Chat', href: '/chat' },
+  { id: 'console', label: 'Console', href: '/console' },
   { id: 'learn', label: 'Learn', href: '/learn' },
   ];
 
@@ -175,9 +175,10 @@ export default function Win95Suite({ initialTab }) {
       <div 
         className="content-area"
         style={{ 
-          minHeight: 0, 
+          minHeight: 0,
           position: 'relative',
           zIndex: 995,
+          flex: '1 1 auto',
           overflow: 'auto'
         }}
       >

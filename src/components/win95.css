@@ -1,0 +1,21 @@
+:root{
+	--w95-desk:#008080;
+	--w95-face:#C0C0C0;
+	--w95-title:#000080;
+	--w95-text:#000000;
+	--w95-shadow:#404040;
+	--w95-mid:#808080;
+	--w95-hi:#FFFFFF;
+}
+
+html,body,#root{height:100%;}
+body{
+	margin:0;
+	font-family: MS Sans Serif, Tahoma, Arial, sans-serif;
+	background: var(--w95-desk);
+}
+
+/* Authentic 95 scrollbars for webkit (non-critical) */
+*::-webkit-scrollbar{width:12px;height:12px}
+*::-webkit-scrollbar-thumb{background: var(--w95-face); border:1px solid #000; box-shadow: inset -1px -1px 0 var(--w95-hi), inset 1px 1px 0 var(--w95-shadow)}
+*::-webkit-scrollbar-track{background: var(--w95-hi); border:1px solid #000}

@@ -6,6 +6,7 @@ import ReactMarkdown from 'react-markdown'
 import SettingsModal from '@/components/SettingsModal';
 import { Loader2, PlusCircle, ChevronLeft, ChevronRight, Search } from "lucide-react"
 import { SecureKeyManager } from '@/lib/security';
+import aiRouter, { fetchChatCompletionRaw } from '@/lib/aiRouter';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { toast } from "@/components/ui/use-toast"
@@ -59,23 +60,15 @@ const ChatPage = () => {
         .map(msg => `${msg.role}: ${msg.content}`)
         .join('\n');
 
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          messages: [
-            { role: 'system', content: 'Generate a short, concise title (3-5 words) for this conversation based on its main topic.' },
-            { role: 'user', content: concatenatedMessages }
-          ],
-          max_tokens: 15
-        })
+      const provider = sessionStorage.getItem('active_provider') || 'openai';
+      const data = await aiRouter.chatCompletion(provider, apiKey, {
+        model: sessionStorage.getItem(`default_model_${provider}`) || 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: 'Generate a short, concise title (3-5 words) for this conversation based on its main topic.' },
+          { role: 'user', content: concatenatedMessages }
+        ],
+        max_tokens: 15
       });
-
-      const data = await response.json();
       return data.choices[0].message.content.trim();
     } catch (error) {
       console.error('Error generating title:', error);
@@ -119,21 +112,15 @@ const ChatPage = () => {
     setIsStreaming(true);
 
     try {
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          messages: [
-            { role: 'system', content: systemMessage },
-            ...conversations[currentConversationIndex].messages,
-            userMessage
-          ],
-          stream: true
-        })
+      const provider = sessionStorage.getItem('active_provider') || 'openai';
+      const response = await fetchChatCompletionRaw(provider, apiKey, {
+        model: sessionStorage.getItem(`default_model_${provider}`) || 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: systemMessage },
+          ...conversations[currentConversationIndex].messages,
+          userMessage
+        ],
+        stream: true
       });
 
       const reader = response.body.getReader();
@@ -157,7 +144,7 @@ const ChatPage = () => {
           .filter((line) => line !== '' && line !== '[DONE]')
           .map((line) => JSON.parse(line));
 
-        for (const parsedLine of parsedLines) {
+  for (const parsedLine of parsedLines) {
           const { choices } = parsedLine;
           const { delta } = choices[0];
           const { content } = delta;

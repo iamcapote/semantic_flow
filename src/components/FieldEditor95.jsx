@@ -1,16 +1,16 @@
 import React, { useState } from 'react';
 import { Sparkles } from 'lucide-react';
-import NodeEnhancementModal from './NodeEnhancementModal';
+import NodeEnhancementModal from './NodeEnhancementModal95';
 
 // Win95 look-and-feel helpers
 const ui = {
 	wrap: { background: '#FFF', border: '2px solid #808080', boxShadow: '2px 2px 0 #000', padding: 6 },
 	row: { display: 'grid', gridTemplateColumns: '120px 120px 1fr auto', gap: 6, alignItems: 'start', marginBottom: 6 },
 	head: { background: '#000080', color: '#fff', padding: '3px 6px', fontWeight: 700, margin: '-6px -6px 6px -6px' },
-	input: { padding: '4px 6px', border: '2px solid #808080', background: '#fff', color: '#000', fontFamily: 'JetBrains Mono, monospace', fontSize: 12 },
-	select: { padding: '4px 6px', border: '2px solid #808080', background: '#C0C0C0', boxShadow: 'inset -1px -1px 0 #FFF, inset 1px 1px 0 #000', fontSize: 12 },
-	btn: { background: '#C0C0C0', border: '1px solid #808080', boxShadow: 'inset -1px -1px 0 #FFF, inset 1px 1px 0 #000', padding: '2px 6px', cursor: 'pointer' },
-	ta: { minHeight: 56, resize: 'vertical', width: '100%', padding: '6px 8px', border: '2px solid #808080', background: '#fff', color: '#000', fontFamily: 'JetBrains Mono, monospace', fontSize: 12 },
+	input: { padding: '4px 6px', border: '2px solid #808080', background: '#fff', color: '#000', fontFamily: 'JetBrains Mono, monospace', fontSize: 12, width: '100%' },
+	select: { padding: '4px 6px', border: '2px solid #808080', background: '#C0C0C0', boxShadow: 'inset -1px -1px 0 #FFF, inset 1px 1px 0 #000', fontSize: 12, width: '100%' },
+	btn: { background: '#C0C0C0', border: '1px solid #808080', boxShadow: 'inset -1px -1px 0 #FFF, inset 1px 1px 0 #000', padding: '2px 6px', cursor: 'pointer', width: '100%' },
+	ta: { minHeight: 80, resize: 'vertical', width: '100%', padding: '6px 8px', border: '2px solid #808080', background: '#fff', color: '#000', fontFamily: 'JetBrains Mono, monospace', fontSize: 12 },
 	small: { fontSize: 10, opacity: 0.7 },
 };
 
@@ -44,7 +44,12 @@ const FieldRow = ({ idx, field, onChange, onRemove }) => {
 					<textarea
 						aria-label={`Field ${idx} value`}
 						value={field.value}
-						onChange={(e)=>onChange(idx, { ...field, value: e.target.value })}
+						onChange={(e)=>{
+							const el = e.target;
+							el.style.height = 'auto';
+							el.style.height = `${Math.min(Math.max(el.scrollHeight, 80), 400)}px`;
+							onChange(idx, { ...field, value: e.target.value });
+						}}
 						placeholder="value"
 						style={ui.ta}
 					/>
@@ -62,11 +67,11 @@ const FieldRow = ({ idx, field, onChange, onRemove }) => {
 				) : field.type === 'tags' ? (
 					<input aria-label={`Field ${idx} value`} value={Array.isArray(field.value) ? field.value.join(', ') : ''} onChange={(e)=>onChange(idx, { ...field, value: e.target.value.split(',').map(x=>x.trim()).filter(Boolean) })} placeholder="tag1, tag2" style={ui.input} />
 				) : field.type === 'object' ? (
-					<textarea aria-label={`Field ${idx} value`} value={typeof field.value === 'string' ? field.value : JSON.stringify(field.value ?? {}, null, 2)} onChange={(e)=>onChange(idx, { ...field, value: e.target.value })} placeholder="{}" style={ui.ta} />
+					<textarea aria-label={`Field ${idx} value`} value={typeof field.value === 'string' ? field.value : JSON.stringify(field.value ?? {}, null, 2)} onChange={(e)=>{ const el = e.target; el.style.height='auto'; el.style.height=`${Math.min(Math.max(el.scrollHeight, 80), 400)}px`; onChange(idx, { ...field, value: e.target.value }); }} placeholder="{}" style={ui.ta} />
 				) : field.type === 'array' ? (
-					<textarea aria-label={`Field ${idx} value`} value={typeof field.value === 'string' ? field.value : JSON.stringify(Array.isArray(field.value) ? field.value : [], null, 2)} onChange={(e)=>onChange(idx, { ...field, value: e.target.value })} placeholder="[]" style={ui.ta} />
+					<textarea aria-label={`Field ${idx} value`} value={typeof field.value === 'string' ? field.value : JSON.stringify(Array.isArray(field.value) ? field.value : [], null, 2)} onChange={(e)=>{ const el = e.target; el.style.height='auto'; el.style.height=`${Math.min(Math.max(el.scrollHeight, 80), 400)}px`; onChange(idx, { ...field, value: e.target.value }); }} placeholder="[]" style={ui.ta} />
 				) : field.type === 'file' ? (
-					<input aria-label={`Field ${idx} value`} value={Array.isArray(field.value) ? field.value.join('\n') : (field.value || '')} onChange={(e)=>onChange(idx, { ...field, value: e.target.value.split(/\n+/).map(x=>x.trim()).filter(Boolean) })} placeholder="One URL per line" style={ui.ta} />
+					<textarea aria-label={`Field ${idx} value`} value={Array.isArray(field.value) ? field.value.join('\n') : (field.value || '')} onChange={(e)=>{ const el = e.target; el.style.height='auto'; el.style.height=`${Math.min(Math.max(el.scrollHeight, 80), 400)}px`; onChange(idx, { ...field, value: e.target.value.split(/\n+/).map(x=>x.trim()).filter(Boolean) }); }} placeholder="One URL per line" style={ui.ta} />
 				) : (
 					<input value={field.value ?? ''} onChange={(e)=>onChange(idx, { ...field, value: e.target.value })} style={ui.input} />
 				)}
@@ -109,8 +114,9 @@ export default function FieldEditor95({ value, onChange }) {
 			{fields.map((f, i) => (
 				<FieldRow key={i} idx={i} field={f} onChange={update} onRemove={remove} />
 			))}
-			<div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-				<button onClick={push} style={ui.btn}>+ Add Field</button>
+			<div style={{ display: 'flex', justifyContent: 'space-between', gap: 6 }}>
+				<div style={ui.small}>Tip: Core fields include title, tags, ontology-type, description, content, icon</div>
+				<button onClick={push} style={{...ui.btn, maxWidth: 140}}>+ Add Field</button>
 			</div>
 		</div>
 	);

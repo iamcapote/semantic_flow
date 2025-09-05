@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { SecureKeyManager } from '@/lib/security';
+import aiRouter, { publishSettings as publishAIRouterSettings } from '@/lib/aiRouter';
 
 // Win95 UI tokens
 const win95 = {
@@ -17,7 +18,7 @@ const win95 = {
 const providers = [
   { id: 'openai', name: 'OpenAI' },
   { id: 'openrouter', name: 'OpenRouter' },
-  { id: 'venicellm', name: 'VeniceLLM' },
+  { id: 'venice', name: 'Venice AI' },
   { id: 'discourse', name: 'Discourse AI' },
 ];
 
@@ -33,7 +34,7 @@ const endpoints = [
 export default function APIConsolePage() {
   // Provider state
   const [activeProvider, setActiveProvider] = useState('openai');
-  const [apiBase, setApiBase] = useState('https://api.openai.com');
+  const [apiBase, setApiBase] = useState('https://api.openai.com/v1');
   const [model, setModel] = useState('gpt-4o-mini');
   const [streaming, setStreaming] = useState(true);
 
@@ -42,14 +43,14 @@ export default function APIConsolePage() {
 
   // Request
   const [method, setMethod] = useState('POST');
-  const [path, setPath] = useState('/v1/chat/completions');
+  const [path, setPath] = useState('/responses');
   const [bodyContent, setBodyContent] = useState(
     JSON.stringify(
       {
         model: 'gpt-4o-mini',
         temperature: 0.2,
-        stream: true,
-        messages: [{ role: 'user', content: 'Hello' }],
+        input: 'Hello',
+        stream: false,
       },
       null,
       2,
@@ -62,21 +63,76 @@ export default function APIConsolePage() {
   const [tokens, setTokens] = useState({ in: 0, out: 0 });
   const [cost, setCost] = useState('$0.0000');
   const [responseContent, setResponseContent] = useState('');
+  const [responseView, setResponseView] = useState('json'); // 'json' | 'text'
+
+  // History and limits
+  const [history, setHistory] = useState(() => {
+    try {
+      const raw = sessionStorage.getItem('api_history_v1');
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [selectedLogIndex, setSelectedLogIndex] = useState(0);
+  const [presets, setPresets] = useState(() => {
+    try {
+      const raw = localStorage.getItem('api_presets_v1');
+      return raw ? JSON.parse(raw) : [];
+    } catch { return []; }
+  });
+  const totalTokens = useMemo(() => history.reduce((acc, h) => ({ in: acc.in + (h.tokens?.in || 0), out: acc.out + (h.tokens?.out || 0) }), { in: 0, out: 0 }), [history]);
+  const recent = useMemo(() => history.slice(0, 10), [history]);
+  const gauge = useMemo(() => {
+    const now = Date.now();
+    const lastMin = history.filter(h => now - h.ts < 60000);
+    const tps = lastMin.length / 60; // per second
+    const avgLatency = recent.length ? Math.round(recent.reduce((a, h) => a + (h.ms || 0), 0) / recent.length) : 0;
+    const errorRate = recent.length ? Math.round((recent.filter(h => (h.status || 200) >= 400).length / recent.length) * 100) : 0;
+    return {
+      tps: Math.min(1, tps / 2), // scale: 0..2 tps → 0..1
+      latency: Math.min(1, avgLatency / 2000), // 0..2000ms → 0..1
+      errors: Math.min(1, errorRate / 100), // 0..100%
+      avgLatency,
+      errorRate,
+    };
+  }, [history, recent]);
 
   // Keys
   const [keys, setKeys] = useState([
-    { label: 'svc-openai', lastUsed: '09:41' },
-    { label: 'svc-router', lastUsed: '08:12' },
-    { label: 'svc-venice', lastUsed: '07:59' },
-    { label: 'svc-discai', lastUsed: '07:10' },
+    { label: 'svc-openai', lastUsed: '' },
+    { label: 'svc-openrouter', lastUsed: '' },
+    { label: 'svc-venice', lastUsed: '' },
   ]);
   const [activeKey, setActiveKey] = useState('');
+  const [keyManagerOpen, setKeyManagerOpen] = useState(false);
+  const [keyInputs, setKeyInputs] = useState({ openai: '', openrouter: '', venice: '' });
+  const [showKeyFields, setShowKeyFields] = useState({ openai: false, openrouter: false, venice: false });
 
   // Pipeline
   const [pipelineLog, setPipelineLog] = useState('');
 
   // Features (Advanced toggle)
   const [features, setFeatures] = useState({ advanced: false, discourseTab: true });
+
+  // Known provider routes (exposed in UI)
+  const providerRoutes = useMemo(() => ({
+    openai: [
+      { label: 'Responses', method: 'POST', base: 'https://api.openai.com/v1', path: '/responses', streaming: false },
+      { label: 'Chat Completions', method: 'POST', base: 'https://api.openai.com/v1', path: '/chat/completions', streaming: true },
+      { label: 'Models', method: 'GET', base: 'https://api.openai.com/v1', path: '/models' },
+    ],
+    openrouter: [
+      { label: 'Chat Completions', method: 'POST', base: 'https://openrouter.ai/api/v1', path: '/chat/completions', streaming: true },
+      { label: 'Completions', method: 'POST', base: 'https://openrouter.ai/api/v1', path: '/completions', streaming: false },
+    ],
+    venice: [
+      { label: 'Chat Completions', method: 'POST', base: 'https://api.venice.ai/api/v1', path: '/chat/completions', streaming: true },
+    ],
+    discourse: [
+      { label: 'Personas (proxy)', method: 'GET', base: 'https://hub.bitwiki.org/api', path: '/discourse_ai/personas' },
+    ],
+  }), []);
 
   // Effects
   useEffect(() => {
@@ -98,26 +154,15 @@ export default function APIConsolePage() {
     const savedKey = SecureKeyManager.getApiKey(activeProvider);
     if (savedKey) setActiveKey(savedKey);
 
-    switch (activeProvider) {
-      case 'openai':
-        setApiBase('https://api.openai.com');
-        setPath('/v1/chat/completions');
-        break;
-      case 'openrouter':
-        setApiBase('https://openrouter.ai/api');
-        setPath('/v1/chat/completions');
-        break;
-      case 'venicellm':
-        setApiBase('https://api.venice.ai');
-        setPath('/v1/chat/completions');
-        break;
-      case 'discourse':
-        setApiBase('https://hub.bitwiki.org/api');
-        setPath('/discourse_ai/personas');
-        break;
-      default:
-        setApiBase('https://api.openai.com');
+  const firstRoute = providerRoutes[activeProvider]?.[0];
+    if (firstRoute) {
+      setApiBase(firstRoute.base);
+      setPath(firstRoute.path);
+      setMethod(firstRoute.method);
+      setStreaming(!!firstRoute.streaming);
     }
+  // publish active provider so other pages pick it up
+  publishAIRouterSettings({ activeProvider });
   }, [activeProvider]);
 
   useEffect(() => {
@@ -126,10 +171,39 @@ export default function APIConsolePage() {
     }
   }, [activeKey, activeProvider]);
 
+  // Keep model/stream fields in sync with body JSON
+  useEffect(() => {
+    try {
+      const body = JSON.parse(bodyContent || '{}');
+      if (body && typeof body === 'object') {
+        const next = { ...body };
+        if (model) next.model = model;
+        if (typeof streaming === 'boolean') next.stream = streaming;
+        setBodyContent(JSON.stringify(next, null, 2));
+      }
+    } catch { /* ignore invalid JSON */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [model, streaming]);
+
+  // publish settings whenever base/model/streaming change so all pages share the router settings
+  useEffect(() => {
+    publishAIRouterSettings({ activeProvider, base: apiBase, model, streaming });
+  }, [activeProvider, apiBase, model, streaming]);
+
   const toggleEndpoint = (endpointId) => {
     setActiveEndpoints((prev) =>
       prev.includes(endpointId) ? prev.filter((id) => id !== endpointId) : [...prev, endpointId],
     );
+  };
+
+  const sanitizeHeaders = (h) => {
+    const c = { ...h };
+    if (c.Authorization) {
+      const v = String(c.Authorization);
+      const tail = v.slice(-6);
+      c.Authorization = `Bearer ••••••${tail}`;
+    }
+    return c;
   };
 
   const generateKey = () => {
@@ -153,9 +227,73 @@ export default function APIConsolePage() {
     alert('API key copied to clipboard');
   };
 
+  const saveActiveKey = () => {
+    if (!activeProvider) return;
+    if (!activeKey || !activeKey.trim()) {
+      alert('Enter a valid API key');
+      return;
+    }
+    SecureKeyManager.storeApiKey(activeProvider, activeKey.trim());
+    alert(`${activeProvider} key saved to session`);
+  };
+
+  const loadSavedKey = () => {
+    if (!activeProvider) return;
+    const k = SecureKeyManager.getApiKey(activeProvider) || '';
+    setActiveKey(k);
+    if (!k) alert('No saved key found for this provider');
+  };
+
+  const clearActiveKey = () => {
+    if (!activeProvider) return;
+    // remove only this provider's key from session
+    try {
+      sessionStorage.removeItem(`api_key_${activeProvider}`);
+      setActiveKey('');
+      alert(`${activeProvider} key cleared from session`);
+    } catch {}
+  };
+
+  const openKeyManager = () => {
+    setKeyInputs({
+      openai: SecureKeyManager.getApiKey('openai') || '',
+      openrouter: SecureKeyManager.getApiKey('openrouter') || '',
+      venice: SecureKeyManager.getApiKey('venice') || '',
+    });
+    setKeyManagerOpen(true);
+  };
+
+  const saveAllKeys = () => {
+    Object.entries(keyInputs).forEach(([pid, val]) => {
+      if (val && val.trim()) SecureKeyManager.storeApiKey(pid, val.trim());
+    });
+    alert('Keys saved to session');
+    // if current provider has value, reflect it in Active Key
+    const curr = keyInputs[activeProvider];
+    if (typeof curr === 'string') setActiveKey(curr);
+    setKeyManagerOpen(false);
+  };
+
   const copyCurl = () => {
-    const headers = `'Authorization: Bearer ${activeKey}' 'Content-Type: application/json'`;
-    const curl = `curl -X ${method} ${apiBase}${path} -H ${headers} -d '${bodyContent}'`;
+    const h = [
+      `Authorization: Bearer ${activeKey}`,
+      'Content-Type: application/json',
+      ...(activeProvider === 'openrouter'
+        ? [
+            `HTTP-Referer: ${window.location.origin}`,
+            'X-Title: Semantic Canvas',
+          ]
+        : []),
+      ...(activeProvider === 'openai'
+        ? [
+            ...(sessionStorage.getItem('openai_org') ? [`OpenAI-Organization: ${sessionStorage.getItem('openai_org')}`] : []),
+            ...(sessionStorage.getItem('openai_project') ? [`OpenAI-Project: ${sessionStorage.getItem('openai_project')}`] : []),
+          ]
+        : []),
+    ];
+    const headers = h.map((x) => `-H '${x}'`).join(' ');
+    const dataFlag = method !== 'GET' ? `--data '${bodyContent}'` : '';
+    const curl = `curl -X ${method} '${apiBase}${path}' ${headers} ${dataFlag}`.trim();
     navigator.clipboard.writeText(curl);
     alert('cURL command copied to clipboard');
   };
@@ -171,9 +309,36 @@ export default function APIConsolePage() {
       const headers = {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${activeKey}`,
+        ...(activeProvider === 'openrouter'
+          ? {
+              'HTTP-Referer': window.location.origin,
+              'X-Title': 'Semantic Canvas',
+            }
+          : {}),
+        ...(activeProvider === 'openai'
+          ? {
+              ...(sessionStorage.getItem('openai_org') ? { 'OpenAI-Organization': sessionStorage.getItem('openai_org') } : {}),
+              ...(sessionStorage.getItem('openai_project') ? { 'OpenAI-Project': sessionStorage.getItem('openai_project') } : {}),
+            }
+          : {}),
       };
 
-      const response = await fetch(`${apiBase}${path}`, {
+      // Prepare request inspector info
+      let parsedBody = {};
+      try { parsedBody = method !== 'GET' ? JSON.parse(bodyContent) : {}; } catch {}
+      const requestInfo = {
+        provider: activeProvider,
+        method,
+        url: `${apiBase}${path}`,
+        base: apiBase,
+        path,
+        model,
+        streaming,
+        headers: sanitizeHeaders(headers),
+        body: parsedBody,
+      };
+
+  const response = await fetch(`${apiBase}${path}`, {
         method,
         headers,
         body: method !== 'GET' ? bodyContent : undefined,
@@ -183,12 +348,40 @@ export default function APIConsolePage() {
       setResponseTime(`${endTime - startTime} ms`);
       setResponseStatus(`${response.status} ${response.statusText}`);
 
+      const meta = {
+        requestId: response.headers.get('x-request-id') || response.headers.get('openai-request-id') || null,
+        rateLimits: {
+          limitRequests: response.headers.get('x-ratelimit-limit-requests') || null,
+          remainingRequests: response.headers.get('x-ratelimit-remaining-requests') || null,
+          resetRequests: response.headers.get('x-ratelimit-reset-requests') || null,
+          limitTokens: response.headers.get('x-ratelimit-limit-tokens') || null,
+          remainingTokens: response.headers.get('x-ratelimit-remaining-tokens') || null,
+          resetTokens: response.headers.get('x-ratelimit-reset-tokens') || null,
+        },
+      };
+
+      if (!response.ok) {
+        const text = await response.text();
+        // Try to format JSON error if possible
+        let out = text;
+        try { out = JSON.stringify(JSON.parse(text), null, 2); } catch {}
+        setResponseContent(out);
+        setHistory((prev) => {
+          const entry = { ts: Date.now(), ...requestInfo, status: response.status, ms: endTime - startTime, tokens: null, error: true, responsePreview: (text || '').slice(0, 200), meta };
+          const next = [entry, ...prev].slice(0, 50);
+          sessionStorage.setItem('api_history_v1', JSON.stringify(next));
+          return next;
+        });
+        setSelectedLogIndex(0);
+        return;
+      }
+
       if (streaming && path.includes('completions') && response.body?.getReader) {
         let inTokens = 0;
         let outTokens = 0;
         try {
           const body = JSON.parse(bodyContent);
-          if (body.messages) inTokens = Math.round(body.messages.reduce((a, m) => a + m.content.length / 4, 0));
+          if (body.messages) inTokens = Math.round(body.messages.reduce((a, m) => a + (m.content?.length || 0) / 4, 0));
         } catch {}
 
         const reader = response.body.getReader();
@@ -203,19 +396,67 @@ export default function APIConsolePage() {
         }
         setTokens({ in: inTokens, out: outTokens });
         setCost(`$${(inTokens * 0.00001 + outTokens * 0.00003).toFixed(6)}`);
+        // Record history
+        setHistory((prev) => {
+          const entry = { ts: Date.now(), ...requestInfo, status: response.status, ms: endTime - startTime, tokens: { in: inTokens, out: outTokens }, responsePreview: streamChunks.slice(0, 120) };
+          const next = [entry, ...prev].slice(0, 50);
+          sessionStorage.setItem('api_history_v1', JSON.stringify(next));
+          return next;
+        });
+        setSelectedLogIndex(0);
       } else {
         const data = await response.json().catch(() => ({}));
         setResponseContent(JSON.stringify(data, null, 2));
         if (data.usage) {
-          const pt = data.usage.prompt_tokens || 0;
-          const ct = data.usage.completion_tokens || 0;
+          const pt = data.usage.prompt_tokens ?? data.usage.input_tokens ?? 0;
+          const ct = data.usage.completion_tokens ?? data.usage.output_tokens ?? 0;
           setTokens({ in: pt, out: ct });
           setCost(`$${(pt * 0.00001 + ct * 0.00003).toFixed(6)}`);
         }
+        // Record history
+        setHistory((prev) => {
+          const entry = { ts: Date.now(), ...requestInfo, status: response.status, ms: endTime - startTime, tokens: data.usage ? { in: (data.usage.prompt_tokens ?? data.usage.input_tokens ?? 0), out: (data.usage.completion_tokens ?? data.usage.output_tokens ?? 0) } : { ...tokens }, responsePreview: JSON.stringify(data).slice(0, 200), meta };
+          const next = [entry, ...prev].slice(0, 50);
+          sessionStorage.setItem('api_history_v1', JSON.stringify(next));
+          return next;
+        });
+        setSelectedLogIndex(0);
       }
     } catch (err) {
       setResponseStatus('Error');
       setResponseContent(`Error: ${err.message}`);
+    }
+  };
+
+  // Test helpers
+  const smallTestBody = (m) => JSON.stringify({
+    model: m,
+    messages: [{ role: 'user', content: 'ping' }],
+    max_tokens: 5,
+    stream: false,
+  });
+
+  const testProvider = async (provId) => {
+    const key = SecureKeyManager.getApiKey(provId) || (provId === activeProvider ? activeKey : '');
+    if (!key) {
+      alert(`${provId}: missing API key`);
+      return { provider: provId, ok: false, error: 'missing_key' };
+    }
+    try {
+      const result = await aiRouter.testProvider(provId, key, model);
+      if (!result.ok) throw new Error(result.error || 'failed');
+      alert(`${provId}: OK`);
+      return { provider: provId, ok: true };
+    } catch (e) {
+      alert(`${provId}: ${e.message}`);
+      return { provider: provId, ok: false, error: e.message };
+    }
+  };
+
+  const testAllProviders = async () => {
+    for (const p of ['openai', 'openrouter', 'venice']) {
+      // eslint-disable-next-line no-await-in-loop
+      await testProvider(p);
     }
   };
 
@@ -234,6 +475,44 @@ export default function APIConsolePage() {
         2,
       ),
     );
+  };
+
+  const savePreset = () => {
+    const name = window.prompt('Save request as… name:');
+    if (!name) return;
+    const preset = { name, provider: activeProvider, base: apiBase, method, path, model, streaming, body: bodyContent };
+    const next = [preset, ...presets.filter(p => p.name !== name)].slice(0, 50);
+    setPresets(next);
+    localStorage.setItem('api_presets_v1', JSON.stringify(next));
+  };
+
+  const loadPreset = (p) => {
+    setActiveProvider(p.provider);
+    setApiBase(p.base);
+    setMethod(p.method);
+    setPath(p.path);
+    setModel(p.model);
+    setStreaming(p.streaming);
+    setBodyContent(p.body);
+  };
+
+  const deletePreset = (name) => {
+    const next = presets.filter(p => p.name !== name);
+    setPresets(next);
+    localStorage.setItem('api_presets_v1', JSON.stringify(next));
+  };
+
+  const clearHistory = () => {
+    setHistory([]);
+    sessionStorage.removeItem('api_history_v1');
+  };
+
+  const exportHistory = () => {
+    const blob = new Blob([JSON.stringify(history, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'api-history.json'; a.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -259,6 +538,10 @@ export default function APIConsolePage() {
                       <span className="text-sm">{provider.name}</span>
                     </div>
                   ))}
+                </div>
+                <div className="p-2 flex gap-2">
+                  <button onClick={() => testProvider(activeProvider)} className={`${win95.button} ${win95.outset} text-sm`}>Test</button>
+                  <button onClick={testAllProviders} className={`${win95.button} ${win95.outset} text-sm`}>Test All</button>
                 </div>
                 <div className="p-2 mt-4">
                   <div className="mb-1 text-sm">API Base</div>
@@ -291,15 +574,23 @@ export default function APIConsolePage() {
                 <div className="mt-4">
                   <div className={win95.title}>Endpoints</div>
                   <div className="p-2 space-y-2">
-                    {endpoints.map((endpoint) => (
-                      <div key={endpoint.id} className="flex items-center">
-                        <div
-                          onClick={() => toggleEndpoint(endpoint.id)}
-                          className={`${win95.checkbox} ${win95.outset} w-3 h-3 flex items-center justify-center mr-2 cursor-pointer`}
-                        >
-                          {activeEndpoints.includes(endpoint.id) && <div className="w-1.5 h-1.5 bg-black" />}
+                    {providerRoutes[activeProvider]?.map((r) => (
+                      <div key={r.label} className="flex items-center justify-between gap-2">
+                        <div className="flex items-center">
+                          <div className={`${win95.checkbox} ${win95.outset} w-3 h-3 mr-2`} />
+                          <span className="text-sm">{r.label}</span>
                         </div>
-                        <span className="text-sm">{endpoint.name}</span>
+                        <button
+                          className={`${win95.miniButton} ${win95.outset} text-xs`}
+                          onClick={() => {
+                            setApiBase(r.base);
+                            setPath(r.path);
+                            setMethod(r.method);
+                            setStreaming(!!r.streaming);
+                          }}
+                        >
+                          Use
+                        </button>
                       </div>
                     ))}
                   </div>
@@ -309,7 +600,7 @@ export default function APIConsolePage() {
               <div className="mt-4">
                 <div className={win95.title}>Keys</div>
                 <div className="p-2">
-                  <div className="mb-1 text-sm">Active Key</div>
+                  <div className="mb-1 text-sm">Active Key ({activeProvider})</div>
                   <div className="flex gap-2 mb-2">
                     <input
                       type="password"
@@ -321,11 +612,21 @@ export default function APIConsolePage() {
                       Copy
                     </button>
                   </div>
-                  <div className="flex gap-2">
-                    <button onClick={generateKey} className={`${win95.button} ${win95.outset} flex-1 text-sm`}>
-                      Generate
+                  <div className="grid grid-cols-3 gap-2 mb-2">
+                    <button onClick={saveActiveKey} className={`${win95.button} ${win95.outset} text-sm`}>
+                      Save Key
                     </button>
-                    <button className={`${win95.button} ${win95.outset} flex-1 text-sm`}>Revoke</button>
+                    <button onClick={loadSavedKey} className={`${win95.button} ${win95.outset} text-sm`}>
+                      Load Saved
+                    </button>
+                    <button onClick={clearActiveKey} className={`${win95.button} ${win95.outset} text-sm`}>
+                      Clear
+                    </button>
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={openKeyManager} className={`${win95.button} ${win95.outset} flex-1 text-sm`}>
+                      Manage All Keys…
+                    </button>
                   </div>
                   <div className={`${win95.inset} mt-4 h-32 overflow-auto bg-white text-black`}>
                     <table className="w-full text-sm">
@@ -344,6 +645,9 @@ export default function APIConsolePage() {
                         ))}
                       </tbody>
                     </table>
+                  </div>
+                  <div className="text-[11px] opacity-70 mt-2">
+                    Stored in this browser session. Use “Manage All Keys…” to re-enter your provider keys anytime.
                   </div>
                 </div>
               </div>
@@ -410,6 +714,26 @@ export default function APIConsolePage() {
                     Authorization: Bearer &lt;key&gt;
                     <br />
                     Content-Type: application/json
+                    {activeProvider === 'openrouter' && (
+                      <>
+                        <br />HTTP-Referer: {typeof window !== 'undefined' ? window.location.origin : ''}
+                        <br />X-Title: Semantic Canvas
+                      </>
+                    )}
+                    {activeProvider === 'openai' && (
+                      <>
+                        {sessionStorage.getItem('openai_org') && (
+                          <>
+                            <br />OpenAI-Organization: {sessionStorage.getItem('openai_org')}
+                          </>
+                        )}
+                        {sessionStorage.getItem('openai_project') && (
+                          <>
+                            <br />OpenAI-Project: {sessionStorage.getItem('openai_project')}
+                          </>
+                        )}
+                      </>
+                    )}
                   </div>
                 </div>
                 <div className="mb-4">
@@ -427,7 +751,7 @@ export default function APIConsolePage() {
                   >
                     Send
                   </button>
-                  <button className={`${win95.button} ${win95.outset} text-sm`}>Save</button>
+                  <button onClick={savePreset} className={`${win95.button} ${win95.outset} text-sm`}>Save</button>
                   <button onClick={copyCurl} className={`${win95.button} ${win95.outset} text-sm`}>
                     Copy cURL
                   </button>
@@ -436,6 +760,50 @@ export default function APIConsolePage() {
                   </button>
                 </div>
               </div>
+
+              {/* Request Inspector */}
+              <div className={`${win95.panel} ${win95.outset} m-2`}>
+                <div className={win95.title}>Request Inspector</div>
+                <div className={`${win95.inset} p-2 text-xs bg-white text-black font-mono overflow-auto`}>
+                  <div><b>{method}</b> {apiBase}{path}</div>
+                  <div className="mt-1">Headers:</div>
+                  <pre className="whitespace-pre-wrap">{JSON.stringify(sanitizeHeaders({
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${activeKey}`,
+                    ...(activeProvider === 'openrouter' ? { 'HTTP-Referer': typeof window !== 'undefined' ? window.location.origin : '', 'X-Title': 'Semantic Canvas' } : {}),
+                    ...(activeProvider === 'openai' ? {
+                      ...(sessionStorage.getItem('openai_org') ? { 'OpenAI-Organization': sessionStorage.getItem('openai_org') } : {}),
+                      ...(sessionStorage.getItem('openai_project') ? { 'OpenAI-Project': sessionStorage.getItem('openai_project') } : {}),
+                    } : {}),
+                  }), null, 2)}</pre>
+                  {method !== 'GET' && (
+                    <>
+                      <div className="mt-1">Body:</div>
+                      <pre className="whitespace-pre-wrap">{bodyContent}</pre>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Presets list */}
+              {presets.length > 0 && (
+                <div className={`${win95.panel} ${win95.outset} m-2`}>
+                  <div className={win95.title}>Saved Requests</div>
+                  <div className={`${win95.inset} p-2 text-xs bg-white text-black`}> 
+                    <div className="space-y-1">
+                      {presets.map((p) => (
+                        <div key={p.name} className="flex items-center justify-between gap-2">
+                          <div className="truncate">{p.name} <span className="opacity-60">({p.provider} {p.method} {p.path})</span></div>
+                          <div className="flex gap-1">
+                            <button onClick={() => loadPreset(p)} className={`${win95.miniButton} ${win95.outset} text-xs`}>Load</button>
+                            <button onClick={() => deletePreset(p.name)} className={`${win95.miniButton} ${win95.outset} text-xs`}>Delete</button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Right: Response */}
@@ -460,17 +828,39 @@ export default function APIConsolePage() {
                     <span className="font-mono">{cost}</span>
                   </div>
                 </div>
-                <div className={`${win95.inset} h-44 p-2 font-mono text-xs overflow-auto mb-4 bg-white text-black break-words`}>
-                  {responseContent || `{ "id":"chatcmpl_...",
-  "choices":[{ "delta":"Hi!" }],
-  "usage":{ "prompt_tokens":8,
-             "completion_tokens":10 }
-}`}
+                <div className={`${win95.inset} h-44 p-2 font-mono text-xs overflow-auto mb-2 bg-white text-black break-words`}>
+                  {responseView === 'json' ? (
+                    <pre className="whitespace-pre-wrap">{(() => { try { return JSON.stringify(JSON.parse(responseContent), null, 2); } catch { return responseContent; } })()}</pre>
+                  ) : (
+                    <pre className="whitespace-pre-wrap">{responseContent}</pre>
+                  )}
                 </div>
-                <div className="flex gap-2">
-                  <button className={`${win95.miniButton} ${win95.outset} text-xs`}>JSON</button>
-                  <button className={`${win95.miniButton} ${win95.outset} text-xs`}>Text</button>
-                  <button className={`${win95.miniButton} ${win95.outset} text-xs`}>Save Persona</button>
+                <div className="flex gap-2 mb-2">
+                  <button onClick={() => setResponseView('json')} className={`${win95.miniButton} ${win95.outset} text-xs`}>JSON</button>
+                  <button onClick={() => setResponseView('text')} className={`${win95.miniButton} ${win95.outset} text-xs`}>Text</button>
+                  <button onClick={() => {
+                    const blob = new Blob([responseContent], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url; a.download = 'response.json'; a.click();
+                    URL.revokeObjectURL(url);
+                  }} className={`${win95.miniButton} ${win95.outset} text-xs`}>Export Response</button>
+                </div>
+              </div>
+              {/* Limits */}
+              <div className={`${win95.panel} ${win95.outset} m-2`}>
+                <div className={win95.title}>Limits</div>
+                <div className={`${win95.inset} p-2 text-xs`}>
+                  <div className="flex justify-between"><span>Total calls</span><span className="font-mono">{history.length}</span></div>
+                  <div className="mt-2">Tokens in</div>
+                  <div className={`${win95.panel} ${win95.outset} w-full h-4`}>
+                    <div className="bg-[#1084d0] h-full" style={{ width: `${Math.min(100, totalTokens.in / 2000 * 100)}%` }} />
+                  </div>
+                  <div className="mt-2">Tokens out</div>
+                  <div className={`${win95.panel} ${win95.outset} w-full h-4`}>
+                    <div className="bg-[#1084d0] h-full" style={{ width: `${Math.min(100, totalTokens.out / 4000 * 100)}%` }} />
+                  </div>
+                  <div className="mt-2 opacity-70">Bars are local session estimates, not provider quotas.</div>
                 </div>
               </div>
             </div>
@@ -502,42 +892,95 @@ export default function APIConsolePage() {
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    <button className={`${win95.button} ${win95.outset} text-sm`}>Checkpoint</button>
-                    <button className={`${win95.button} ${win95.outset} text-sm`}>Rollback</button>
-                    <button className={`${win95.button} ${win95.outset} text-sm`}>Export</button>
+                    <button className={`${win95.button} ${win95.outset} text-sm`} onClick={exportHistory}>Export</button>
+                    <button className={`${win95.button} ${win95.outset} text-sm`} onClick={clearHistory}>Clear History</button>
                   </div>
                 </div>
               </div>
             )}
 
-            {/* Bottom right: Gauge Board (Advanced) */}
+            {/* Bottom right: Interface Logs + Gauge (Advanced) */}
             {features.advanced && (
               <div className={`col-span-12 md:col-span-3 ${win95.panel} ${win95.outset}`}>
+                <div className={win95.title}>Interface Logs</div>
+                <div className={`${win95.inset} p-2 m-2 h-64 overflow-auto bg-white text-black`}>
+                  <div className="space-y-2">
+                    {history.length === 0 && <div className="text-xs opacity-70">No calls yet.</div>}
+                    {history.map((h, idx) => (
+                      <div key={idx} className={`${win95.panel} ${win95.outset} cursor-pointer`} onClick={() => setSelectedLogIndex(idx)}>
+                        <div className={`${win95.title} text-xs`}>{h.provider.toUpperCase()} · {h.status} · {h.ms}ms</div>
+                        <div className={`${win95.inset} p-1 text-[11px]`}> 
+                          <div className="truncate"><span className="font-mono">{h.method}</span> {h.url}</div>
+                          <div className="flex justify-between mt-1">
+                            <span>{new Date(h.ts).toLocaleTimeString()}</span>
+                            <span className="font-mono">{h.model || ''}</span>
+                          </div>
+                          <div className="mt-1 opacity-80">{h.responsePreview}</div>
+                          <details className="mt-1">
+                            <summary>Request</summary>
+                            <pre className="whitespace-pre-wrap">{JSON.stringify({ headers: h.headers, body: h.body }, null, 2)}</pre>
+                          </details>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
                 <div className={win95.title}>Gauge Board</div>
                 <div className={`${win95.inset} p-2 m-2`}>
-                  <div className="flex justify-around mb-4">
+                  <div className="flex justify-around mb-2">
                     {[
-                      ['tps', 'h-1/3'],
-                      ['latency', 'h-1/2'],
-                      ['errors', 'h-1/12'],
-                    ].map(([label, height]) => (
+                      ['tps', gauge.tps],
+                      ['latency', gauge.latency],
+                      ['errors', gauge.errors],
+                    ].map(([label, val]) => (
                       <div key={label} className="flex flex-col items-center">
-                        <div className={`${win95.panel} ${win95.outset} w-12 h-44 flex flex-col-reverse mb-1`}>
-                          <div className={`bg-[#1084d0] ${height} w-full`} />
+                        <div className={`${win95.panel} ${win95.outset} w-10 h-32 flex flex-col-reverse mb-1`}>
+                          <div className={`bg-[#1084d0]`} style={{ height: `${Math.round((val||0)*100)}%`, width: '100%' }} />
                         </div>
                         <span className="text-xs">{label}</span>
                       </div>
                     ))}
                   </div>
-                  <div className="flex gap-2">
-                    <button className={`${win95.button} ${win95.outset} text-sm flex-1`}>Calibrate</button>
-                    <button className={`${win95.button} ${win95.outset} text-sm flex-1`}>Reset</button>
+                  <div className="text-[11px] opacity-70">
+                    avg latency: {gauge.avgLatency}ms · errors: {gauge.errorRate}%
                   </div>
                 </div>
               </div>
             )}
           </div>
         </div>
+        {/* Key Manager Modal */}
+        {keyManagerOpen && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className={`${win95.panel} ${win95.outset} w-full max-w-lg bg-[#c0c0c0]`}>
+              <div className={win95.title}>Manage Provider Keys</div>
+              <div className="p-3 space-y-3">
+                {['openai','openrouter','venice'].map((pid) => (
+                  <div key={pid} className={`${win95.panel} ${win95.outset}`}>
+                    <div className={win95.title + ' text-xs'}>{pid.toUpperCase()}</div>
+                    <div className={`${win95.inset} p-2`}>
+                      <div className="flex gap-2">
+                        <input
+                          type={showKeyFields[pid] ? 'text' : 'password'}
+                          value={keyInputs[pid] || ''}
+                          onChange={(e) => setKeyInputs((prev) => ({ ...prev, [pid]: e.target.value }))}
+                          placeholder={`Enter ${pid} API key`}
+                          className={`${win95.inset} ${win95.inputField} flex-1 text-sm`}
+                        />
+                        <button onClick={() => setShowKeyFields((prev) => ({ ...prev, [pid]: !prev[pid] }))} className={`${win95.miniButton} ${win95.outset} text-xs`}>{showKeyFields[pid] ? 'Hide' : 'Show'}</button>
+                        <button onClick={() => testProvider(pid)} className={`${win95.miniButton} ${win95.outset} text-xs`}>Test</button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                <div className="flex gap-2 justify-end">
+                  <button onClick={() => setKeyManagerOpen(false)} className={`${win95.button} ${win95.outset} text-sm`}>Close</button>
+                  <button onClick={saveAllKeys} className={`${win95.button} ${win95.outset} text-sm bg-[#000080] text-white`}>Save All</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

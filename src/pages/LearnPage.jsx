@@ -1,20 +1,21 @@
 // @ts-nocheck
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BookOpenTextIcon, InfoIcon, LightbulbIcon, BoxesIcon, FileCode2Icon, ShieldCheckIcon, RocketIcon, ListTreeIcon } from 'lucide-react';
+import { BookOpenTextIcon, InfoIcon, LightbulbIcon, BoxesIcon, FileCode2Icon, ShieldCheckIcon, ListTreeIcon, SearchIcon, Circle } from 'lucide-react';
 import TopNav95Plus from '@/components/TopNav95Plus';
 
 // Win94+ styled static Learn page for Semantic Flow
 export default function LearnPage() {
   const navigate = useNavigate();
+  const FONT_STACK = 'Tahoma, "MS Sans Serif", system-ui';
 
   // Keep sections consistent with Win95Suite
   const sections = [
     { id: 'builder', label: 'Builder', href: '/builder' },
     { id: 'ide', label: 'IDE', href: '/ide' },
     { id: 'api', label: 'Router', href: '/api' },
-    { id: 'console', label: 'Console', href: '/console' },
-    { id: 'chat', label: 'Chat', href: '/chat' },
+  { id: 'chat', label: 'Chat', href: '/chat' },
+  { id: 'console', label: 'Console', href: '/console' },
     { id: 'learn', label: 'Learn', href: '/learn' },
   ];
 
@@ -31,11 +32,74 @@ export default function LearnPage() {
     <section id={id} className={`bg-[#cfcfcf] ${bevel.out} border-2 p-0 overflow-hidden`}> 
       <header className="flex items-center gap-2 px-3 py-2 text-sm text-white" style={{ background: '#000080' }}>
         <Icon className="h-4 w-4" />
-        <h3 className="font-semibold tracking-wide" style={{ fontFamily: 'Tahoma, "MS Sans Serif", system-ui' }}>{title}</h3>
+        <h3 className="font-semibold tracking-wide" style={{ fontFamily: FONT_STACK }}>{title}</h3>
       </header>
       <div className={`bg-[#ffffff] ${bevel.in} border-2 m-2 p-3 text-sm leading-6 text-black`}>{children}</div>
     </section>
   );
+
+  // Small UI primitives inspired by the template, tuned to current style
+  const Button95 = ({ children, onClick, ariaLabel }) => (
+    <button
+      aria-label={ariaLabel}
+      onClick={onClick}
+      className={`inline-flex items-center gap-2 px-3 py-2 text-sm ${bevel.out} border-2 active:${bevel.in}`}
+      style={{ background: '#c0c0c0' }}
+    >
+      {children}
+    </button>
+  );
+
+  const FeatureChip = ({ icon: Icon = InfoIcon, text }) => (
+    <div className={`inline-flex items-center gap-2 px-2 py-1 text-xs ${bevel.out} border-2`} style={{ background: '#c0c0c0' }}>
+      <Icon className="h-3.5 w-3.5" />
+      <span>{text}</span>
+    </div>
+  );
+
+  const Card = ({ title, children, id }) => (
+    <div id={id} className={`bg-white ${bevel.out} border-2 p-3`}>
+      {title ? <h4 className="font-semibold mb-1" style={{ fontFamily: FONT_STACK }}>{title}</h4> : null}
+      <div className="text-sm leading-6">{children}</div>
+    </div>
+  );
+
+  const Step = ({ n, label, desc }) => (
+    <div className={`flex items-start gap-3 ${bevel.out} border-2 p-3 bg-white`}>
+      <div className={`min-w-6 h-6 flex items-center justify-center text-xs font-bold ${bevel.in} border-2`} style={{ background: '#c0c0c0' }}>{n}</div>
+      <div>
+        <div className="text-sm font-semibold" style={{ fontFamily: FONT_STACK }}>{label}</div>
+        <div className="text-sm leading-6">{desc}</div>
+      </div>
+    </div>
+  );
+
+  // TOC with icons and filter
+  const tocItems = [
+    { id: 'core', label: 'Core Concepts', icon: ListTreeIcon },
+    { id: 'nav', label: 'How Navigation Works', icon: BookOpenTextIcon },
+    { id: 'pages', label: 'Pages & Features', icon: BoxesIcon },
+    { id: 'export', label: 'Export & Interop', icon: FileCode2Icon },
+    { id: 'security', label: 'Security & Access', icon: ShieldCheckIcon },
+    { id: 'creative', label: 'Creative Uses', icon: LightbulbIcon },
+  ];
+  const [tocQuery, setTocQuery] = useState('');
+  const filteredToc = useMemo(() => {
+    const q = tocQuery.trim().toLowerCase();
+    if (!q) return tocItems;
+    return tocItems.filter((t) => t.label.toLowerCase().includes(q));
+  }, [tocQuery]);
+
+  // CTAs and highlights
+  const CTA_DATA = [
+    { id: 'cta-builder', label: 'Open Builder', href: '/builder' },
+    { id: 'cta-chat', label: 'Try Chat', href: '/chat' },
+  ];
+  const HIGHLIGHTS = [
+    { id: 'h1', text: 'Portable exports', icon: FileCode2Icon },
+    { id: 'h2', text: 'No workflow runner', icon: InfoIcon },
+    { id: 'h3', text: 'BYOK + SSO', icon: ShieldCheckIcon },
+  ];
 
   return (
     <div className="win95-learn-container" style={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#008080' }}>
@@ -54,39 +118,86 @@ export default function LearnPage() {
           <div className="flex items-center justify-between px-3 py-2 text-white" style={{ background: '#000080' }}>
             <div className="flex items-center gap-2">
               <div className="w-4 h-4 bg-white" />
-              <div className="font-semibold" style={{ fontFamily: 'Tahoma, "MS Sans Serif", system-ui' }}>Semantic Flow — Learn</div>
+              <div className="font-semibold" style={{ fontFamily: FONT_STACK }}>Semantic Flow — Learn</div>
             </div>
             <div className="text-xs opacity-80">Win94+ Manifold UI</div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-[220px_1fr] gap-3 p-3">
+          <div className="grid grid-cols-1 md:grid-cols-[240px_1fr] gap-3 p-3">
             {/* TOC */}
             <aside className={`md:sticky md:top-2 h-max bg-[#c0c0c0] ${bevel.in} border-2 p-2`}>
-              <div className="text-xs font-semibold mb-2">On this page</div>
+              <div className="flex items-center gap-1 text-xs font-semibold mb-2">
+                <Circle className="h-3 w-3" /> On this page
+              </div>
+              <div className="mb-2 flex items-center gap-2">
+                <SearchIcon className="h-4 w-4 opacity-70" />
+                <input
+                  aria-label="Filter sections"
+                  value={tocQuery}
+                  onChange={(e) => setTocQuery(e.target.value)}
+                  placeholder="Filter"
+                  className={`w-full text-xs px-2 py-1 ${bevel.in} border-2 outline-none`}
+                  style={{ background: '#ffffff' }}
+                />
+              </div>
               <nav className="space-y-1 text-sm">
-                {[ 
-                  ['core', 'Core Concepts'],
-                  ['nav', 'How Navigation Works'],
-                  ['pages', 'Pages & Features'],
-                  ['export', 'Export & Interop'],
-                  ['security', 'Security & Access'],
-                  ['not', 'What It Is Not'],
-                  ['creative', 'Creative Uses'],
-                  ['glossary', 'Quick Glossary'],
-                ].map(([id, label]) => (
-                  <a key={id} href={`#${id}`} className="block hover:underline">{label}</a>
+                {filteredToc.map(({ id, label, icon: Icon }) => (
+                  <a key={id} href={`#${id}`} className="flex items-center gap-2 hover:underline">
+                    <Icon className="h-3.5 w-3.5" /> {label}
+                  </a>
                 ))}
+                {/* Anchor to hero-local NOT card */}
+                <a href="#not" className="flex items-center gap-2 hover:underline">
+                  <InfoIcon className="h-3.5 w-3.5" /> What It Is Not
+                </a>
               </nav>
             </aside>
 
             {/* INTRO */}
             <div className={`space-y-3`}>
-              <div className={`bg-[#ffffff] ${bevel.in} border-2 p-3`}>
-                <h1 className="text-xl font-bold mb-2" style={{ fontFamily: 'Tahoma, "MS Sans Serif", system-ui' }}>What this app is and what it does</h1>
-                <p className="text-sm leading-6">
-                  Semantic Flow is a live canvas for building schemas and context. Compose information as connected nodes with fields, then export your work (JSON, YAML, Markdown, XML, CSV) for prompts, system messages, API shapes, documents, and code scaffolds.
-                </p>
-                <div className="mt-2 p-2 bg-[#fffbd1] text-[#3b3b00] border border-[#d0c86a]">
-                  <strong>Important:</strong> Semantic Flow is not an automation runner. It does not execute flows; it helps you design, structure, and manage context.
+              <div className={`bg-[#ffffff] ${bevel.in} border-2 p-4`}>
+                <h1 className="text-2xl font-bold" style={{ fontFamily: FONT_STACK }}>What this app is</h1>
+                <div className="text-sm leading-6 mt-2">
+                  Semantic Flow is a live canvas for building schemas and context. Build with nodes and fields, link them, then export your work
+                  (JSON, YAML, Markdown, XML, CSV) for prompts, system messages, API shapes, documents, and code scaffolds.
+                </div>
+                <div className="text-[12px] mt-1 opacity-80" style={{ fontFamily: FONT_STACK }}>Design context like it's 1995, export it like it's today</div>
+
+                <div className="mt-3 p-3 text-sm bg-[#fffbd1] text-[#3b3b00] border border-[#d0c86a]">
+                  <strong>Important:</strong> Semantic Flow is not an automation runner. It does not execute flows. It helps you design, structure, and manage context.
+                </div>
+
+                {/* What it is not moved under hero */}
+                <div className="mt-3">
+                  <Card id="not" title="What it is not">
+                    <ul className="list-disc pl-5 text-sm space-y-1">
+                      <li>Not a workflow runner or automation engine</li>
+                      <li>Not a queue or job system</li>
+                      <li>Not a datastore for your keys</li>
+                      <li>Not a spreadsheet replacement</li>
+                    </ul>
+                  </Card>
+                </div>
+
+                {/* Quick steps */}
+                <div className={`h-px my-3 bg-[#9a9a9a] ${bevel.out}`} />
+                <div className="grid md:grid-cols-3 gap-3">
+                  <Step n={1} label="Drop nodes" desc="Drag from palette. Give each a few fields." />
+                  <Step n={2} label="Link meaning" desc="Connect nodes to show references. Pick a format per node." />
+                  <Step n={3} label="Export" desc="Send to JSON/YAML/MD/XML/CSV. Use in routes, docs, or code." />
+                </div>
+
+                {/* Highlights */}
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {HIGHLIGHTS.map((h) => (
+                    <FeatureChip key={h.id} icon={h.icon} text={h.text} />
+                  ))}
+                </div>
+
+                {/* CTAs */}
+                <div className="mt-3 flex items-center gap-2">
+                  {CTA_DATA.map((c) => (
+                    <Button95 key={c.id} onClick={() => navigate(c.href)} ariaLabel={c.label}>{c.label}</Button95>
+                  ))}
                 </div>
               </div>
             </div>
@@ -95,7 +206,7 @@ export default function LearnPage() {
 
         {/* CONTENT SECTIONS */}
         <div className="grid grid-cols-1 gap-4">
-          <Section id="core" title="1) Core Concepts" icon={ListTreeIcon}>
+          <Section id="core" title="Core Concepts" icon={ListTreeIcon}>
             <div className="grid md:grid-cols-2 gap-3">
               <div className={`bg-white ${bevel.out} border-2 p-3`}>
                 <h4 className="font-semibold mb-1">Schema</h4>
@@ -129,10 +240,14 @@ export default function LearnPage() {
                 <h4 className="font-semibold mb-1">Provider</h4>
                 <p>AI or data source used in the app. Supported: OpenAI, OpenRouter, Venice AI. Discourse via SSO can power context and personas.</p>
               </div>
+              <div className={`bg-white ${bevel.out} border-2 p-3`}>
+                <h4 className="font-semibold mb-1">Persona</h4>
+                <p>A configured AI role (often from Discourse AI) that bundles policies, constraints, and behavior; can be referenced by Router/Chat.</p>
+              </div>
             </div>
           </Section>
 
-          <Section id="nav" title="2) How Navigation Works" icon={BookOpenTextIcon}>
+          <Section id="nav" title="How Navigation Works" icon={BookOpenTextIcon}>
             <div className="space-y-2">
               <div className={`bg-white ${bevel.out} border-2 p-3`}>
                 <h4 className="font-semibold mb-1">Landing</h4>
@@ -167,7 +282,7 @@ export default function LearnPage() {
             </div>
           </Section>
 
-          <Section id="pages" title="3) Pages and Features" icon={BoxesIcon}>
+          <Section id="pages" title="Pages and Features" icon={BoxesIcon}>
             <div className="space-y-3">
               {/* Builder */}
               <div className={`bg-white ${bevel.out} border-2 p-3`}>
@@ -262,7 +377,7 @@ export default function LearnPage() {
             </div>
           </Section>
 
-          <Section id="export" title="4) Export and Interop" icon={FileCode2Icon}>
+          <Section id="export" title="Export and Interop" icon={FileCode2Icon}>
             <ul className="list-disc pl-5 text-sm space-y-1">
               <li>Export to JSON, YAML, Markdown, XML for downstream tooling and docs.</li>
               <li>CSV/Table for quick audits and spreadsheet workflows.</li>
@@ -270,7 +385,7 @@ export default function LearnPage() {
             </ul>
           </Section>
 
-          <Section id="security" title="5) Security and Access" icon={ShieldCheckIcon}>
+          <Section id="security" title="Security and Access" icon={ShieldCheckIcon}>
             <div className="grid md:grid-cols-2 gap-3">
               <div className={`bg-white ${bevel.out} border-2 p-3`}>
                 <h4 className="font-semibold mb-1">BYOK</h4>
@@ -296,16 +411,7 @@ export default function LearnPage() {
             </div>
           </Section>
 
-          <Section id="not" title="6) What Semantic Flow Is Not" icon={InfoIcon}>
-            <ul className="list-disc pl-5 text-sm space-y-1">
-              <li>Not a workflow runner or automation engine</li>
-              <li>Not a queue or job system</li>
-              <li>Not a datastore for your keys</li>
-              <li>Not a spreadsheet replacement</li>
-            </ul>
-          </Section>
-
-          <Section id="creative" title="7) Creative Ways to Use Semantic Flow" icon={LightbulbIcon}>
+          <Section id="creative" title="Creative Ways to Use Semantic Flow" icon={LightbulbIcon}>
             <div className="grid md:grid-cols-2 gap-3">
               {[
                 ['Prompt & System Message Library', 'Build a catalog of reusable system messages, role prompts, and guardrails; link examples and constraints; export Markdown/JSON.'],
@@ -342,30 +448,6 @@ export default function LearnPage() {
                   </div>
                 ))}
               </div>
-            </div>
-          </Section>
-
-          <Section id="glossary" title="8) Quick Glossary" icon={RocketIcon}>
-            <div className="grid md:grid-cols-2 gap-3">
-              {[
-                ['Node', 'A mini table with fields; a unit of meaning'],
-                ['Field', 'A key-value inside a node'],
-                ['Language Mode', 'The chosen content format of a node (JSON/YAML/XML/Markdown)'],
-                ['Edge', 'A reference from one node to another'],
-                ['Schema', 'Your whole connected structure'],
-                ['Ontology', 'The library of node types and clusters'],
-                ['Seed', 'A Discourse topic used as a contextual anchor'],
-                ['Persona', 'A configured AI role in Discourse AI'],
-                ['Provider', 'AI source (OpenAI, OpenRouter, Venice) or Discourse via SSO'],
-              ].map(([term, desc]) => (
-                <div key={term} className={`bg-white ${bevel.out} border-2 p-3`}>
-                  <div className="font-semibold">{term}</div>
-                  <div className="text-sm">{desc}</div>
-                </div>
-              ))}
-            </div>
-            <div className="mt-3 text-xs">
-              For Discourse API reference, see: <a className="underline" href="https://docs.discourse.org/" target="_blank" rel="noreferrer">https://docs.discourse.org/</a>
             </div>
           </Section>
         </div>

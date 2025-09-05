@@ -2,13 +2,10 @@ import React, { memo, useState } from 'react';
 import { Handle, Position } from 'reactflow';
 import { NodeResizer } from '@reactflow/node-resizer';
 import '@reactflow/node-resizer/dist/style.css';
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Edit3, Save, X, Play, Sparkles } from "lucide-react";
+import { Edit3, Save, X, Play } from "lucide-react";
 import { NODE_TYPES, CLUSTER_COLORS } from "@/lib/ontology";
-import NodeEnhancementModal from './NodeEnhancementModal';
 import FieldEditor95 from './FieldEditor95';
-import { convertContent, detectFormat } from '@/lib/formatUtils';
+import { detectFormat } from '@/lib/formatUtils';
 import { serializeFields, fieldsToRecord } from '@/lib/nodeModel';
 
 const styles = {
@@ -146,53 +143,43 @@ const SemanticNode95 = ({ id, data, isConnectable, selected, onNodeUpdate }) => 
   const displayDescription = rec.description ?? data.description ?? data.metadata?.description ?? '';
   const displayContent = rec.content ?? data.content ?? '';
   const displayIcon = rec.icon ?? NODE_TYPES[data.type]?.icon ?? '📦';
-  const [editTitle, setEditTitle] = useState(String(displayTitle || ''));
-  const [editTags, setEditTags] = useState(Array.isArray(displayTags) ? displayTags : []);
-  const [editDescription, setEditDescription] = useState(String(displayDescription || ''));
-  const [editContent, setEditContent] = useState(displayContent || '');
-  const [editIcon, setEditIcon] = useState(String(displayIcon || ''));
+  // Everything is edited via Fields; no inline editors for core values
   const isBlankNode = data.type === 'UTIL-BLANK';
   const [editType, setEditType] = useState(data.type);
-  const [contentFormat, setContentFormat] = useState(data.language || detectFormat(editContent || ''));
+  const [contentFormat, setContentFormat] = useState(data.language || detectFormat(displayContent || ''));
 
   const nodeType = NODE_TYPES[data.type];
   const clusterColor = CLUSTER_COLORS[data.metadata?.cluster] || '#6B7280';
 
   const handleSaveEdit = () => {
-    data.title = editTitle;
-    data.label = editTitle; // mirror for display
-    data.tags = editTags;
-    data.metadata.tags = editTags; // mirror for compatibility
-    data.description = editDescription;
-    data.content = editContent;
+    // Sync top-level mirrors from fields so downstream code continues to work
+    const r = fieldsToRecord(fields);
+    if (typeof r.title === 'string') {
+      data.title = r.title;
+      data.label = r.title;
+    }
+    if (Array.isArray(r.tags)) {
+      data.tags = r.tags;
+      data.metadata.tags = r.tags;
+    }
+    if (typeof r.description === 'string') data.description = r.description;
+    if (typeof r.content === 'string') data.content = r.content;
     data.language = contentFormat;
-    // keep array-of-fields authoritative for core keys
-    const upsert = (name, type, value) => {
-      const idx = fields.findIndex(f => f?.name === name);
-      const next = { name, type, value };
-      if (idx >= 0) fields[idx] = next; else fields.push(next);
-    };
-    upsert('title','text', editTitle);
-    upsert('tags','tags', editTags);
-    upsert('description','longText', editDescription);
-    upsert('content','longText', editContent);
-    upsert('icon','text', editIcon || displayIcon);
+    data.fields = [...fields];
     if (isBlankNode) {
       data.type = editType;
     }
     data.metadata.updatedAt = new Date().toISOString();
     delete data.isNew;
     setIsEditing(false);
-    const patch = { title: editTitle, label: editTitle, tags: editTags, description: editDescription, content: editContent, language: contentFormat, fields: [...fields], ...(isBlankNode && { type: editType }) };
+    const patch = { title: data.title, label: data.label, tags: data.tags, description: data.description, content: data.content, language: contentFormat, fields: [...fields], ...(isBlankNode && { type: editType }) };
     if (typeof data._onUpdate === 'function') data._onUpdate(id, patch);
     else if (onNodeUpdate) onNodeUpdate(id, patch);
   };
 
   const handleCancelEdit = () => {
-    setEditTitle(displayTitle || '');
-    setEditTags(Array.isArray(displayTags) ? displayTags : []);
-    setEditDescription(displayDescription || '');
-    setEditContent(displayContent || '');
+    setFields(Array.isArray(data.fields) ? data.fields : []);
+    setContentFormat(data.language || detectFormat(displayContent || ''));
     setIsEditing(false);
   };
 
@@ -200,24 +187,7 @@ const SemanticNode95 = ({ id, data, isConnectable, selected, onNodeUpdate }) => 
     console.log(`Executing node ${id} of type ${data.type}`);
   };
 
-  const handleNodeEnhancementUpdate = (updatedNode) => {
-    setEditContent(updatedNode.data.content);
-    data.content = updatedNode.data.content;
-    data.metadata.updatedAt = new Date().toISOString();
-    if (typeof data._onUpdate === 'function') data._onUpdate(id, { content: updatedNode.data.content });
-    else if (onNodeUpdate) onNodeUpdate(id, { content: updatedNode.data.content });
-  };
-
-  const handleConvertContent = (to) => {
-    try {
-      const from = contentFormat;
-      const converted = convertContent(editContent, from, to);
-      setEditContent(converted);
-      setContentFormat(to);
-    } catch (e) {
-      console.error('conversion failed', e);
-    }
-  };
+  // No inline enhancement/conversion here; FieldEditor rows handle per-field AI
 
   return (
     <div data-testid="semantic-node" onDoubleClick={() => setIsEditing(true)} style={{ ...styles.panel(selected), borderLeft: `4px solid ${clusterColor}`, cursor: 'move' }}>
@@ -243,30 +213,7 @@ const SemanticNode95 = ({ id, data, isConnectable, selected, onNodeUpdate }) => 
           <div style={styles.headerLeft}>
           <span style={{ fontSize: 14, marginRight: 4 }}>{displayIcon}</span>
           <div style={{ width: 8, height: 8, background: clusterColor, border: '1px solid #FFFFFF' }} />
-          <div style={styles.headerTitle}>
-            {isEditing ? (
-              <div style={{ display: 'grid', gap: 2 }}>
-                <div style={styles.smallLabel}>Title</div>
-                <input
-                  type="text"
-                  value={editTitle}
-                  onChange={(e)=>setEditTitle(e.target.value)}
-                  placeholder="Title"
-                  style={{
-                    width: '100%',
-                    padding: '2px 4px',
-                    border: '1px inset #C0C0C0',
-                    background: '#FFFFFF',
-                    fontFamily: '"MS Sans Serif", sans-serif',
-                    fontSize: '11px',
-                    boxShadow: 'inset 1px 1px 0 #808080, inset -1px -1px 0 #FFFFFF'
-                  }}
-                />
-              </div>
-            ) : (
-              displayTitle
-            )}
-          </div>
+          <div style={styles.headerTitle}>{displayTitle}</div>
         </div>
         <div style={{ display: 'flex', gap: 2 }}>
           {data.config?.isExecutable && (
@@ -297,58 +244,19 @@ const SemanticNode95 = ({ id, data, isConnectable, selected, onNodeUpdate }) => 
       <div style={styles.body}>
         <div style={styles.metaRow}>
           <span style={styles.tag}>{data.type}</span>
-          {isEditing ? (
-            <div style={{ display: 'grid', gap: 2, minWidth: 160 }}>
-              <div style={styles.smallLabel}>Tags</div>
-              <input
-                type="text"
-                value={Array.isArray(editTags) ? editTags.join(', ') : ''}
-                onChange={(e)=>setEditTags(e.target.value.split(',').map(t=>t.trim()).filter(Boolean))}
-                placeholder="tag1, tag2"
-                style={{ 
-                  padding: '2px 4px', 
-                  border: '1px inset #C0C0C0', 
-                  background: '#FFFFFF',
-                  fontFamily: '"MS Sans Serif", sans-serif',
-                  fontSize: '11px',
-                  boxShadow: 'inset 1px 1px 0 #808080, inset -1px -1px 0 #FFFFFF'
-                }}
-              />
-            </div>
-          ) : (
-            (Array.isArray(displayTags) ? displayTags : []).slice(0, 3).map((t, i) => (
-              <span key={i} style={styles.tag}>{t}</span>
-            ))
-          )}
+          {(Array.isArray(displayTags) ? displayTags : []).slice(0, 3).map((t, i) => (
+            <span key={i} style={styles.tag}>{t}</span>
+          ))}
         </div>
 
-        {/* Inline description with Win95 styling */}
-        <div style={styles.description}>
-          {isEditing ? (
-            <div style={{ display: 'grid', gap: 2 }}>
-              <div style={styles.smallLabel}>Description</div>
-              <Textarea
-                value={editDescription}
-                onChange={(e)=>setEditDescription(e.target.value)}
-                placeholder="Description"
-                className="w-full resize-y"
-                style={{ 
-                  fontSize: '10px',
-                  fontFamily: '"MS Sans Serif", sans-serif',
-                  background: '#FFFFFF',
-                  color: '#000000',
-                  border: '1px inset #C0C0C0',
-                  padding: '6px',
-                  boxShadow: 'inset 1px 1px 0 #808080, inset -1px -1px 0 #FFFFFF'
-                }}
-              />
-            </div>
-          ) : (
-            (displayDescription || nodeType?.description) && (
+        {/* Description is edited via Fields; in view we show a summary if present */}
+        {!isEditing && (
+          <div style={styles.description}>
+            {(displayDescription || nodeType?.description) && (
               <span>{String.fromCodePoint(0x1F4A1)} {displayDescription || nodeType?.description}</span>
-            )
-          )}
-        </div>
+            )}
+          </div>
+        )}
 
         {isEditing ? (
           <div style={styles.editingArea}>
@@ -370,55 +278,28 @@ const SemanticNode95 = ({ id, data, isConnectable, selected, onNodeUpdate }) => 
                 />
               </div>
             )}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 120px', gap: 8, alignItems: 'start' }}>
-              <div style={{ display: 'grid', gap: 6 }}>
-                <label style={{ fontSize: 10, color: '#000080', fontWeight: 'bold' }}>Icon</label>
-                <input value={editIcon} onChange={(e)=>setEditIcon(e.target.value)} style={{ padding: '4px 6px', border: '1px inset #C0C0C0', background: '#FFF' }} />
-              </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8, gap: 6 }}>
+              <div style={{ fontSize: 10, alignSelf: 'center', color: '#000080', fontWeight: 'bold' }}>Node Format</div>
+              <select 
+                value={contentFormat} 
+                onChange={(e)=>setContentFormat(e.target.value)} 
+                style={{ 
+                  padding: '4px 6px', 
+                  border: '1px inset #C0C0C0', 
+                  background: '#C0C0C0',
+                  fontFamily: '"MS Sans Serif", sans-serif',
+                  fontSize: '10px',
+                  boxShadow: 'inset 1px 1px 0 #808080, inset -1px -1px 0 #FFFFFF'
+                }}
+              >
+                {['markdown','json','yaml','xml'].map(f => (<option key={f} value={f}>{f}</option>))}
+              </select>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8, alignItems: 'start' }}>
-              <div style={{ display: 'grid', gap: 2 }}>
-                <div style={styles.smallLabel}>Content</div>
-                <Textarea 
-                  value={editContent} 
-                  onChange={(e) => setEditContent(e.target.value)} 
-                  placeholder="Enter node content..." 
-                  className="w-full resize-y"
-                  style={{ 
-                    minHeight: '100px',
-                    fontSize: '11px',
-                    fontFamily: '"MS Sans Serif", Consolas, monospace',
-                    background: '#FFFFFF',
-                    color: '#000000',
-                    border: '1px inset #C0C0C0',
-                    padding: '6px',
-                    resize: 'both',
-                    boxShadow: 'inset 1px 1px 0 #808080, inset -1px -1px 0 #FFFFFF'
-                  }} 
-                />
-              </div>
-              <div style={{ display: 'grid', gap: 4 }}>
-                <div style={{ fontSize: 10, textAlign: 'center', color: '#000080', fontWeight: 'bold' }}>Node Language</div>
-                <select 
-                  value={contentFormat} 
-                  onChange={(e)=>handleConvertContent(e.target.value)} 
-                  style={{ 
-                    padding: '4px 6px', 
-                    border: '1px inset #C0C0C0', 
-                    background: '#C0C0C0',
-                    fontFamily: '"MS Sans Serif", sans-serif',
-                    fontSize: '10px',
-                    boxShadow: 'inset 1px 1px 0 #808080, inset -1px -1px 0 #FFFFFF'
-                  }}
-                >
-                  {['markdown','json','yaml','xml'].map(f => (<option key={f} value={f}>{f}</option>))}
-                </select>
-              </div>
-            </div>
-
-            <div style={{ marginTop: 8 }}>
+            <div>
               <FieldEditor95 value={fields} onChange={setFields} />
             </div>
+
+            {/* FieldEditor now solely manages description/content/icon/custom fields */}
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 6, marginTop: 8, paddingTop: 6, borderTop: '1px solid #D0D0D0' }}>
               <div style={{ display: 'flex', gap: 4 }}>
                 <button 
@@ -442,25 +323,11 @@ const SemanticNode95 = ({ id, data, isConnectable, selected, onNodeUpdate }) => 
                   <Save size={10} />
                 </button>
               </div>
-              <NodeEnhancementModal
-                node={{ id, data }}
-                onNodeUpdate={handleNodeEnhancementUpdate}
-                trigger={
-                  <button 
-                    style={{ ...styles.bevelBtn, width: 24, background: '#FFE4B5', border: '1px outset #FFE4B5' }} 
-                    aria-label="Enhance"
-                    onMouseDown={(e) => e.currentTarget.style.cssText = Object.entries({...styles.bevelBtnPressed, width: 24, background: '#FFE4B5', border: '1px inset #FFE4B5'}).map(([k,v]) => `${k.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${v}`).join('; ')}
-                    onMouseUp={(e) => e.currentTarget.style.cssText = Object.entries({...styles.bevelBtn, width: 24, background: '#FFE4B5', border: '1px outset #FFE4B5'}).map(([k,v]) => `${k.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${v}`).join('; ')}
-                    onMouseLeave={(e) => e.currentTarget.style.cssText = Object.entries({...styles.bevelBtn, width: 24, background: '#FFE4B5', border: '1px outset #FFE4B5'}).map(([k,v]) => `${k.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${v}`).join('; ')}
-                  >
-                    <Sparkles size={10} />
-                  </button>
-                }
-              />
+              {/* Enhancement button removed; per-field AI lives inside FieldEditor rows */}
             </div>
           </div>
         ) : (
-          <div style={styles.contentArea}>
+      <div style={styles.contentArea}>
       {displayContent ? (
               <div style={{ 
                 fontSize: '11px', 
@@ -474,7 +341,7 @@ const SemanticNode95 = ({ id, data, isConnectable, selected, onNodeUpdate }) => 
               }}>
         {displayContent}
               </div>
-            ) : (
+      ) : (
               <div style={{ 
                 fontSize: '11px', 
                 color: '#808080', 
@@ -486,7 +353,7 @@ const SemanticNode95 = ({ id, data, isConnectable, selected, onNodeUpdate }) => 
         {displayDescription || 'Double-click to edit...'}
               </div>
             )}
-      {Array.isArray(data.fields) && data.fields.filter(f=>!['title','tags','description','content','icon'].includes(f?.name)).length > 0 && (
+      {Array.isArray(data.fields) && data.fields.length > 0 && (
               <div style={{ marginTop: 8 }}>
                 <div style={{ 
                   fontSize: '10px', 
@@ -497,15 +364,14 @@ const SemanticNode95 = ({ id, data, isConnectable, selected, onNodeUpdate }) => 
                   padding: '2px 4px',
                   border: '1px outset #C0C0C0'
                 }}>
-          {String.fromCodePoint(0x1F4CB)} Fields ({data.fields.filter(f=>!['title','tags','description','content','icon'].includes(f?.name)).length})
+          {String.fromCodePoint(0x1F4CB)} Fields ({data.fields.length})
                 </div>
                 <pre style={{ margin: 0, fontSize: 10, background: '#FFFFFF', border: '1px inset #C0C0C0', padding: 6, whiteSpace: 'pre-wrap', fontFamily: 'Consolas, "Courier New", monospace' }}>
                   {(() => {
                     try {
-            const custom = data.fields.filter(f=>!['title','tags','description','content','icon'].includes(f?.name));
-            return serializeFields(custom, data.language || 'markdown');
+            return serializeFields(data.fields, data.language || 'markdown');
                     } catch (e) {
-            try { return JSON.stringify(Object.fromEntries((data.fields||[]).filter(f=>!['title','tags','description','content','icon'].includes(f?.name)).map(f=>[f.name,f.value])), null, 2); } catch { return ''; }
+            try { return JSON.stringify(Object.fromEntries((data.fields||[]).map(f=>[f.name,f.value])), null, 2); } catch { return ''; }
                     }
                   })()}
                 </pre>

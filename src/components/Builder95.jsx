@@ -4,7 +4,6 @@ import LabCanvas from './LabCanvas';
 import SemanticNode95 from './SemanticNode95';
 import { createWorkflowSchema, generateId } from '@/lib/graphSchema';
 import WorkflowExecutionEngine from '@/lib/WorkflowExecutionEngine';
-import TextToWorkflow from './TextToWorkflow';
 import { useMemo } from 'react';
 
 const win98 = {
@@ -75,19 +74,7 @@ export default function Builder95() {
             isExecuting={false}
             nodeTypes={memoNodeTypes}
           />
-          <div style={{ borderTop: '1px solid #808080' }}>
-            <TextToWorkflow onWorkflowGenerated={(wfNew) => {
-              try {
-                // Accept either full workflow or minimal nodes/edges
-                const next = wfNew?.nodes && wfNew?.edges
-                  ? { ...workflow, nodes: wfNew.nodes, edges: wfNew.edges, metadata: { ...workflow.metadata, updatedAt: new Date().toISOString() } }
-                  : wfNew;
-                setWorkflow(next);
-                localStorage.setItem('current-workflow', JSON.stringify(next));
-                window.dispatchEvent(new CustomEvent('workflow:updated', { detail: { source: 'TextToWorkflow', workflow: next } }));
-              } catch {}
-            }} />
-          </div>
+          {/* Removed global Text-to-Workflow generator; per-field AI lives in FieldEditor rows */}
         </div>
       </div>
     </div>

@@ -13,6 +13,7 @@ import { useAuth } from './lib/auth';
 // Import debug utility
 import { detectOverlappingElements } from './utils/debugNav';
 import BlueScreen from "./components/BlueScreen";
+import './components/win95.css';
 
 const queryClient = new QueryClient();
 
@@ -96,6 +97,14 @@ const App = () => {
     return <BlueScreen />;
   }
 
+  // Small gateway for root path: show Landing when not configured
+  const HomeGateway = () => {
+    if (!hasApiKey && !user) {
+      return <Navigate to="/setup" replace />;
+    }
+    return <Win95Suite />;
+  };
+
   return (
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
       <QueryClientProvider client={queryClient}>
@@ -103,8 +112,8 @@ const App = () => {
           <Toaster />
           <BrowserRouter>
             <Routes>
-              {/** Root shows the unified Win95 Suite by default */}
-              <Route path="/" element={<Win95Suite />} />
+              {/** Root now gates to Landing until configured, then shows the unified Win95 Suite */}
+              <Route path="/" element={<HomeGateway />} />
               {/** Keep routes for deep links, but the suite is the primary UI */}
               <Route path="/builder" element={<Win95Suite initialTab="builder" />} />
               <Route path="/ide" element={<Win95Suite initialTab="ide" />} />

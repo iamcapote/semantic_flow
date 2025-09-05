@@ -12,10 +12,11 @@ import 'reactflow/dist/style.css';
 
 // Import components
 import SemanticNode95 from './SemanticNode95';
-import NodeEnhancementModal from './NodeEnhancementModal';
-import TextToWorkflow from './TextToWorkflow';
+import NodeEnhancementModal from './NodeEnhancementModal95';
 import WorkflowExecutionModal95 from './WorkflowExecutionModal95';
 import { createWorkflowSchema, createNode, createEdge, generateId } from '@/lib/graphSchema';
+import { emitNodeSelected } from '@/lib/workflowBus';
+import { upsertField } from '@/lib/nodeModel';
 import { NODE_TYPES, CLUSTER_COLORS, ONTOLOGY_CLUSTERS, getClusterSummary } from '@/lib/ontology';
 import { exportWorkflow } from '@/lib/exportUtils';
 
@@ -50,6 +51,19 @@ const SemanticFlowBuilder = () => {
   const fileInputRef = useRef(null);
   const [locked, setLocked] = useState(false);
   const [toolbarOpen, setToolbarOpen] = useState(false);
+  // Sidebar visibility
+  const [showPalette, setShowPalette] = useState(() => {
+    try {
+      const v = localStorage.getItem('builder-showPalette');
+      return v === null ? true : v === 'true';
+    } catch { return true; }
+  });
+  const [showInspector, setShowInspector] = useState(() => {
+    try {
+      const v = localStorage.getItem('builder-showInspector');
+      return v === null ? true : v === 'true';
+    } catch { return true; }
+  });
 
   // Save workflow to localStorage when it changes
   useEffect(() => {
@@ -68,6 +82,14 @@ const SemanticFlowBuilder = () => {
     window.addEventListener('workflow:updated', onExternalUpdate);
     return () => window.removeEventListener('workflow:updated', onExternalUpdate);
   }, []);
+
+  // Persist sidebar preferences
+  useEffect(() => {
+    try { localStorage.setItem('builder-showPalette', String(showPalette)); } catch {}
+  }, [showPalette]);
+  useEffect(() => {
+    try { localStorage.setItem('builder-showInspector', String(showInspector)); } catch {}
+  }, [showInspector]);
 
   // Update parent workflow when nodes/edges change
   useEffect(() => {
@@ -103,14 +125,33 @@ const SemanticFlowBuilder = () => {
       // Normalize any legacy/loaded nodes to use our custom 'semantic' type
       const isCustomRenderer = n.type === 'semantic';
       const semanticType = n.data?.type || (!isCustomRenderer ? n.type : undefined);
+      // Build/merge canonical fields for non-blank nodes
+      const existingFields = Array.isArray(n.data?.fields) ? [...n.data.fields] : [];
+      let mergedFields = existingFields;
+      if (semanticType && semanticType !== 'UTIL-BLANK') {
+        const nt = NODE_TYPES[semanticType] || {};
+        const getField = (name) => existingFields.find(f => f?.name === name)?.value;
+        mergedFields = upsertField(mergedFields, 'title', 'text', n.data?.title || n.data?.label || nt.label || 'Node');
+        mergedFields = upsertField(mergedFields, 'tags', 'tags', Array.isArray(n.data?.tags) ? n.data.tags : (Array.isArray(n.data?.metadata?.tags) ? n.data.metadata.tags : (nt.tags || [])));
+        mergedFields = upsertField(mergedFields, 'ontology-type', 'text', semanticType);
+        mergedFields = upsertField(mergedFields, 'description', 'longText', n.data?.description || n.data?.metadata?.description || nt.description || '');
+        mergedFields = upsertField(mergedFields, 'content', 'longText', n.data?.content || '');
+        // Preserve icon from existing field if present, else from top-level or ontology
+        const existingIcon = getField('icon');
+        mergedFields = upsertField(mergedFields, 'icon', 'text', existingIcon ?? n.data?.icon ?? nt.icon ?? '📦');
+      } else if (semanticType === 'UTIL-BLANK') {
+        mergedFields = [];
+      }
+
       const normalized = {
         ...n,
         type: 'semantic',
-  width: n.width || 320,
-  height: n.height || 220,
+        width: n.width || 320,
+        height: n.height || 220,
         data: {
           ...(n.data || {}),
           ...(semanticType ? { type: semanticType } : {}),
+          ...(semanticType ? { fields: mergedFields } : {}),
           _onUpdate: (nodeId, patch) => updateNodeData(nodeId, patch)
         },
         position: n.position || { x: 0, y: 0 }
@@ -131,6 +172,7 @@ const SemanticFlowBuilder = () => {
     // Prevent double click editing from immediately triggering
     event.stopPropagation();
     setSelectedNode(node);
+    try { emitNodeSelected('Builder', node?.id); } catch {}
   }, []);
 
   const reactFlowWrapper = useRef(null);
@@ -178,10 +220,7 @@ const SemanticFlowBuilder = () => {
 
   const onExecuteWorkflow = useCallback(async () => {
     setIsExecuting(true);
-    // Workflow execution logic would go here
-    setTimeout(() => {
-      setIsExecuting(false);
-    }, 2000);
+    setTimeout(() => { setIsExecuting(false); }, 600);
   }, []);
 
   const onSaveWorkflow = useCallback(async () => {
@@ -425,24 +464,35 @@ const SemanticFlowBuilder = () => {
 
   const memoNodeTypes = useMemo(() => ({ semantic: SemanticNode95 }), []);
   const clusters = useMemo(() => getClusterSummary().sort((a,b)=>a.name.localeCompare(b.name)), []);
+  const contentColumns = useMemo(() => {
+    if (showPalette && showInspector) return '300px 1fr 220px';
+    if (showPalette && !showInspector) return '300px 1fr';
+    if (!showPalette && showInspector) return '1fr 220px';
+    return '1fr';
+  }, [showPalette, showInspector]);
+
+  // Re-fit view when layout changes so nodes stay in view
+  useEffect(() => {
+    if (!reactFlowInstance) return;
+    const id = setTimeout(() => {
+      try { reactFlowInstance.fitView({ padding: 0.2 }); } catch {}
+    }, 60);
+    return () => clearTimeout(id);
+  }, [showPalette, showInspector, reactFlowInstance]);
 
   return (
-    <div className="w95-window" style={{ width: '100%', height: '100vh', display: 'flex', flexDirection: 'column' }}>
-      {/* Window Title Bar */}
-      <div className="w95-title-bar">
-        <div className="w95-title">Semantic Flowbuilder — Win95++ Agentic Canvas</div>
-        <div className="w95-buttons">
-          <button className="w95-minimize">-</button>
-          <button className="w95-maximize">□</button>
-          <button className="w95-close">×</button>
-        </div>
-      </div>
+    <div className="w95-window" style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
 
       {/* Top Menu Bar */}
       <div className="w95-menu-bar">
-        <button className="w95-button" onClick={onExecuteWorkflow} disabled={isExecuting}>
-          {isExecuting ? 'Executing...' : 'Execute'}
-        </button>
+        <WorkflowExecutionModal95
+          workflow={workflow}
+          trigger={
+            <button className="w95-button" disabled={isExecuting}>
+              {isExecuting ? 'Executing...' : 'Execute…'}
+            </button>
+          }
+        />
         <button className="w95-button" onClick={onSaveWorkflow}>
           Save
         </button>
@@ -463,6 +513,12 @@ const SemanticFlowBuilder = () => {
         <button className="w95-button" onClick={onResetView}>
           Reset View
         </button>
+        <button className="w95-button" onClick={() => setShowPalette(v => !v)}>
+          {showPalette ? 'Hide Palette' : 'Show Palette'}
+        </button>
+        <button className="w95-button" onClick={() => setShowInspector(v => !v)}>
+          {showInspector ? 'Hide Inspector' : 'Show Inspector'}
+        </button>
         <div className="w95-spacer"></div>
         <button className="w95-button" onClick={onZoomOut}>-</button>
         <button className="w95-button" onClick={onZoomIn}>+</button>
@@ -470,10 +526,18 @@ const SemanticFlowBuilder = () => {
       </div>
 
       {/* Main Content Area */}
-      <div className="w95-content-area">
+      <div className="w95-content-area" style={{ gridTemplateColumns: contentColumns }}>
         {/* Left Panel - Palette */}
-        <div className="w95-panel w95-palette">
-          <div className="w95-panel-title">Palette</div>
+        <div className="w95-panel w95-palette" style={{ display: showPalette ? 'flex' : 'none' }}>
+          <div className="w95-panel-title">
+            Palette
+            <button
+              className="w95-minimize"
+              title="Hide Palette"
+              onClick={() => setShowPalette(false)}
+              style={{ float: 'right' }}
+            >×</button>
+          </div>
           <div className="w95-panel-content">
             <input 
               type="text" 
@@ -626,6 +690,7 @@ const SemanticFlowBuilder = () => {
             elementsSelectable={true}
             selectNodesOnDrag={false}
             fitView
+            proOptions={{ hideAttribution: true }}
             panOnDrag={!locked}
             zoomOnScroll={!locked}
             zoomOnPinch={!locked}
@@ -636,6 +701,14 @@ const SemanticFlowBuilder = () => {
               if (reactFlowInstance) setZoomLevel(Math.round(reactFlowInstance.getZoom() * 100));
             }}
             className="w95-flow-canvas"
+            onSelectionChange={(sel) => {
+              try {
+                const ids = (sel?.nodes || []).map(n => n.id);
+                const id = ids[0] || null;
+                setSelectedNode(id ? nodes.find(n => n.id === id) || null : null);
+                emitNodeSelected('Builder', id);
+              } catch {}
+            }}
           >
             <Background 
               variant="cross" 
@@ -689,8 +762,16 @@ const SemanticFlowBuilder = () => {
         </div>
 
         {/* Right Panel - Inspector */}
-        <div className="w95-panel w95-inspector">
-          <div className="w95-panel-title">Inspector</div>
+        <div className="w95-panel w95-inspector" style={{ display: showInspector ? 'flex' : 'none' }}>
+          <div className="w95-panel-title">
+            Inspector
+            <button
+              className="w95-minimize"
+              title="Hide Inspector"
+              onClick={() => setShowInspector(false)}
+              style={{ float: 'right' }}
+            >×</button>
+          </div>
           <div className="w95-panel-content">
             {selectedNode ? (
               <div className="w95-inspector-content">
@@ -726,7 +807,7 @@ const SemanticFlowBuilder = () => {
                     className="w95-button w95-block"
                     onClick={() => {
                       const fields = Array.isArray(selectedNode.data?.fields) ? [...selectedNode.data.fields] : [];
-                      fields.push({ name: 'Long Text', type: 'markdown', value: '' });
+                      fields.push({ name: 'Long Text', type: 'longText', value: '' });
                       updateNodeData(selectedNode.id, { fields });
                     }}
                   >
@@ -746,11 +827,11 @@ const SemanticFlowBuilder = () => {
                     className="w95-button w95-block"
                     onClick={() => {
                       const fields = Array.isArray(selectedNode.data?.fields) ? [...selectedNode.data.fields] : [];
-                      fields.push({ name: 'Function', type: 'json', value: '{ "type": "function", "code": "" }' });
+                      fields.push({ name: 'Object', type: 'object', value: '{ "key": "value" }' });
                       updateNodeData(selectedNode.id, { fields });
                     }}
                   >
-                    Function
+                    Object
                   </button>
                 </div>
                 
@@ -789,9 +870,9 @@ const SemanticFlowBuilder = () => {
             )}
           </div>
         </div>
-      </div>
+  </div>
 
-      {/* Bottom Status Bar */}
+  {/* Bottom Status Bar */}
       <div className="w95-status-bar">
         <span>Zoom: {zoomLevel}%</span>
         <span>Grid: 8px</span>

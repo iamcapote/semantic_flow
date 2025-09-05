@@ -3,6 +3,7 @@
 
 import { NODE_TYPES } from './ontology.js';
 import { exportWorkflowAsJSON, exportWorkflowAsMarkdown, exportWorkflowAsYAML, exportWorkflowAsXML } from './exportUtils.js';
+import { chatCompletion } from './aiRouter.js';
 
 export class PromptingEngine {
   constructor(userId) {
@@ -42,24 +43,7 @@ export class PromptingEngine {
   }
 
   async callProvider(providerId, model, apiKey, messages) {
-    const provider = this.providers.find((p) => p.providerId === providerId);
-    if (!provider) {
-      throw new Error('Unknown provider');
-    }
-    const response = await fetch(`${provider.baseURL}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-        ...provider.headers,
-      },
-      body: JSON.stringify({ model, messages }),
-    });
-    if (!response.ok) {
-      const data = await response.json().catch(() => ({}));
-      throw new Error(data.error?.message || response.statusText);
-    }
-    return response.json();
+  return chatCompletion(providerId, apiKey, { model, messages });
   }
 
   // Mode 1: Text-to-Workflow Conversion

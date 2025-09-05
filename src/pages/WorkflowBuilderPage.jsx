@@ -13,7 +13,6 @@ import { SecureKeyManager } from '@/lib/security';
 import NodePalette from "../components/NodePalette";
 import LabCanvas from "../components/LabCanvas";
 import ConfigurationModal from "../components/ConfigurationModal";
-import TextToWorkflow from "../components/TextToWorkflow";
 import ThemeToggle from "../components/ThemeToggle";
 import ClearSessionButton from "../components/ClearSessionButton";
 import { createWorkflowSchema, generateId } from "../lib/graphSchema";
@@ -201,8 +200,9 @@ const WorkflowBuilderPage = () => {
       setIsExecuting(true);
       const providerId = sessionStorage.getItem('active_provider') || 'openai';
       const apiKey = SecureKeyManager.getApiKey(providerId);
-      const promptingEngine = new PromptingEngine('demo-user');
-      const response = await promptingEngine.callProvider(providerId, 'gpt-4o', apiKey, [
+  const promptingEngine = new PromptingEngine('demo-user');
+  const model = sessionStorage.getItem(`default_model_${providerId}`) || 'gpt-4o';
+  const response = await promptingEngine.callProvider(providerId, model, apiKey, [
         { role: 'user', content: chatInput },
       ]);
       const assistantMessage = {
@@ -344,13 +344,12 @@ const WorkflowBuilderPage = () => {
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">
         <ResizablePanelGroup direction="horizontal">
-          {/* Left Panel - Node Palette & AI Converter */}
+          {/* Left Panel - Node Palette */}
           <ResizablePanel defaultSize={25} minSize={20} maxSize={35}>
             <div className="h-full flex flex-col bg-card border-r border-border">
               <div className="flex-1 min-h-0">
                 <NodePalette />
               </div>
-              <TextToWorkflow onWorkflowGenerated={handleWorkflowGenerated} apiKey={apiKey} />
             </div>
           </ResizablePanel>
           

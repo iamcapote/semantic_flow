@@ -239,10 +239,11 @@ export const createNode = (type, position, content = '') => {
   if (!nodeTypeData) {
     throw new Error(`Unknown node type: ${type}`);
   }
-  // Build canonical array-of-fields (core first)
-  const coreFields = [
+  // Build canonical array-of-fields (core first). Blank nodes come without fields.
+  const coreFields = type === 'UTIL-BLANK' ? [] : [
     { name: 'title', type: 'text', value: nodeTypeData.label || 'Node' },
     { name: 'tags', type: 'tags', value: Array.isArray(nodeTypeData.tags) ? nodeTypeData.tags : [] },
+    { name: 'ontology-type', type: 'text', value: type },
     { name: 'description', type: 'longText', value: nodeTypeData.description || '' },
     { name: 'content', type: 'longText', value: content || '' },
     { name: 'icon', type: 'text', value: nodeTypeData.icon || '📦' }
@@ -253,18 +254,18 @@ export const createNode = (type, position, content = '') => {
     id: generateId(),
     type,
     position,
-  width: 320,
-  height: 220,
+    width: 320,
+    height: 220,
     data: {
       ...nodeSchema.data,
-  label: nodeTypeData.label,
-  title: nodeTypeData.label,
-  tags: nodeTypeData.tags || [],
-  description: nodeTypeData.description || '',
-  content: content || '',
-  language: 'markdown',
-  // Canonical storage (array of pairs including core keys)
-  fields: coreFields,
+      label: type === 'UTIL-BLANK' ? 'Blank Node' : nodeTypeData.label,
+      title: type === 'UTIL-BLANK' ? 'Blank Node' : nodeTypeData.label,
+      tags: type === 'UTIL-BLANK' ? [] : (nodeTypeData.tags || []),
+      description: type === 'UTIL-BLANK' ? '' : (nodeTypeData.description || ''),
+      content: content || '',
+      language: 'markdown',
+      // Canonical storage (array of pairs including core keys)
+      fields: coreFields,
       metadata: {
         ...nodeSchema.data.metadata,
         cluster: nodeTypeData.cluster,
