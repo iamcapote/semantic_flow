@@ -9,6 +9,10 @@ An open‑source, production‑ready **Context Engineering Canvas** for AI. <br/
 Visually design, connect, and export agentic knowledge structures with a rich semantic ontology and a nostalgic Win95‑style UI. <br/>
 One‑click **FREE** deployment of your private, BYOK, ontology‑driven workflow system.
 
+<div align="center">
+  <strong>Live App:</strong> <a href="http://canvas.bitwiki.org/">http://canvas.bitwiki.org/</a>
+</div>
+
 <div align="center"><em>Core Canvas for Structured Hyper Inference.</em></div>
 
 **English** · **[Docs][docs]** · **[Changelog][changelog]** · **[Issues][issues]** · **[Releases][github-release-link]**
