@@ -66,8 +66,8 @@ export default function LandingPage({ onApiKeySet }) {
                     <div style={{ fontSize:13 }}>Generate a first pass, enhance any field, or execute sequentially with a provider key you supply.</div>
                   </div>
                   <div style={{ background:'#f7f7f7', border:'1px solid #808080', padding:8 }}>
-                    <div style={{ fontWeight:700, marginBottom:4 }}>Optional SSO Context</div>
-                    <div style={{ fontSize:13 }}>Use Discourse to pull personas and seeds securely. Keys stay local (session‑only, encrypted).</div>
+                    <div style={{ fontWeight:700, marginBottom:4 }}>Pluggable SSO Context</div>
+                    <div style={{ fontSize:13 }}>Configure SSO apps (e.g. Discourse) to pull personas, seeds, or org context. Session data & provider keys stay local (session‑only, encrypted).</div>
                   </div>
                 </div>
               </div>
@@ -75,9 +75,9 @@ export default function LandingPage({ onApiKeySet }) {
           </div>
           {/* Discourse SSO */}
           <div style={win98.panel}>
-            <div style={win98.head}>Sign in with Discourse (SSO)</div>
+            <div style={win98.head}>Discourse SSO (Example)</div>
             <div style={{ fontSize: 13, lineHeight: 1.4, marginBottom: 12 }}>
-              Use hub.bitwiki.org as SSO provider to unlock the Discourse tab, AI Personas, and context seeds.
+              Sign in via hub.bitwiki.org to unlock personas, seeds, and shared context. Additional SSO providers can be enabled server‑side.
             </div>
             <div style={win98.field}>
               <div style={{ fontSize: 12, opacity: 0.8 }}>Provider: https://hub.bitwiki.org</div>
@@ -88,11 +88,11 @@ export default function LandingPage({ onApiKeySet }) {
 
       {/* BYOK */}
           <div style={win98.panel}>
-            <div style={win98.head}>Bring Your Own Keys (OpenAI / OpenRouter / Venice / Nous / Morpheus)</div>
+    <div style={win98.head}>Bring Your Own Keys</div>
             {!showProviderSetup ? (
               <>
                 <div style={{ fontSize: 13, lineHeight: 1.4, marginBottom: 12 }}>
-                  Configure providers to run the canvas without Discourse SSO. Keys are session-only and encrypted.
+      Configure model & tool providers (OpenAI, OpenRouter, Venice, etc.) to run the canvas without SSO. Keys are session-only and encrypted.
                 </div>
         <button style={win98.btn} onClick={() => setShowProviderSetup(true)}>Configure Providers…</button>
               </>
