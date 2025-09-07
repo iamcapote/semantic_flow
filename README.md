@@ -3,17 +3,17 @@
 [![][image-banner]][repo-link]
 
 # 🧠 Semantic Flow
-
-<strong>The Core Layer for Composable Inference.</strong><br/>
-An open‑source, production‑ready **Context Engineering Canvas** for AI. <br/>
-Visually design, connect, and export agentic knowledge structures with a rich semantic ontology and a nostalgic Win95‑style UI. <br/>
-One‑click **FREE** deployment of your private, BYOK, ontology‑driven workflow system.
+### An open‑source, production‑ready **Context Engineering Canvas** for AI. 
+<strong>Composable Structured Context. Under Your Control.</strong><br/>
+Semantic Flow is a visual workspace for composing precise, interlinked semantic nodes with explicit fields and formats. <br/>
+You design the context; the model consumes a clean, inspectable structure you can export or execute—never a hidden chain. <br/>
+Bring your own keys (BYOK). Nothing sensitive is persisted server‑side.
 
 <div align="center">
   <strong>Live App:</strong> <a href="http://canvas.bitwiki.org/">http://canvas.bitwiki.org/</a>
 </div>
 
-<div align="center"><em>Core Canvas for Structured Hyper Inference.</em></div>
+<div align="center"><em>A compact canvas for deliberate context design.</em></div>
 
 **English** · **[Docs][docs]** · **[Changelog][changelog]** · **[Issues][issues]** · **[Releases][github-release-link]**
 
@@ -80,8 +80,7 @@ One‑click **FREE** deployment of your private, BYOK, ontology‑driven workflo
 
 ## 👋🏻 Getting Started
 
-Semantic Flow is a **Context Engineering Canvas**. Compose knowledge as connected nodes with explicit fields, link them with edges, and **export** your work as JSON, YAML, Markdown, or XML for downstream systems, prompts, and contracts. It’s
-**not** an automation engine; it’s where you *design* the context that other systems use.
+Compose knowledge as linked, typed nodes. Each node can carry different formats (Markdown, JSON, YAML, XML) so you keep structure and narrative side by side. Export anytime, or run execution to send node context sequentially to a provider you configure. This is a design surface—*not* a background automation runner.
 
 > \[!IMPORTANT]
 > **Star** the repo to receive release notifications on GitHub.

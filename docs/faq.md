@@ -1,20 +1,27 @@
 # FAQ
 
-**Executions are sequential. Why?**  Current design favors transparency and simplicity for refinement passes. Parallel dependency resolution is not active.
+### Why did a node output look generic?
+Usually the node description or fields were too thin. Add a concrete example or clarify intent, then re-run.
 
-**Do edges control order?**  No. They supply upstream context only.
+### Do edges determine order?
+No. They supply upstream context. Order is the visual / creation order. Keep edges meaningful (real semantic linkage) to avoid noise.
 
-**How do I keep prompts short?**  Trim verbose narrative fields, switch Chat injection to stripped, and merge low‑value nodes.
+### Can I run only part of the workflow?
+Create a temporary copy with just the subset of nodes you want, or delete irrelevant nodes and undo afterwards if your environment supports it.
 
-**Can I recover a past workflow version?**  Export routinely; the application does not maintain historical versions.
+### How do I switch models safely?
+Change provider/model in Settings and re-run one or two representative nodes (via execution) to compare tone and structure before a full pass.
 
-**Why did execution skip a node’s expected dependency?**  Because ordering is linear; ensure dependent nodes appear earlier or manually adjust.
+### Are ontology nodes mandatory?
+No. They just encourage clarity. Mix and match with freeform nodes.
 
-**Are ontology types mandatory?**  No. They improve readability but freeform nodes function.
+### Why are placeholder nodes harmful?
+They dilute context, causing the model to generalize. Remove or fill them before serious execution.
 
-**Where are my keys stored?**  Local browser storage only.
+### How do I clear everything?
+Use Clear Session for volatile state; manually clear browser storage to remove saved workflows. Export first if you may need the structure later.
 
-**Can I view a diff after enhancement?**  Not internally; copy original content before running if you need manual comparison.
+### Can I share my workflow with someone else?
+Export as JSON (full fidelity) or Markdown (readable narrative). They can re-import JSON if an import feature is available in their build.
 
-**Why is a model response empty or truncated?**  Provider token limits or filtering. Retry with a more concise node context or a different model.
-
+Return to: [Getting Started](getting-started.md) · Back to: [User Guide Index](README.md)

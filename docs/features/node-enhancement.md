@@ -1,26 +1,35 @@
-# Node Enhancement
+# Enhance a Node
 
-Purpose: transform a single node’s content to improve clarity, brevity, depth, or structure without changing its identity or fields.
+Use enhancement when a node’s content is serviceable but weak—too wordy, vague, inconsistent in tone, or underdeveloped.
 
-Available actions (typical effect):
-Improve: balanced polish.
-Simplify: removes verbosity, keeps core intent.
-Elaborate: expands with supporting detail or rationale.
-Refactor: restructures into clearer sections or lists.
-Optimize: sharpens wording for operational reuse (e.g., system prompts).
+## What It Does
+Sends the node’s serialized content plus a style directive to the model. Returns a rewritten version for you to optionally accept.
 
-Procedure:
-1. Select node.
-2. Choose action.
-3. Inspect proposed revision.
-4. Accept if semantic intent is preserved; otherwise adjust manually and rerun or discard.
+## Available Styles
+- Improve: General clarity + strength.
+- Optimize: Tighter, removes fluff, keeps intent.
+- Refactor: Reorganizes structure for readability.
+- Enhance: Enriches with detail and precision.
+- Simplify: Shorter, plainer language.
+- Elaborate: Expands with additional depth.
 
-Selection guidance:
-Simplify after Elaborate if expansion overshoots. Prefer a single decisive enhancement over stacking multiple incremental ones, which can introduce drift.
+## How To Use
+1. Select a node (via canvas modal or enhancement action where provided).
+2. Choose a style.
+3. Submit. Wait for the enhanced content to appear.
+4. Compare quickly (original vs enhanced if diff UI is provided or by pasting temporarily elsewhere).
+5. Accept (replace content) or discard.
 
-Verification checklist:
-Numeric bounds unchanged. Constraints preserved. Role or target audience unaltered. Field references still valid.
+## Good Candidates
+- Long rambling descriptions
+- Nodes with placeholders like “TBD” or “Refine this later”
+- Inconsistent tone across related nodes (personas / constraints)
 
-Known limits: no built‑in side‑by‑side diff; copy original content first if you need a manual rollback.
+## Avoid Over-Enhancing
+Repeated enhancement on already-clean content can introduce verbosity. Stop when the node is clear, specific, and minimal.
 
+## Troubleshooting
+- Empty result: Try a different provider or a less aggressive style (e.g. Improve instead of Enhance).
+- Overly flowery rewrite: Use Simplify to bring it back down.
 
+Return to: [Run a Workflow](workflow-execution.md) · Continue: [Export / Import](../export-import.md)

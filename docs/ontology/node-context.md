@@ -1,20 +1,35 @@
-# Node Context
+# Fields & Context
 
-Definition: the serialized textual form of a node used for model prompting and exports. It combines identity, supporting fields, and explanatory content, adapting to the node’s declared language.
+Every node combines four layers of meaning:
+1. Title – the concise handle.
+2. Description – why it exists / intent.
+3. Fields – structured attributes (key/value; arrays or objects where suitable).
+4. Content – freeform body (Markdown, JSON, YAML, XML, or plain text).
 
-Construction logic (practical understanding):
-1. Pick title, description, content from either explicit fields or top‑level values.
-2. Omit core keys from the custom field block to avoid duplication.
-3. Render according to language mode:
-   * Markdown: heading + optional description + bullet list of remaining fields + freeform notes section.
-   * JSON/YAML/XML: structured object with header, description, fields object, and content.
+When you run or enhance, the system assembles a clean textual representation so the model sees a well-ordered snapshot of the node.
 
-Field type overview (user impact):
-text / longText for narrative, number and boolean for quantifiable gates, enum / multiEnum for controlled vocabularies, object / array for small embedded structures, tags for quick filtering lists, file for referencing external assets, fileFormat to influence serialization.
+## Deciding What Goes Where
+Put structured, enumerated, or machine‑parsable info into fields. Use the content block for narrative, examples, or multi-paragraph logic. If you find yourself writing a list like “Parameters: A:…, B:…, C:…”, convert those into distinct fields.
 
-Validation guidance:
-Keep numeric fields numeric (avoid embedding units in the same field; use a companion field if needed). Restrict enum sets to fewer than ~12 values for usability. Use tags for unbounded labeling rather than expanding enum lists indefinitely.
+## Field Usage Patterns
+- tags: Topical or functional labels (“classification”, “persona”, “scoring”).
+- enum / multi select style fields (if present in UI): Mode switches or capability flags.
+- object / array: Complex configuration payloads that you still want nested.
 
-Prompt efficiency tips:
-Strip redundant prose from content if fields already capture it. Prefer concise structured fields plus one clarifying paragraph instead of multiple overlapping paragraphs.
+## Format Choice
+Choose the content format that matches downstream intent:
+- Markdown: General instructions, prose, examples.
+- JSON: Data shapes, structured config, machine contract drafts.
+- YAML: Hierarchical policies or human‑oriented config.
+- XML: Less common—use only if you plan to consume it that way elsewhere.
 
+## Keeping Nodes Lean
+Shorter is clearer. Split a node if:
+- Description is doing two unrelated jobs.
+- Content grows into multiple independent conceptual blocks.
+- You want to re-use part of it downstream without copying everything.
+
+## Before Execution
+Skim each node: Title precise? Description crisp? Fields populated? Content free of placeholders? Adjust, then execute.
+
+Return to: [Ontology Overview](overview.md) · Continue: [Run a Workflow](../features/workflow-execution.md)

@@ -1,24 +1,41 @@
-# Workflow Execution
+# Run a Workflow
 
-Function: sequentially processes each node, enriching or transforming its content with optional upstream outputs as context.
+Execution sends each node (with upstream context appended) to your chosen model and shows a rolling log of progress and outputs.
 
-Operational sequence:
-1. Determine execution order (current list order of nodes).
-2. Serialize current node context (title, fields, content).
-3. Append upstream node outputs in a separated block.
-4. Submit to provider model.
-5. Capture response and mark completion or error.
+## Why Run It
+- Sanity check: Does your structured context produce coherent intermediate outputs?
+- Iterate wording: Adjust weak nodes and re-execute quickly.
+- Collect staged outputs for documentation or further prompting.
 
-Use cases:
-* Batch refinement of draft nodes.
-* Consistency pass across related definitions.
-* Generating elaborations or summaries per node.
+## Before You Press Execute
+Confirm:
+- Nodes have meaningful titles + concise descriptions.
+- Edges reflect dependency or reference (upstream outputs should logically feed downstream interpretation).
+- Sensitive content is removed (you are sending node text to the provider). 
 
-Not suited for: conditional branching, parallelism, external side effects, scheduling, or tool invocation.
+## How To Execute
+1. Open the Builder.
+2. Press Execute (button in the canvas controls or header depending on layout).
+3. Watch the Test / Results panel populate messages:
+   - Start notice
+   - Per-node start
+   - Per-node completion with result snippet
+   - Final summary
 
-Optimization guidelines:
-Reduce extraneous upstream chains to control prompt length. Remove placeholder nodes before running. Lower temperature for convergence, raise for ideation.
+## Reading the Log
+- ✅ Completed: Model returned content.
+- ❌ Error: That node failed (usually missing key, rate limit, or formatting issue). Subsequent nodes may still run.
+- Upstream Context section (internally assembled) is included in what the model sees for each downstream node.
 
-Error handling: node failures are logged and execution continues. Manually re‑run failed nodes after adjustment.
+## Improving Outputs
+- If results feel repetitive, reduce redundancy in source nodes.
+- If a node output is too generic, enrich its content or add examples fields.
+- If outputs drift, tighten descriptions and remove vague filler language.
 
+## Re-Running Safely
+You can re-run after edits; previous log entries remain visible for comparison until you clear or refresh.
 
+## Exporting After Execution
+Execution does not alter node data. To save structure, use the Export menu (not the log). Copy individual outputs manually if needed.
+
+Next: [Enhance a Node](node-enhancement.md)

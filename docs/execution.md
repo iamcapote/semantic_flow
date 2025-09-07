@@ -1,15 +1,33 @@
-# Runtime Execution Model
+# Execution Details
 
-Input composition: system role declares node type; user role carries serialized node context plus aggregated upstream outputs separated by a delimiter block.
+Execution processes your workflow one node at a time and shows a step log so you can evaluate structure and clarity.
 
-Progress lifecycle events:
-start → node_start → node_complete / node_error (repeated) → complete.
+## What Happens Internally (Conceptually)
+1. Each node’s own content and fields are assembled.
+2. Outputs from nodes that point into it (incoming edges) are appended as upstream context.
+3. That combined text is sent to the active model.
+4. The model’s reply becomes that node’s output shown in the results panel.
+5. The next node proceeds with its own context augmented by any upstream outputs.
 
-Data captured per node: input context snapshot, output text, start/end timestamps, provider/model used, success or error state.
+## Reading the Output Stream
+You’ll see lines for:
+- Start (execution begins)
+- Node started (processing a specific node)
+- Node completed (with a rendered snippet)
+- Errors (if a single node fails; others continue)
+- Final summary (counts of completed nodes)
 
-Session persistence: execution results remain in memory until page reload; export manually if a record is needed.
+## Improving Results Iteratively
+After a run:
+- Weak or generic outputs usually mean the source node is vague—sharpen the description or add example fields.
+- Repeated patterns across nodes often indicate you duplicated redundant context; consolidate or break apart nodes strategically.
+- Missing nuance: add an explicit constraint or evaluation node upstream.
 
-Prompt hygiene recommendations: remove orphan edges and obsolete nodes prior to long executions to reduce prompt cost and noise.
+## When to Re-Execute
+Re-run after any structural change (adding nodes, relabeling edges, splitting a large node) to verify context flow still makes sense.
 
-Performance considerations: very large aggregated upstream contexts can inflate token usage; trim verbose narrative fields after finalizing structure.
+## Performance Hygiene
+- Remove placeholder nodes before executing to reduce noise.
+- Keep large raw dumps (logs, transcripts) in separate nodes flagged clearly so they don’t drown more critical semantics.
 
+Return to: [Run a Workflow](features/workflow-execution.md) · Continue: [Enhance a Node](features/node-enhancement.md)

@@ -1,16 +1,37 @@
-# Export / Import
+# Export & (Re)Use
 
-Supported export formats: JSON, YAML, Markdown, XML. Use JSON for programmatic reuse, Markdown for readable briefs, YAML when embedding in configuration workflows, XML only if integrating with XML‑centric pipelines.
+Export whenever you need to reuse the structure outside the app (system messages, prompt libraries, specs, onboarding docs, prototypes).
 
-Canonical JSON outline:
-id, metadata (title, createdAt, updatedAt), nodes[], edges[]. Each node contains data: label, type, fields (array of name/type/value), content, optional metadata.
+## Formats
+JSON
+- Machine-friendly; preserves full fidelity (ids, metadata, fields, edges).
 
-Export usage patterns:
-* Snapshot before major refactor (archive the JSON).
-* Generate a Markdown brief for stakeholders without exposing internal UI.
-* Produce YAML for downstream templating or static site generation.
+YAML
+- Human-scannable; good for config handoffs or policy packs.
 
-Import (if enabled in your build) should target a clean canvas to avoid duplicate IDs; otherwise manually reconcile.
+Markdown
+- Readable narrative blend; embeds node content in a linear document—handy for documentation or sharing context via chat.
 
-Pre‑AI sanitization removes extraneous UI artifacts so only meaningful semantic content reaches a model.
+XML
+- Only choose this if a downstream consumer expects structured XML.
 
+## How to Export
+1. Open the Builder (or any page with the header export menu).
+2. Click Export.
+3. Choose format; a download starts automatically.
+
+## Selecting the Right Format
+- Need to round-trip back into the tool later? Prefer JSON.
+- Want teammates to skim logic and roles? Markdown.
+- Need an editable yet structured draft of config? YAML.
+- Interfacing with a system that ingests structured schema? JSON (or XML if mandated).
+
+## Sanity Checklist Before Export
+- Titles are consistent.
+- No stray placeholder content (“lorem”, “TBD”).
+- Sensitive keys or secrets removed (they are not needed in node content).
+
+## Re-Importing
+If an import feature is provided in your build, load a JSON export to continue where you left off. Otherwise keep a version history manually by saving dated exports.
+
+Return to: [Enhance a Node](features/node-enhancement.md) · Continue: [Providers](providers.md)

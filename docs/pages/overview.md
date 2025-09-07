@@ -1,41 +1,72 @@
 # Pages Overview
 
-## Builder (/builder)
-Primary workspace. Left palette lists available node types. Drag to canvas. Select a node to edit fields and free text. Create edges by dragging from a handle or connector. Use for assembling structured knowledge, requirements, prompt components, personas, evaluation criteria, and API shapes.
+Use this reference when deciding which screen to open next. Each page has a distinct role; switching does not destroy your existing workflow unless you clear storage manually.
 
-Keyboard tips (if enabled in your build): Delete removes a selected node; basic zoom via mouse wheel.
+## Landing (`/setup` or entry)
+Purpose: Provide an initial jump-off. Add a key, read a summary, proceed to Builder or Learn. If you already configured a key you may be routed directly into the suite.
 
-Leave Builder when you need bulk text edits or want to inspect the raw unified structure.
+You use it to:
+- Paste provider key(s)
+- Orient yourself the first time
 
-## IDE (/ide)
-Structured textual view of the current workflow. Supports faster batch editing of titles, field values, or content blocks. Use to clean naming conventions, collapse redundant nodes, and verify exported representations (JSON / YAML / Markdown / XML) match expectations.
+## Builder (`/builder`)
+Purpose: Primary canvas for creating and organizing nodes (+ edges). This is where most structural thinking happens.
 
-## Chat (/chat)
-Multi‑conversation chat with optional workflow injection. Manage multiple threads, rename conversations, and control injection mode:
-* None: plain messages.
-* System: workflow appended to system prompt.
-* First: workflow prepended to first user message.
-Selection mode (full vs stripped) controls whether auxiliary metadata is included. Use Chat to test clarity and completeness of your workflow: the higher the model’s alignment to intended output, the more coherent your structure likely is.
+Key Regions:
+- Left Palette: Drag node types (semantic, utility, blank).
+- Canvas: Place, select, connect. Click a node to edit its fields & content.
+- Header: Title input, Export menu (JSON/YAML/Markdown/XML), Settings (keys/system message), Clear Session.
+- Execute Button (in canvas tools): Runs nodes in sequence and streams results.
 
-## Console (/console)
-Lightweight inspection and single inference interface. Faster to load than full chat for quick checks. Use to test a workflow snapshot or verify an export without context noise.
+When to stay here: Early drafting, restructuring, high‑level planning, adding or pruning nodes.
 
-## Router / API (/api)
-Provider selection, model choice, staged message assembly, workflow export utilities, text → workflow conversion, node enhancement operations. Establish base parameters here before jumping back to Builder or Chat.
+## IDE (`/ide`)
+Purpose: Text-oriented view (if included in your build) allowing batch review or editing of the underlying serialized workflow. Useful for scanning or copying larger structures.
 
-## Learn (/learn)
-Overview and orientation. Use at first contact or when introducing another user. Links out to the full documentation browser.
+You use it to:
+- Inspect raw JSON / DSL forms
+- Perform quick global edits then return to Builder
 
-## Documentation Browser (/learn/docs)
-Left navigation tree of all guide topics rendered inline. Remains within application style; no external navigation required.
+## Router / API (`/api` or `/router`)
+Purpose: Central place to assemble active context sets (personas, seeds, policies) and test Text → Workflow, Execute Workflow, or Enhancement operations in a controlled panel.
 
-## Discourse (/discourse) (conditional)
-Integrates a Discourse community space: pull topic summaries, seed shared context, reference collaborative briefs. Appears only if configured.
+You use it to:
+- Convert a free-form spec into a starter workflow
+- Run a workflow in a chosen output format (e.g. JSON execution transcript)
+- Enhance nodes and apply changes back
 
-## Win95 Suite Shell
-The retro multi‑tab environment that hosts Builder, IDE, API/Router, Chat, and Console. Direct route access simply preselects a tab.
+## Chat (`/chat`)
+Purpose: Direct conversational testing with the active provider using your system message. Lightweight, not context-saturated beyond what you supply.
 
-## Usage Guidance
-Add nodes only when they add clarity. Prefer concise field keys. Keep edge network sparse; dense edge webs reduce readability. Periodically export to ensure external representation matches intent.
+You use it to:
+- Probe a model quickly
+- Sanity check provider response quality
 
+## Console (`/console`)
+Purpose: Quick single-run surface to execute the saved workflow, enumerate nodes, and export fast without leaving a compact terminal-like panel.
 
+You use it to:
+- Run a quick execution
+- List nodes/edges for inspection
+
+## Learn (`/learn`)
+Purpose: High-level orientation and quick-start guidance. Short explanations, not exhaustive.
+
+You use it to:
+- Understand core vocabulary
+- Jump to docs browser
+
+## Docs (`/learn/docs`)
+Purpose: Complete in‑app documentation (this guide set). Left menu lists every topic. Content scrolls; menu is fixed length (no internal scroll needed).
+
+You use it to:
+- Deep dive on node types, execution, exports, security
+- Revisit how to use features without guessing
+
+## Discourse (`/discourse`)
+Purpose: Link or configure discourse-related context (if enabled for your environment). Used when integrating forum-sourced personas or seeds.
+
+## Retro Suite (`/` → App Shell)
+Purpose: Unified Win95‑styled environment hosting the above views as tabs/windows (depending on configuration). Provides consistent theme, icons, and navigation.
+
+Return to: [Getting Started](../getting-started.md) · Continue: [Ontology Overview](../ontology/overview.md)

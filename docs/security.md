@@ -1,13 +1,25 @@
-# Security & Key Management
+# Security & Privacy
 
-API keys are stored locally in browser storage under provider‑specific entries. Removing site data or using a clear session control deletes them. Keys are sent only to the chosen provider’s HTTPS endpoint during requests.
+You control what leaves your browser. All meaningful outbound traffic occurs only when you execute, enhance, or convert text to workflow. That sends the relevant node or assembled workflow context to the active model provider you configured.
 
-User content (nodes, fields, exports) remains local unless a provider invocation includes it as part of a prompt. Avoid placing secrets or regulated data into node content or fields intended for model injection.
+## Keys
+- Stored locally in the browser (session/local storage depending on UI flow).
+- Remove a key by clearing it in Settings; no further calls use it.
+- Clearing “session” may not wipe stored keys—manually remove them if required.
 
-Operational precautions:
-* Never paste provider keys into node fields.
-* Exclude or redact proprietary data before running enhancement or execution on large canvases.
-* Regularly clear stale workflows containing sensitive temporary context.
+## What Gets Sent
+- Node titles, descriptions, fields, and content for the portion being processed.
+- For execution: upstream node outputs are appended as textual context.
+- Provider never receives your raw local storage objects beyond what’s in assembled text.
 
-Recommended practices for stricter environments (if deploying a managed instance): server‑side key proxy, encryption at rest for any cached context, strict CSP and referrer policies, optional audit logging of export actions.
+## Keep These Out of Nodes
+- API secrets or private tokens (not needed for semantic structure).
+- Personal identifying data unless absolutely necessary.
+- Large binary data (store elsewhere; summarize instead).
 
+## Hygiene Tips
+- Review nodes before exporting or executing.
+- Delete abandoned scratch nodes.
+- Use concise, factual descriptions—avoid injecting unnecessary sensitive context.
+
+Return to: [Providers](providers.md) · Continue: [FAQ](faq.md)

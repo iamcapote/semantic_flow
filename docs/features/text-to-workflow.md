@@ -1,25 +1,34 @@
 # Text → Workflow
 
-Purpose: accelerate initial graph creation from a descriptive specification.
+Turn a raw paragraph or requirement list into an initial structured workflow you can refine.
 
-Usage:
-1. Navigate to the API / Router tab.
-2. Locate the Text → Workflow input area.
-3. Paste a concise, information‑dense description: goals, actors, constraints, key artifacts, evaluation criteria.
-4. Run conversion; a preliminary workflow is produced.
-5. Review each node: delete irrelevant or duplicated nodes immediately.
-6. Normalize titles to a consistent tense and casing.
-7. Add or adjust edges to reflect genuine conceptual references.
+## When To Use
+- You have an unstructured spec and don’t want to place 15 starter nodes manually.
+- You’re exploring possible structure for a new domain.
 
-Effective input characteristics:
-* Declarative sentences identifying roles and responsibilities.
-* Explicit constraints and success metrics.
-* Segmented bullet lists rather than freeform narrative.
+## What It Produces
+- A set of nodes (labels + content areas) and edges suggesting relationships.
+- Sometimes minimal content requiring refinement—treat it as scaffolding.
 
-Post‑generation refinement:
-Merge nodes that only differ by minor wording. Split nodes that contain more than one actionable concept. Introduce missing evaluation or risk nodes where necessary to complete reasoning loops.
+## How To Run
+1. Open the Router / API panel (or the feature location provided in the UI).
+2. Paste your raw spec into the Text → Workflow input.
+3. (Optional) Choose ontology inclusion mode if available:
+  - Force Ontology: Prefer known node types.
+  - Novel: Allow new category labels if no clear match.
+  - Exclude: Freeform nodes only.
+4. Press Generate.
+5. Review the resulting draft; send accepted nodes to the canvas.
 
-Limits:
-Edge inference is approximate; expect manual correction. Extraneous invented categories can appear—remove them. Very long unstructured prose reduces accuracy; pre‑structure with headings or bullets when possible.
+## Refining After Generation
+- Rename vague node titles for clarity.
+- Merge redundant nodes (delete one, enrich the other).
+- Add missing linking edges to complete semantic context.
+- Enhance individual nodes for tone or specificity.
 
+## Tips
+- Short, clean input specs create tighter node sets.
+- If output is too generic, add explicit roles or constraints in the input text.
+- Re-run with Exclude mode if you want purely freeform categories.
 
+Next: [Run a Workflow](workflow-execution.md)

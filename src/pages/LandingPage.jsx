@@ -51,23 +51,23 @@ export default function LandingPage({ onApiKeySet }) {
             <div style={{ display: 'grid', gridTemplateColumns: '96px 1fr', gap: 12, alignItems: 'center' }}>
               <img src="/logo.svg" alt="Semantic Flow" width={96} height={96} style={{ border: '2px solid #808080', background:'#fff' }} />
               <div>
-                <div style={{ fontWeight: 800, fontSize: 18, marginBottom: 6 }}>Build a contextual engine that understands your data</div>
+                <div style={{ fontWeight: 800, fontSize: 18, marginBottom: 6 }}>Design structured context your models can understand.</div>
                 <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
                   <div style={{ background:'#f7f7f7', border:'1px solid #808080', padding:8 }}>
-                    <div style={{ fontWeight:700, marginBottom:4 }}>Visual Builder</div>
-                    <div style={{ fontSize:13 }}>Design workflows on a semantic canvas. Use a single palette of modular nodes, or start with a blank node and add fields as you go.</div>
+                    <div style={{ fontWeight:700, marginBottom:4 }}>Semantic Canvas</div>
+                    <div style={{ fontSize:13 }}>Lay out nodes with explicit fields. Add, link, and refine without hidden automation or opaque chains.</div>
                   </div>
                   <div style={{ background:'#f7f7f7', border:'1px solid #808080', padding:8 }}>
-                    <div style={{ fontWeight:700, marginBottom:4 }}>Format‑aware</div>
-                    <div style={{ fontSize:13 }}>Every node and the IDE speak Markdown, YAML, XML, and JSON. Convert between formats inline to keep context consistent.</div>
+                    <div style={{ fontWeight:700, marginBottom:4 }}>Multi‑Format</div>
+                    <div style={{ fontSize:13 }}>Markdown narrative beside JSON, YAML, or XML structure. Convert inline; keep intent and schema aligned.</div>
                   </div>
                   <div style={{ background:'#f7f7f7', border:'1px solid #808080', padding:8 }}>
-                    <div style={{ fontWeight:700, marginBottom:4 }}>AI on every field</div>
-                    <div style={{ fontSize:13 }}>Use “Text → Workflow”, enhance any field with AI, and execute workflows with provider models you control.</div>
+                    <div style={{ fontWeight:700, marginBottom:4 }}>Inline AI Assist</div>
+                    <div style={{ fontSize:13 }}>Generate a first pass, enhance any field, or execute sequentially with a provider key you supply.</div>
                   </div>
                   <div style={{ background:'#f7f7f7', border:'1px solid #808080', padding:8 }}>
-                    <div style={{ fontWeight:700, marginBottom:4 }}>Discourse as control plane</div>
-                    <div style={{ fontSize:13 }}>Keep personas, seeds, and API calls in Discourse. Chat is your agent backed by that context.</div>
+                    <div style={{ fontWeight:700, marginBottom:4 }}>Optional SSO Context</div>
+                    <div style={{ fontSize:13 }}>Use Discourse to pull personas and seeds securely. Keys stay local (session‑only, encrypted).</div>
                   </div>
                 </div>
               </div>

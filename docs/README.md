@@ -1,20 +1,40 @@
-# User Guide Index
+# Semantic Flow User Guide
 
-Use these sections in sequence when learning the system or jump directly to a topic.
+> Semantic Flow is a visual workspace for composing structured semantic context as linked nodes with explicit fields. You shape the information, trace how it connects, and deliver clean, model‑ready context to the AI provider you control.
 
-1. Getting Started (`getting-started.md`) – first run, core objects, quick workflow.
-2. Pages Overview (`pages/overview.md`) – what each area is for.
-3. Providers (`providers.md`) – selecting models and controlling prompt injection.
-4. Ontology (`ontology/overview.md`) – node types, clusters, why they matter.
-5. Node Context (`ontology/node-context.md`) – how a node becomes structured text.
-6. Text → Workflow (`features/text-to-workflow.md`) – drafting from prose.
-7. Node Enhancement (`features/node-enhancement.md`) – polishing individual nodes.
-8. Workflow Execution (`features/workflow-execution.md`) – sequential run behavior.
-9. Runtime Execution Model (`execution.md`) – prompt shaping and progress events.
-10. Export / Import (`export-import.md`) – formats and practical export uses.
-11. Security (`security.md`) – key handling and local storage surfaces.
-12. FAQ (`faq.md`) – concise answers to recurring usage questions.
+This guide shows you how to use every part of the app directly and efficiently—plain language, no roadmap fluff. Skim the map, read Getting Started once, then jump to what you need.
 
-Cross‑reference: When in Chat and unsure how injection works, read Providers. When deciding node granularity, read Ontology and Node Context.
+## Quick Map
+- [Getting Started](getting-started.md)
+- Core Concepts: [Workflow & Nodes](ontology/overview.md) · [Fields & Context](ontology/node-context.md)
+- Pages & Screens: [Page Overview](pages/overview.md)
+- Feature Guides: [Text → Workflow](features/text-to-workflow.md) · [Run a Workflow](features/workflow-execution.md) · [Enhance a Node](features/node-enhancement.md)
+- Working With Providers & Keys: [Providers](providers.md)
+- Running & Monitoring: [Execution Details](execution.md)
+- Saving & Sharing: [Export / Import](export-import.md)
+- Privacy & Safety: [Security](security.md)
+- Reference & Answers: [FAQ](faq.md)
 
+All links above are local files rendered inside the in‑app Documentation Browser (`/learn/docs`).
 
+## If You Read Only One Page
+Read [Getting Started](getting-started.md) to: add a key, place nodes, link them, export, and execute.
+
+## Scope At A Glance
+What it does:
+- Lets you build layered context (nodes + fields) you can run or export.
+- Keeps structure explicit so models get cleaner grounding.
+- Converts and exports instantly (JSON / YAML / Markdown / XML).
+
+What it does not do:
+- Does not schedule or orchestrate long jobs.
+- Does not store provider keys server‑side.
+- Does not claim to “think” for you.
+
+## Conventions Used Here
+- “Canvas” = Builder surface where nodes live.
+- “Workflow” = The entire set of nodes + edges + metadata.
+- “Execute” = Send current workflow context node-by-node to the selected provider.
+- “Enhance” = Ask the model to rewrite a node’s content with a chosen style (improve, simplify, etc.).
+
+Proceed to [Getting Started →](getting-started.md)

@@ -121,27 +121,27 @@ export default function DocsPanel95({ styleVariant = 'win95' }) {
 
   return (
     <div className="mt-4 grid grid-cols-1 md:grid-cols-[260px_1fr] gap-3" id="docs-browser">
-      <aside className={`h-full bg-[#c0c0c0] ${bevel.out} border-2 flex flex-col`}>
-        <div className="flex items-center justify-between px-3 py-2 text-xs font-semibold text-white" style={{ background:'#000080' }}>
+  <aside className={`h-full bg-[#1f1f2a] text-white ${bevel.out} border-2 flex flex-col`}>
+    <div className="flex items-center justify-between px-3 py-2 text-xs font-semibold" style={{ background:'#000080' }}>
           <span>Documentation</span>
         </div>
-        <div className="p-2">
+  <div className="p-2">
           <input
             placeholder="Filter..."
             value={query}
             onChange={e => setQuery(e.target.value)}
-            className={`w-full text-xs px-2 py-1 mb-2 outline-none ${bevel.in} border-2 bg-white`}
+    className={`w-full text-xs px-2 py-1 mb-2 outline-none ${bevel.in} border-2 bg-white text-black`}
           />
-          <nav className="space-y-2 pr-1 overflow-y-auto max-h-[60vh] text-sm">
+      <nav className="space-y-2 pr-1 text-sm">
             {filteredTree.map(item => item.children ? (
               <div key={item.id}>
-                <div className="font-bold text-[11px] opacity-80 uppercase tracking-wide mt-2 mb-1">{item.label}</div>
+        <div className="font-bold text-[11px] text-[#d0d8ff] uppercase tracking-wide mt-2 mb-1">{item.label}</div>
                 <div className="space-y-1">
                   {item.children.map(c => (
                     <button
                       key={c.id}
                       onClick={() => setActiveId(c.id)}
-                      className={`block w-full text-left px-2 py-1 text-[12px] hover:bg-[#000080] hover:text-white ${activeId===c.id ? 'bg-[#000080] text-white' : 'bg-[#e0e0e0]' } ${bevel.in} border-2`}
+          className={`block w-full text-left px-2 py-1 text-[12px] transition-colors hover:bg-[#263d8b] hover:text-white ${activeId===c.id ? 'bg-[#000080] text-white' : 'bg-[#303548] text-[#f0f4ff]'} ${bevel.in} border-2`}
                     >{c.label}</button>
                   ))}
                 </div>
@@ -151,7 +151,7 @@ export default function DocsPanel95({ styleVariant = 'win95' }) {
                 key={item.id}
                 onClick={() => !item.group && setActiveId(item.id)}
                 disabled={item.group}
-                className={`block w-full text-left px-2 py-1 text-[12px] ${item.group ? 'cursor-default opacity-70 font-bold uppercase' : 'hover:bg-[#000080] hover:text-white'} ${activeId===item.id ? 'bg-[#000080] text-white' : 'bg-[#e0e0e0]'} ${bevel.in} border-2`}
+        className={`block w-full text-left px-2 py-1 text-[12px] ${item.group ? 'cursor-default opacity-60 font-bold uppercase text-[#d0d8ff]' : 'transition-colors hover:bg-[#263d8b] hover:text-white'} ${activeId===item.id ? 'bg-[#000080] text-white' : 'bg-[#303548] text-[#f0f4ff]'} ${bevel.in} border-2`}
               >{item.label}</button>
             ))}
           </nav>
