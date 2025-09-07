@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import LandingPage from "./pages/LandingPage";
 import Win95Suite from "./pages/Win95Suite";
 import LearnPage from "./pages/LearnPage";
+import DocsPage from "./pages/DocsPage";
 import DiscoursePage from "./pages/DiscoursePage";
 import { SecureKeyManager } from './lib/security';
 import { useAuth } from './lib/auth';
@@ -123,6 +124,7 @@ const App = () => {
               <Route path="/router" element={<Win95Suite initialTab="api" />} />
               <Route path="/discourse" element={<DiscoursePage />} />
               <Route path="/learn" element={<LearnPage />} />
+              <Route path="/learn/docs" element={<DocsPage />} />
               <Route path="/setup" element={<LandingPage onApiKeySet={refreshApiKeyState} />} />
             </Routes>
           </BrowserRouter>

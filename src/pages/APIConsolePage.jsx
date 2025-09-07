@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { SecureKeyManager } from '@/lib/security';
-import aiRouter, { publishSettings as publishAIRouterSettings } from '@/lib/aiRouter';
+import aiRouter, { publishSettings as publishAIRouterSettings, getPromptDefaults, publishPromptDefaults } from '@/lib/aiRouter';
 import PromptingEngine from '@/lib/promptingEngine';
+import { ONTOLOGY_CLUSTERS } from '@/lib/ontology';
 
 // Win95 UI tokens
 const win95 = {
@@ -78,6 +79,7 @@ export default function APIConsolePage() {
     }
   });
   const [selectedLogIndex, setSelectedLogIndex] = useState(0);
+  const [showCallDetails, setShowCallDetails] = useState(true); // sidebar for selected call details
   const [presets, setPresets] = useState(() => {
     try {
       const raw = localStorage.getItem('api_presets_v1');
@@ -98,6 +100,7 @@ export default function APIConsolePage() {
       errors: Math.min(1, errorRate / 100), // 0..100%
       avgLatency,
       errorRate,
+  rawTPS: tps,
     };
   }, [history, recent]);
 
@@ -130,7 +133,21 @@ export default function APIConsolePage() {
   const [aiOutput, setAiOutput] = useState('');
   const [aiWorkflowInfo, setAiWorkflowInfo] = useState({ nodes: 0, edges: 0, title: '' });
   const [engine] = useState(() => new PromptingEngine('router-user'));
+  // Prompt templates (system/user) editable by user
+  const [promptTemplates, setPromptTemplates] = useState(() => getPromptDefaults());
+  const [showPromptsEditor, setShowPromptsEditor] = useState(false);
   const [availableProviders, setAvailableProviders] = useState([]);
+  const [aiIncludeOntology, setAiIncludeOntology] = useState(true);
+  const [aiOntologyMode, setAiOntologyMode] = useState('force_framework');
+  const [aiSelectedClusters, setAiSelectedClusters] = useState(() => Object.keys(ONTOLOGY_CLUSTERS));
+
+  const aiToggleCluster = (code) => {
+    setAiSelectedClusters(prev => {
+      if (prev.includes(code)) return prev.filter(c => c !== code);
+      return [...prev, code];
+    });
+  };
+  const aiSelectAllClusters = (checked) => setAiSelectedClusters(checked ? Object.keys(ONTOLOGY_CLUSTERS) : []);
   const providerModels = useMemo(() => (availableProviders.find(p => p.providerId === activeProvider)?.models) || [], [availableProviders, activeProvider]);
   const [customModel, setCustomModel] = useState('');
   const effectiveModel = useMemo(() => (customModel && customModel.trim()) ? customModel.trim() : model, [customModel, model]);
@@ -228,6 +245,14 @@ export default function APIConsolePage() {
     load();
   }, [engine, activeProvider]);
 
+  // Keep local copy of prompt templates in sync with storage on mount
+  useEffect(() => {
+    try {
+      const p = getPromptDefaults();
+      setPromptTemplates(p);
+    } catch {}
+  }, []);
+
   // Keep model/stream fields in sync with body JSON
   useEffect(() => {
     try {
@@ -305,7 +330,7 @@ export default function APIConsolePage() {
     if (!activeProvider) return;
     // remove only this provider's key from session
     try {
-      sessionStorage.removeItem(`api_key_${activeProvider}`);
+  SecureKeyManager.clearApiKey(activeProvider);
       setActiveKey('');
       alert(`${activeProvider} key cleared from session`);
     } catch {}
@@ -334,8 +359,9 @@ export default function APIConsolePage() {
   };
 
   const copyCurl = () => {
+    const headerKey = SecureKeyManager.getApiKey(activeProvider) || activeKey || '';
     const h = [
-      `Authorization: Bearer ${activeKey}`,
+      `Authorization: Bearer ${headerKey}`,
       'Content-Type: application/json',
       ...(activeProvider === 'openrouter'
         ? [
@@ -365,9 +391,10 @@ export default function APIConsolePage() {
       setResponseContent('');
 
       const startTime = Date.now();
+      const requestKey = SecureKeyManager.getApiKey(activeProvider) || activeKey || '';
       const headers = {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${activeKey}`,
+        Authorization: `Bearer ${requestKey}`,
         ...(activeProvider === 'openrouter'
           ? {
               'HTTP-Referer': window.location.origin,
@@ -505,11 +532,15 @@ export default function APIConsolePage() {
 
   const aiTextToWorkflow = async () => {
     const prov = activeProvider;
-    const key = activeKey || SecureKeyManager.getApiKey(prov);
+    const key = SecureKeyManager.getApiKey(prov) || activeKey;
     if (!key) { alert(`Missing API key for ${prov}`); return; }
     setAiRunning(true); setAiOutput('');
     try {
-  const res = await engine.convertTextToWorkflow(aiInput, key, prov, effectiveModel);
+  const res = await engine.convertTextToWorkflow(aiInput, key, prov, effectiveModel, {
+        includeOntology: !!aiIncludeOntology,
+        ontologyMode: aiOntologyMode,
+        selectedOntologies: aiSelectedClusters,
+      });
       if (!res.success) throw new Error(res.error || 'Failed');
       setAiOutput(JSON.stringify(res.workflow, null, 2));
     } catch (e) { setAiOutput('Error: ' + (e.message || String(e))); }
@@ -518,7 +549,7 @@ export default function APIConsolePage() {
 
   const aiExecuteWorkflow = async () => {
     const prov = activeProvider;
-    const key = activeKey || SecureKeyManager.getApiKey(prov);
+  const key = SecureKeyManager.getApiKey(prov) || activeKey;
     if (!key) { alert(`Missing API key for ${prov}`); return; }
   const wf = aiWf || loadWorkflowFromLocal();
     if (!wf || !wf.nodes?.length) { alert('Workflow has no nodes.'); return; }
@@ -533,7 +564,7 @@ export default function APIConsolePage() {
 
   const aiEnhance = async () => {
     const prov = activeProvider;
-    const key = activeKey || SecureKeyManager.getApiKey(prov);
+  const key = SecureKeyManager.getApiKey(prov) || activeKey;
     if (!key) { alert(`Missing API key for ${prov}`); return; }
     let node;
     if (selNode && selField) {
@@ -586,7 +617,7 @@ export default function APIConsolePage() {
   });
 
   const testProvider = async (provId) => {
-    const key = SecureKeyManager.getApiKey(provId) || (provId === activeProvider ? activeKey : '');
+  const key = SecureKeyManager.getApiKey(provId) || (provId === activeProvider ? activeKey : '');
     if (!key) {
       alert(`${provId}: missing API key`);
       return { provider: provId, ok: false, error: 'missing_key' };
@@ -669,162 +700,95 @@ export default function APIConsolePage() {
       <div className="w-full max-w-7xl p-4">
         <div className={`${win95.panel} ${win95.outset} w-full`}>
           <div className={win95.title}>Pipeline Forge OS · API Console</div>
-          <div className={`grid grid-cols-1 md:grid-cols-12 gap-4 p-4 bg-[#c0c0c0]`}>
-            {/* Left: Providers + Endpoints + Keys */}
-            <div className={`col-span-12 md:col-span-3 ${win95.panel} ${win95.outset}`}>
-              {/* Providers */}
-              <div>
-                <div className={win95.title}>Providers</div>
-                <div className="p-2 space-y-2">
-                  {providers.map((provider) => (
-                    <div key={provider.id} className="flex items-center">
-                      <div
-                        onClick={() => setActiveProvider(provider.id)}
-                        className={`${win95.radio} ${win95.outset} w-3 h-3 flex items-center justify-center mr-2 cursor-pointer`}
-                      >
-                        {activeProvider === provider.id && <div className="w-1.5 h-1.5 bg-black rounded-full" />}
-                      </div>
-                      <span className="text-sm">{provider.name}</span>
-                    </div>
-                  ))}
-                </div>
-                <div className="p-2 flex gap-2">
-                  <button onClick={() => testProvider(activeProvider)} className={`${win95.button} ${win95.outset} text-sm`}>Test</button>
-                  <button onClick={testAllProviders} className={`${win95.button} ${win95.outset} text-sm`}>Test All</button>
-                </div>
-                <div className="p-2 mt-4">
-                  <div className="mb-1 text-sm">API Base</div>
-                  <input
-                    type="text"
-                    value={apiBase}
-                    onChange={(e) => setApiBase(e.target.value)}
-                    className={`${win95.inset} ${win95.inputField} w-full mb-2 text-sm`}
-                  />
-                  <div className="mb-1 text-sm">Model</div>
-                  <input
-                    type="text"
-                    value={model}
-                    onChange={(e) => setModel(e.target.value)}
-                    className={`${win95.inset} ${win95.inputField} w-full mb-2 text-sm`}
-                  />
-                  <div className="flex items-center mt-2">
-                    <div
-                      onClick={() => setStreaming(!streaming)}
-                      className={`${win95.checkbox} ${win95.outset} w-3 h-3 flex items-center justify-center mr-2 cursor-pointer`}
-                    >
-                      {streaming && <div className="w-1.5 h-1.5 bg-black" />}
-                    </div>
-                    <span className="text-sm">Streaming</span>
-                  </div>
-                </div>
-              </div>
-              {/* Endpoints (Advanced) */}
-              {features.advanced && (
-                <div className="mt-4">
-                  <div className={win95.title}>Endpoints</div>
-                  <div className="p-2 space-y-2">
-                    {providerRoutes[activeProvider]?.map((r) => (
-                      <div key={r.label} className="flex items-center justify-between gap-2">
-                        <div className="flex items-center">
-                          <div className={`${win95.checkbox} ${win95.outset} w-3 h-3 mr-2`} />
-                          <span className="text-sm">{r.label}</span>
-                        </div>
-                        <button
-                          className={`${win95.miniButton} ${win95.outset} text-xs`}
-                          onClick={() => {
-                            setApiBase(r.base);
-                            setPath(r.path);
-                            setMethod(r.method);
-                            setStreaming(!!r.streaming);
-                          }}
-                        >
-                          Use
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {/* Keys */}
-              <div className="mt-4">
-                <div className={win95.title}>Keys</div>
-                <div className="p-2">
-                  <div className="mb-1 text-sm">Active Key ({activeProvider})</div>
-                  <div className="flex gap-2 mb-2">
-                    <input
-                      type="password"
-                      value={activeKey}
-                      onChange={(e) => setActiveKey(e.target.value)}
-                      className={`${win95.inset} ${win95.inputField} flex-1 text-sm`}
-                    />
-                    <button onClick={copyKey} className={`${win95.button} ${win95.outset} text-sm px-2`}>
-                      Copy
-                    </button>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2 mb-2">
-                    <button onClick={saveActiveKey} className={`${win95.button} ${win95.outset} text-sm`}>
-                      Save Key
-                    </button>
-                    <button onClick={loadSavedKey} className={`${win95.button} ${win95.outset} text-sm`}>
-                      Load Saved
-                    </button>
-                    <button onClick={clearActiveKey} className={`${win95.button} ${win95.outset} text-sm`}>
-                      Clear
-                    </button>
-                  </div>
-                  <div className="flex gap-2">
-                    <button onClick={openKeyManager} className={`${win95.button} ${win95.outset} flex-1 text-sm`}>
-                      Manage All Keys…
-                    </button>
-                  </div>
-                  <div className={`${win95.inset} mt-4 h-32 overflow-auto bg-white text-black`}>
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b border-gray-700">
-                          <th className="text-left p-1">label</th>
-                          <th className="text-left p-1">last used</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {keys.map((key, index) => (
-                          <tr key={index} className="font-mono text-xs hover:bg-gray-100">
-                            <td className="p-1">{key.label}</td>
-                            <td className="p-1">{key.lastUsed}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                  <div className="text-[11px] opacity-70 mt-2">
-                    Stored in this browser session. Use “Manage All Keys…” to re-enter your provider keys anytime.
-                  </div>
-                </div>
-              </div>
 
-              {/* Settings */}
-              <div className="mt-4">
-                <div className={win95.title}>Settings</div>
-                <div className="p-2 space-y-2">
-                  <label className="flex items-center gap-2 text-[12px]">
-                    <input
-                      type="checkbox"
-                      checked={features.advanced}
-                      onChange={(e) => {
-                        const next = { ...features, advanced: e.target.checked };
-                        setFeatures(next);
-                        try {
-                          const raw = localStorage.getItem('sf_local_settings_v1');
-                          const parsed = raw ? JSON.parse(raw) : {};
-                          const updated = { ...parsed, features: { ...next } };
-                          localStorage.setItem('sf_local_settings_v1', JSON.stringify(updated));
-                        } catch {}
-                      }}
-                    />
-                    Advanced features
-                  </label>
-                  <div className="text-[11px] opacity-70">
-                    Advanced reduces clutter when off by hiding expert panels.
+          {/* Top: Provider Tabs (page-wide) */}
+          <div className="p-2 bg-[#c0c0c0] border-b-2 flex items-center gap-2">
+            {providers.map((p) => (
+              <button
+                key={p.id}
+                onClick={() => setActiveProvider(p.id)}
+                className={`${win95.miniButton} ${win95.outset} px-4 py-2 text-sm ${activeProvider === p.id ? 'bg-[#000080] text-white' : ''}`}
+              >
+                {p.name}
+              </button>
+            ))}
+            <div className="flex-1" />
+            <label className="flex items-center gap-2 text-xs">
+              <input type="checkbox" checked={features.advanced} onChange={(e)=>{const next={...features, advanced:e.target.checked}; setFeatures(next); try{const raw=localStorage.getItem('sf_local_settings_v1'); const parsed= raw?JSON.parse(raw):{}; localStorage.setItem('sf_local_settings_v1', JSON.stringify({...parsed, features: next}));}catch{}}} />
+              Advanced
+            </label>
+          </div>
+
+          <div className={`grid grid-cols-1 md:grid-cols-12 gap-4 p-4 bg-[#c0c0c0]`}>
+            {/* Left: Provider Profile */}
+            <div className={`col-span-12 md:col-span-3 ${win95.panel} ${win95.outset}`}>
+              <div>
+                <div className={win95.title}>{providers.find(p=>p.id===activeProvider)?.name || 'Provider'}</div>
+                <div className="p-3 space-y-3">
+                  <div className="text-sm">Profile</div>
+                  <div className="text-xs opacity-80">Settings and keys for <b>{activeProvider}</b></div>
+
+                  <div className="mt-2">
+                    <div className="mb-1 text-sm">API Base</div>
+                    <input type="text" value={apiBase} onChange={(e)=>setApiBase(e.target.value)} className={`${win95.inset} ${win95.inputField} w-full text-sm`} />
                   </div>
+
+                  <div>
+                    <div className="mb-1 text-sm">Model (suggested)</div>
+                    <select value={providerModels.includes(model)? model : (providerModels[0]||'')} onChange={(e)=>setModel(e.target.value)} className={`${win95.inset} ${win95.inputField} w-full text-sm`}>
+                      {providerModels.length === 0 && (<option value="">(no models available)</option>)}
+                      {providerModels.map(m => (<option key={m} value={m}>{m}</option>))}
+                    </select>
+                    <div className="text-[11px] opacity-70 mt-1">Choose a model suggested for this provider or type a custom id in Request Builder.</div>
+                  </div>
+
+                  <div className="mt-2">
+                    <div className="mb-1 text-sm">Streaming</div>
+                    <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={streaming} onChange={()=>setStreaming(!streaming)} /> Enable streaming by default for this provider</label>
+                  </div>
+
+                  {/* Keys compact */}
+                  <div className="mt-3">
+                    <div className="mb-1 text-sm">API Key</div>
+                    <div className={`${win95.inset} p-2 bg-white text-black font-mono`}> 
+                      {(() => {
+                        const k = SecureKeyManager.getApiKey(activeProvider) || activeKey || '';
+                        if (!k) return (<div className="text-xs opacity-70">No key saved for this provider.</div>);
+                        const m = k.length > 12 ? `${k.slice(0,4)}••••••${k.slice(-4)}` : `••••••${k.slice(-4)}`;
+                        return (
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="truncate">{m}</div>
+                            <div className="flex gap-1">
+                              <button onClick={()=>{ navigator.clipboard.writeText(k); alert('API key copied'); }} className={`${win95.miniButton} ${win95.outset} text-xs`}>Copy</button>
+                              <button onClick={()=>{ setActiveKey(k); alert('Loaded key into active input'); }} className={`${win95.miniButton} ${win95.outset} text-xs`}>Use</button>
+                              <button onClick={()=>{ try{ SecureKeyManager.clearApiKey(activeProvider); setActiveKey(''); alert('Key cleared'); }catch{} }} className={`${win95.miniButton} ${win95.outset} text-xs`}>Clear</button>
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                    <div className="flex gap-2 mt-2">
+                      <button onClick={()=>openKeyManager()} className={`${win95.button} ${win95.outset} text-sm flex-1`}>Manage Keys…</button>
+                      <button onClick={()=>testProvider(activeProvider)} className={`${win95.button} ${win95.outset} text-sm`}>Test</button>
+                    </div>
+                  </div>
+
+                  {/* Endpoints (advanced)
+                      keep as a quick list with Use action */}
+                  {features.advanced && (
+                    <div className="mt-3">
+                      <div className="mb-1 text-sm">Known Routes</div>
+                      <div className={`${win95.inset} p-2 bg-white text-xs`}> 
+                        {providerRoutes[activeProvider]?.map(r => (
+                          <div key={r.label} className="flex items-center justify-between mb-1">
+                            <div className="truncate">{r.label} <span className="opacity-60">{r.path}</span></div>
+                            <button onClick={()=>{ setApiBase(r.base); setPath(r.path); setMethod(r.method); setStreaming(!!r.streaming); }} className={`${win95.miniButton} ${win95.outset} text-xs`}>Use</button>
+                          </div>
+                        ))}
+                        {!providerRoutes[activeProvider] && (<div className="text-xs opacity-70">No known routes for this provider.</div>)}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -976,6 +940,39 @@ export default function APIConsolePage() {
                       </div>
                     )}
                   </div>
+                  {aiTab === 'text2wf' && (
+                    <div className="grid grid-cols-3 gap-2 mb-2 text-sm">
+                      <div>
+                        <div className="mb-1">Include Ontology</div>
+                        <label className="flex items-center gap-2"><input type="checkbox" checked={aiIncludeOntology} onChange={(e)=>setAiIncludeOntology(e.target.checked)} /> Attach ontology</label>
+                      </div>
+                      <div>
+                        <div className="mb-1">Ontology Mode</div>
+                        <select value={aiOntologyMode} onChange={(e)=>setAiOntologyMode(e.target.value)} className={`${win95.inset} ${win95.inputField} w-full text-sm`}>
+                          <option value="force_framework">Force framework</option>
+                          <option value="novel_category">Generate novel category</option>
+                          <option value="exclude">Exclude ontology</option>
+                        </select>
+                      </div>
+                      <div>
+                        <div className="mb-1">Clusters (optional)</div>
+                        <div className="p-2 border rounded bg-white text-xs">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="font-semibold">Ontology selection</div>
+                            <label className="text-[12px] flex items-center gap-1"><input type="checkbox" checked={aiSelectedClusters.length === Object.keys(ONTOLOGY_CLUSTERS).length} onChange={(e)=>aiSelectAllClusters(e.target.checked)} /> <span>Select all</span></label>
+                          </div>
+                          <div className="h-40 overflow-auto pr-1">
+                            {Object.keys(ONTOLOGY_CLUSTERS).map(c => (
+                              <label key={c} className="flex items-center gap-2 mb-1 text-[13px]">
+                                <input type="checkbox" checked={aiSelectedClusters.includes(c)} onChange={()=>aiToggleCluster(c)} />
+                                <span className="truncate">{c} — {ONTOLOGY_CLUSTERS[c].name}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                   {features.advanced && (
                     <div className="grid grid-cols-2 gap-2 mb-3 text-sm">
                       <div>
@@ -1055,6 +1052,31 @@ export default function APIConsolePage() {
                     <pre className="whitespace-pre-wrap font-mono text-xs max-h-56 overflow-auto">{aiOutput || '—'}</pre>
                   </div>
                 </div>
+                  {/* Prompt templates editor */}
+                  <div className={`${win95.panel} ${win95.outset} m-2`}>
+                    <div className={win95.title}>Prompt Templates</div>
+                    <div className={`${win95.inset} p-2`}> 
+                      <label className="flex items-center gap-2 mb-2"><input type="checkbox" checked={showPromptsEditor} onChange={(e)=>setShowPromptsEditor(e.target.checked)} /> Edit prompt templates</label>
+                      {showPromptsEditor && (
+                        <div className="space-y-2 text-xs">
+                          {['text2wf','execute','enhance'].map(mode => (
+                            <div key={mode} className="mb-2">
+                              <div className="font-semibold">{mode === 'text2wf' ? 'Text → Workflow' : mode === 'execute' ? 'Execute Workflow' : 'Enhance Content'}</div>
+                              <div className="mt-1 text-[11px] opacity-80">System prompt</div>
+                              <textarea value={(promptTemplates[mode]?.system)||''} onChange={(e)=>setPromptTemplates(prev=>({...prev,[mode]:{...prev[mode],system:e.target.value}}))} className={`${win95.inset} w-full h-20 p-2 font-mono text-xs resize-none bg-white text-black`} />
+                              <div className="mt-1 text-[11px] opacity-80">User prompt</div>
+                              <textarea value={(promptTemplates[mode]?.user)||''} onChange={(e)=>setPromptTemplates(prev=>({...prev,[mode]:{...prev[mode],user:e.target.value}}))} className={`${win95.inset} w-full h-16 p-2 font-mono text-xs resize-none bg-white text-black`} />
+                            </div>
+                          ))}
+                          <div className="flex gap-2">
+                            <button onClick={()=>{ publishPromptDefaults(promptTemplates); alert('Prompts saved'); }} className={`${win95.button} ${win95.outset} text-sm bg-[#000080] text-white`}>Save Prompts</button>
+                            <button onClick={()=>{ const p=getPromptDefaults(); setPromptTemplates(p); alert('Reloaded prompts'); }} className={`${win95.button} ${win95.outset} text-sm`}>Reload</button>
+                            <button onClick={()=>{ setPromptTemplates(getPromptDefaults()); try{ localStorage.removeItem('ai_prompt_defaults_v1'); alert('Reset prompts to defaults'); }catch{} }} className={`${win95.button} ${win95.outset} text-sm`}>Reset to Defaults</button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
               </div>
 
               {/* Presets list */}
@@ -1122,101 +1144,137 @@ export default function APIConsolePage() {
               {/* Limits */}
               <div className={`${win95.panel} ${win95.outset} m-2`}>
                 <div className={win95.title}>Limits</div>
-                <div className={`${win95.inset} p-2 text-xs`}>
-                  <div className="flex justify-between"><span>Total calls</span><span className="font-mono">{history.length}</span></div>
-                  <div className="mt-2">Tokens in</div>
-                  <div className={`${win95.panel} ${win95.outset} w-full h-4`}>
-                    <div className="bg-[#1084d0] h-full" style={{ width: `${Math.min(100, totalTokens.in / 2000 * 100)}%` }} />
+                <div className={`${win95.inset} p-2 text-xs space-y-3`}>
+                  <div className="flex justify-between items-center">
+                    <span>Total calls</span><span className="font-mono">{history.length}</span>
                   </div>
-                  <div className="mt-2">Tokens out</div>
-                  <div className={`${win95.panel} ${win95.outset} w-full h-4`}>
-                    <div className="bg-[#1084d0] h-full" style={{ width: `${Math.min(100, totalTokens.out / 4000 * 100)}%` }} />
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <div className="mb-1">Tokens in</div>
+                      <div className={`${win95.panel} ${win95.outset} w-full h-4`}>
+                        <div className="bg-[#1084d0] h-full" style={{ width: `${Math.min(100, totalTokens.in / 2000 * 100)}%` }} />
+                      </div>
+                      <div className="text-[10px] opacity-70 mt-0.5">{totalTokens.in}</div>
+                    </div>
+                    <div>
+                      <div className="mb-1">Tokens out</div>
+                      <div className={`${win95.panel} ${win95.outset} w-full h-4`}>
+                        <div className="bg-[#1084d0] h-full" style={{ width: `${Math.min(100, totalTokens.out / 4000 * 100)}%` }} />
+                      </div>
+                      <div className="text-[10px] opacity-70 mt-0.5">{totalTokens.out}</div>
+                    </div>
                   </div>
-                  <div className="mt-2 opacity-70">Bars are local session estimates, not provider quotas.</div>
-                </div>
-              </div>
-            </div>
-
-            {/* Bottom: Conveyor (Advanced) */}
-            {features.advanced && (
-              <div className={`col-span-12 md:col-span-9 ${win95.panel} ${win95.outset}`}>
-                <div className={win95.title}>Forge Conveyor · Call Timeline</div>
-                <div className={`${win95.inset} p-2 m-2`}>
-                  <div className={`${win95.inset} p-1 font-mono text-xs mb-4 bg-white text-black`}>
-                    {pipelineLog || 'plan> POST /v1/chat/completions  provider=openai  stream=true'}
-                  </div>
-                  <div className="relative h-28 mb-4">
-                    <div className="absolute top-1/2 w-full border-t border-black" />
-                    <div className="absolute top-1/2 translate-y-14 w-full border-t border-black" />
-                    <div className="flex justify-between px-4">
+                  {/* Gauge Board relocated here */}
+                  <div className="mt-2">
+                    <div className="font-semibold mb-1 flex items-center gap-2">
+                      <span>Gauge Board</span>
+                      <span className="text-[10px] font-normal opacity-70">live session metrics</span>
+                    </div>
+                    <div className="flex justify-around mb-2">
                       {[
-                        ['S1 · Build', 'headers + body'],
-                        ['S2 · Sign', 'keys + auth'],
-                        ['S3 · Dispatch', 'provider endpoint'],
-                        ['S4 · Stream', 'SSE chunks'],
-                        ['S5 · Emit', 'response → UI'],
-                      ].map(([title, desc]) => (
-                        <div key={title} className={`${win95.panel} ${win95.outset} w-32`}>
-                          <div className={win95.title + ' text-xs'}>{title}</div>
-                          <div className={`${win95.inset} p-1 text-xs h-12 flex items-center justify-center`}>{desc}</div>
+                        ['tps', gauge.tps, `${gauge.rawTPS.toFixed(2)} /s`],
+                        ['latency', gauge.latency, `${gauge.avgLatency}ms`],
+                        ['errors', gauge.errors, `${gauge.errorRate}%`],
+                      ].map(([label, val, foot]) => (
+                        <div key={label} className="flex flex-col items-center">
+                          <div className={`${win95.panel} ${win95.outset} w-10 h-24 flex flex-col-reverse mb-1`}>
+                            <div className={`bg-[#1084d0]`} style={{ height: `${Math.round((val||0)*100)}%`, width: '100%' }} />
+                          </div>
+                          <span className="text-[11px] leading-none">{label}</span>
+                          <span className="text-[10px] opacity-70 mt-0.5">{foot}</span>
                         </div>
                       ))}
                     </div>
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    <button className={`${win95.button} ${win95.outset} text-sm`} onClick={exportHistory}>Export</button>
-                    <button className={`${win95.button} ${win95.outset} text-sm`} onClick={clearHistory}>Clear History</button>
-                  </div>
+                  <div className="text-[10px] opacity-70">Session-local estimates; not provider-enforced quotas.</div>
                 </div>
               </div>
-            )}
+            </div>
 
-            {/* Bottom right: Interface Logs + Gauge (Advanced) */}
+            {/* Bottom: History Carousel (Advanced) */}
             {features.advanced && (
-              <div className={`col-span-12 md:col-span-3 ${win95.panel} ${win95.outset}`}>
-                <div className={win95.title}>Interface Logs</div>
-                <div className={`${win95.inset} p-2 m-2 h-64 overflow-auto bg-white text-black`}>
-                  <div className="space-y-2">
-                    {history.length === 0 && <div className="text-xs opacity-70">No calls yet.</div>}
-                    {history.map((h, idx) => (
-                      <div key={idx} className={`${win95.panel} ${win95.outset} cursor-pointer`} onClick={() => setSelectedLogIndex(idx)}>
-                        <div className={`${win95.title} text-xs`}>{h.provider.toUpperCase()} · {h.status} · {h.ms}ms</div>
-                        <div className={`${win95.inset} p-1 text-[11px]`}> 
-                          <div className="truncate"><span className="font-mono">{h.method}</span> {h.url}</div>
-                          <div className="flex justify-between mt-1">
-                            <span>{new Date(h.ts).toLocaleTimeString()}</span>
-                            <span className="font-mono">{h.model || ''}</span>
+              <div className={`col-span-12 ${win95.panel} ${win95.outset} relative`}>
+                <div className={win95.title + ' flex items-center justify-between'}>
+                  <span>API Call History · Carousel</span>
+                  <div className="flex gap-2 items-center text-xs">
+                    <button className={`${win95.miniButton} ${win95.outset}`} disabled={!history.length} onClick={() => setSelectedLogIndex(i => Math.max(0, i - 1))}>◀</button>
+                    <span className="px-1">{history.length ? `${selectedLogIndex + 1}/${history.length}` : '0/0'}</span>
+                    <button className={`${win95.miniButton} ${win95.outset}`} disabled={!history.length} onClick={() => setSelectedLogIndex(i => Math.min(history.length - 1, i + 1))}>▶</button>
+                    <button className={`${win95.miniButton} ${win95.outset}`} onClick={exportHistory} disabled={!history.length}>Export</button>
+                    <button className={`${win95.miniButton} ${win95.outset}`} onClick={clearHistory} disabled={!history.length}>Clear</button>
+                    <button className={`${win95.miniButton} ${win95.outset}`} onClick={() => setShowCallDetails(v=>!v)} disabled={!history.length}>{showCallDetails ? 'Hide Details' : 'Show Details'}</button>
+                  </div>
+                </div>
+                <div className={`${win95.inset} p-3 m-2 overflow-hidden`}> 
+                  {history.length === 0 && (
+                    <div className="text-xs opacity-70">No calls yet. Send a request to populate history.</div>
+                  )}
+                  {history.length > 0 && (
+                    <div className="relative">
+                      {/* Carousel Track */}
+                      <div className="flex items-stretch justify-center gap-4 select-none">
+                        {[-2,-1,0,1,2].map(offset => {
+                          const idx = selectedLogIndex + offset;
+                          if (idx < 0 || idx >= history.length) return <div key={offset} className="w-40" />;
+                          const h = history[idx];
+                          const isCenter = offset === 0;
+                          return (
+                            <div
+                              key={offset}
+                              className={`${win95.panel} ${win95.outset} ${isCenter ? 'w-64' : 'w-40'} cursor-pointer transition-all duration-150`}
+                              style={{ opacity: isCenter ? 1 : 0.6, transform: isCenter ? 'scale(1.05)' : 'scale(0.92)' }}
+                              onClick={() => setSelectedLogIndex(idx)}
+                            >
+                              <div className={win95.title + ' text-xs flex justify-between'}>
+                                <span>{h.provider.toUpperCase()}</span>
+                                <span>{h.status}</span>
+                              </div>
+                              <div className={`${win95.inset} p-1 text-[11px] h-32 overflow-hidden bg-white text-black`}> 
+                                <div className="truncate"><span className="font-mono">{h.method}</span> {h.path || h.url.replace(h.base||'', '')}</div>
+                                <div className="flex justify-between mt-1">
+                                  <span>{h.ms}ms</span>
+                                  <span className="font-mono">{h.model || ''}</span>
+                                </div>
+                                <div className="mt-1 line-clamp-4 whitespace-pre-wrap">{h.responsePreview}</div>
+                                <div className="mt-1 text-[10px] opacity-70 flex justify-between"><span>{new Date(h.ts).toLocaleTimeString()}</span><span>{(h.tokens?.in||0)+(h.tokens?.out||0)} tok</span></div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                {/* Details Sidebar */}
+                {showCallDetails && history[selectedLogIndex] && (
+                  <div className="absolute top-0 right-0 h-full w-[340px] bg-[#c0c0c0] border-l-2 border-t-white border-l-white border-b-[#6d6d6d] border-r-[#6d6d6d] shadow-lg flex flex-col">
+                    <div className={win95.title + ' flex justify-between items-center'}>
+                      <span>Call Details</span>
+                      <button className={`${win95.miniButton} ${win95.outset}`} onClick={()=>setShowCallDetails(false)}>×</button>
+                    </div>
+                    <div className="p-2 overflow-auto text-xs space-y-2">
+                      {(() => { const h = history[selectedLogIndex]; return (
+                        <>
+                          <div className="font-semibold">{h.method} {h.url}</div>
+                          <div className="grid grid-cols-2 gap-2 text-[11px]">
+                            <div>Status: <span className="font-mono">{h.status}</span></div>
+                            <div>Time: <span className="font-mono">{h.ms}ms</span></div>
+                            <div>Model: <span className="font-mono">{h.model||'-'}</span></div>
+                            <div>Tokens: <span className="font-mono">{(h.tokens?.in||0)}/{(h.tokens?.out||0)}</span></div>
                           </div>
-                          <div className="mt-1 opacity-80">{h.responsePreview}</div>
-                          <details className="mt-1">
-                            <summary>Request</summary>
-                            <pre className="whitespace-pre-wrap">{JSON.stringify({ headers: h.headers, body: h.body }, null, 2)}</pre>
+                          <details open>
+                            <summary className="cursor-pointer">Request</summary>
+                            <pre className="whitespace-pre-wrap bg-white text-black p-1 border-2 border-t-white border-l-white border-b-[#6d6d6d] border-r-[#6d6d6d]">{JSON.stringify({ headers: h.headers, body: h.body }, null, 2)}</pre>
                           </details>
-                        </div>
-                      </div>
-                    ))}
+                          <details open>
+                            <summary className="cursor-pointer">Response</summary>
+                            <pre className="whitespace-pre-wrap bg-white text-black p-1 border-2 border-t-white border-l-white border-b-[#6d6d6d] border-r-[#6d6d6d]">{h.responseRaw || h.responsePreview}</pre>
+                          </details>
+                        </>
+                      ); })()}
+                    </div>
                   </div>
-                </div>
-                <div className={win95.title}>Gauge Board</div>
-                <div className={`${win95.inset} p-2 m-2`}>
-                  <div className="flex justify-around mb-2">
-                    {[
-                      ['tps', gauge.tps],
-                      ['latency', gauge.latency],
-                      ['errors', gauge.errors],
-                    ].map(([label, val]) => (
-                      <div key={label} className="flex flex-col items-center">
-                        <div className={`${win95.panel} ${win95.outset} w-10 h-32 flex flex-col-reverse mb-1`}>
-                          <div className={`bg-[#1084d0]`} style={{ height: `${Math.round((val||0)*100)}%`, width: '100%' }} />
-                        </div>
-                        <span className="text-xs">{label}</span>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="text-[11px] opacity-70">
-                    avg latency: {gauge.avgLatency}ms · errors: {gauge.errorRate}%
-                  </div>
-                </div>
+                )}
               </div>
             )}
           </div>

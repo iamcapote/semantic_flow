@@ -249,8 +249,8 @@ export default function LearnPage() {
           </div>
         </div>
 
-        {/* CONTENT SECTIONS */}
-        <div className="grid grid-cols-1 gap-4">
+  {/* CONTENT SECTIONS */}
+  <div className="grid grid-cols-1 gap-4">
           <Section id="core" title="Core Concepts" icon={ListTreeIcon}>
             <div className="grid md:grid-cols-2 gap-3">
               <div className={`bg-white ${bevel.out} border-2 p-3`}>
@@ -290,6 +290,12 @@ export default function LearnPage() {
                 <p>A configured AI role (often from Discourse AI) that bundles policies, constraints, and behavior; can be referenced by Router/Chat.</p>
               </div>
             </div>
+          </Section>
+
+          {/* Link out to nested docs route */}
+          <Section id="developer-docs" title="Developer & User Documentation" icon={InfoIcon}>
+            <p className="mb-3 text-sm">The full structured documentation now lives under <code>/learn/docs</code>. This page is an overview. Continue to the detailed docs browser:</p>
+            <a href="/learn/docs" className="inline-block px-3 py-2 text-sm font-semibold bg-[#c0c0c0] border-2 border-white border-b-[#6d6d6d] border-r-[#6d6d6d] hover:brightness-105">Open Documentation Browser</a>
           </Section>
 
           <Section id="nav" title="How Navigation Works" icon={BookOpenTextIcon}>

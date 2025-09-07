@@ -58,6 +58,15 @@ export class SecureKeyManager {
       }
     });
   }
+
+  // Clear a single provider API key
+  static clearApiKey(provider) {
+    try {
+      sessionStorage.removeItem(`api_key_${provider}`);
+    } catch (e) {
+      // ignore
+    }
+  }
   
   // Encrypt using AES
   static encrypt(text) {

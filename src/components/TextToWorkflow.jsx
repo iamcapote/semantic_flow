@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Wand2, Loader2, ChevronDown, ChevronUp, Settings } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import PromptingEngine from '@/lib/promptingEngine';
+import { ONTOLOGY_CLUSTERS } from '@/lib/ontology';
 import { SecureKeyManager } from '@/lib/security';
 
 const TextToWorkflow = ({ onWorkflowGenerated, apiKey }) => {
@@ -18,6 +19,19 @@ const TextToWorkflow = ({ onWorkflowGenerated, apiKey }) => {
   const [selectedModel, setSelectedModel] = useState('gpt-4o');
   const [availableProviders, setAvailableProviders] = useState([]);
   const [promptingEngine] = useState(() => new PromptingEngine('demo-user'));
+  const [includeOntology, setIncludeOntology] = useState(true);
+  const [ontologyMode, setOntologyMode] = useState('force_framework');
+  const [selectedClusters, setSelectedClusters] = useState(() => Object.keys(ONTOLOGY_CLUSTERS));
+
+  const toggleCluster = (code) => {
+    setSelectedClusters(prev => {
+      if (prev.includes(code)) return prev.filter(c => c !== code);
+      return [...prev, code];
+    });
+  };
+  const selectAllClusters = (checked) => {
+    setSelectedClusters(checked ? Object.keys(ONTOLOGY_CLUSTERS) : []);
+  };
 
   // Load available providers on component mount
   useEffect(() => {
@@ -66,7 +80,12 @@ const TextToWorkflow = ({ onWorkflowGenerated, apiKey }) => {
         textInput,
         providerApiKey,
         selectedProvider,
-        selectedModel
+        selectedModel,
+        {
+          includeOntology: !!includeOntology,
+          ontologyMode: ontologyMode,
+          selectedOntologies: selectedClusters,
+        }
       );
 
       if (result.success) {
@@ -164,6 +183,51 @@ const TextToWorkflow = ({ onWorkflowGenerated, apiKey }) => {
                       )) || []}
                   </SelectContent>
                 </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <Label className="text-sm font-medium">Include Ontology</Label>
+                <div className="flex items-center gap-2">
+                  <input type="checkbox" checked={includeOntology} onChange={(e)=>setIncludeOntology(e.target.checked)} />
+                  <span className="text-sm">Attach ontology reference to prompt</span>
+                </div>
+              </div>
+
+              <div>
+                <Label className="text-sm font-medium">Ontology Mode</Label>
+                <Select value={ontologyMode} onValueChange={setOntologyMode}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Mode" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="force_framework">Force framework</SelectItem>
+                    <SelectItem value="novel_category">Generate novel category</SelectItem>
+                    <SelectItem value="exclude">Do not include ontology</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label className="text-sm font-medium">Ontology Clusters</Label>
+                <div className="p-2 border rounded bg-white text-xs">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="font-semibold">Ontology selection</div>
+                    <div className="flex items-center gap-2">
+                      <label className="text-[12px] flex items-center gap-1"><input type="checkbox" checked={selectedClusters.length === Object.keys(ONTOLOGY_CLUSTERS).length} onChange={(e)=>selectAllClusters(e.target.checked)} /> <span>Select all</span></label>
+                    </div>
+                  </div>
+                  <div className="h-40 overflow-auto pr-1">
+                    {Object.keys(ONTOLOGY_CLUSTERS).map(code => (
+                      <label key={code} className="flex items-center gap-2 mb-1 text-[13px]">
+                        <input type="checkbox" checked={selectedClusters.includes(code)} onChange={()=>toggleCluster(code)} />
+                        <span className="truncate">{code} — {ONTOLOGY_CLUSTERS[code].name}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                <div className="mt-2 text-[12px] text-muted-foreground">Tip: Use Select all to include full ontology (default).</div>
               </div>
             </div>
 

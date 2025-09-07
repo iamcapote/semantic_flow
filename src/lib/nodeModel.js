@@ -18,6 +18,7 @@ export const FIELD_TYPES = [
   'array',       // arbitrary JSON array (edited as JSON or CSV)
   'tags',        // array<string>
   'file',        // url list
+  'fileFormat'   // special field to declare node's serialization: json, markdown, yaml, xml
 ];
 
 // Normalize an array of { name,type,value } into a key→value record

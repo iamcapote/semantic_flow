@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ChevronDown, ChevronUp, CheckCircle, AlertCircle, Eye, EyeOff, Plus } from 'lucide-react';
+import { SecureKeyManager } from '@/lib/security';
 
 // ProviderSettings manages the configuration and testing of AI providers for the semantic flow canvas.
 const defaultProviders = [
@@ -52,6 +53,37 @@ const ProviderSettings = () => {
   const [showApiKeys, setShowApiKeys] = useState({});
   const [customModels, setCustomModels] = useState({});
 
+  // Load persisted keys, base URLs and active provider from session on mount
+  useEffect(() => {
+    try {
+      const mapped = defaultProviders.map(p => ({
+        ...p,
+        apiKey: SecureKeyManager.getApiKey(p.providerId) || p.apiKey,
+        baseURL: sessionStorage.getItem(`base_url_${p.providerId}`) || p.baseURL,
+        isActive: sessionStorage.getItem('active_provider') === p.providerId ? true : p.isActive,
+      }));
+      setProviders(mapped);
+    } catch (e) {
+      // ignore
+    }
+  }, []);
+
+  // Persist API keys and base URLs to session when providers change
+  useEffect(() => {
+    try {
+      providers.forEach(p => {
+        if (p.apiKey && p.apiKey.trim()) {
+          SecureKeyManager.storeApiKey(p.providerId, p.apiKey);
+        } else {
+          SecureKeyManager.clearApiKey(p.providerId);
+        }
+        if (p.baseURL && p.baseURL.trim()) sessionStorage.setItem(`base_url_${p.providerId}`, p.baseURL);
+      });
+    } catch (e) {
+      // ignore
+    }
+  }, [providers]);
+
   // No initialProviders logic needed; defaultProviders is always used.
   const handleProviderUpdate = (providerId, field, value) => {
     setProviders(prev => prev.map(p =>
@@ -87,6 +119,15 @@ const ProviderSettings = () => {
       ...p,
       isActive: p.providerId === providerId
     })));
+    // persist active provider selection
+    try { sessionStorage.setItem('active_provider', providerId); } catch {}
+  };
+
+  const clearProviderKey = (providerId) => {
+    try {
+  SecureKeyManager.clearApiKey(providerId);
+      setProviders(prev => prev.map(p => p.providerId === providerId ? { ...p, apiKey: '' } : p));
+    } catch (e) {}
   };
 
   const getProviderStatus = (provider) => {
@@ -144,7 +185,10 @@ const ProviderSettings = () => {
                   </label>
                 </div>
                 {provider.apiKey && !provider.isActive && (
-                  <button onClick={()=>handleActivateProvider(provider.providerId)} className={`px-3 py-1 text-[11px] bg-[var(--w95-face)] ${bevel.out} border-2`}>Set Active</button>
+                  <div className="flex gap-2">
+                    <button onClick={()=>handleActivateProvider(provider.providerId)} className={`px-3 py-1 text-[11px] bg-[var(--w95-face)] ${bevel.out} border-2`}>Set Active</button>
+                    <button onClick={()=>clearProviderKey(provider.providerId)} className={`px-3 py-1 text-[11px] bg-[var(--w95-face)] ${bevel.out} border-2`}>Clear Key</button>
+                  </div>
                 )}
               </div>
             )}

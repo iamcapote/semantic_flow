@@ -3,7 +3,8 @@
 
 import { NODE_TYPES } from './ontology.js';
 import { exportWorkflowAsJSON, exportWorkflowAsMarkdown, exportWorkflowAsYAML, exportWorkflowAsXML } from './exportUtils.js';
-import { chatCompletion } from './aiRouter.js';
+import { chatCompletion, getPromptDefaults } from './aiRouter.js';
+import { stripWorkflow as stripWorkflowUtil, serializeNodeForAI } from './sanitizer.js';
 
 export class PromptingEngine {
   constructor(userId) {
@@ -74,57 +75,69 @@ export class PromptingEngine {
   }
 
   // Mode 1: Text-to-Workflow Conversion
-  async convertTextToWorkflow(textInput, apiKey, providerId = 'openai', model = 'gpt-4o') {
-    const systemPrompt = `You are a semantic logic workflow converter. Convert the provided text into a structured workflow using our semantic node ontology.
+  /**
+   * Convert free text into a workflow.
+   * options: {
+   *   includeOntology: boolean (default true),
+   *   ontologyMode: 'force_framework' | 'novel_category' | 'exclude' (default 'force_framework'),
+   *   selectedOntologies: array of cluster codes or node type codes to include (optional)
+   * }
+   */
+  async convertTextToWorkflow(textInput, apiKey, providerId = 'openai', model = 'gpt-4o', options = {}) {
+    const { includeOntology = true, ontologyMode = 'force_framework', selectedOntologies = [] } = options || {};
 
-Available Node Types:
-${Object.entries(NODE_TYPES).map(([key, value]) => `- ${key}: ${value.label} (${value.description})`).join('\n')}
+  // Load prompt defaults (user-editable)
+  const prompts = getPromptDefaults();
+  const header = prompts.text2wf?.system || `You are a semantic logic workflow converter. Your job is to convert the user's free-form specification into a structured workflow composed of the canonical semantic node ontology used by the system.`;
 
-Instructions:
-1. Analyze the text for logical components, statements, hypotheses, evidence, reasoning steps, etc.
-2. Map these to appropriate semantic node types from our ontology
-3. Create connections between nodes that show logical flow
-4. Output ONLY valid JSON in this exact format:
+    // Behavior modes
+    let modeNote = '';
+    if (ontologyMode === 'force_framework') {
+      modeNote = 'When uncertain, prefer nodes from the provided ontology. If input suggests a new concept that does not match the ontology, create a node and tag it with a best-fit cluster from the ontology.';
+    } else if (ontologyMode === 'novel_category') {
+      modeNote = 'Avoid mapping inputs to exact existing ontology node types; when the concept does not clearly match, generate a novel category and label it clearly (e.g., NEW-<name>) but still provide a best-fit cluster if possible.';
+    } else if (ontologyMode === 'exclude') {
+      modeNote = 'Do not use the canonical ontology mapping. Instead, produce a best-effort semantic workflow without referencing or requiring the provided ontology.';
+    }
 
-{
-  "nodes": [
-    {
-      "id": "node-1",
-      "type": "semantic",
-      "position": {"x": 100, "y": 100},
-      "data": {
-        "type": "PROP-STM",
-        "label": "Main Statement",
-        "content": "Extracted statement from text",
-        "metadata": {
-          "cluster": "PROP",
-          "tags": ["extracted", "atomic"]
-        }
+    // Build ontology text based on selection
+    let ontologyText = '';
+    if (includeOntology && ontologyMode !== 'exclude') {
+      // If selectedOntologies includes cluster codes, include those clusters; otherwise include a short listing of node types
+      const pick = Array.isArray(selectedOntologies) && selectedOntologies.length > 0;
+      const lines = [];
+      if (pick) {
+        // Try to include requested clusters or exact types
+        const sel = new Set(selectedOntologies.map(s => String(s).trim().toUpperCase()));
+        Object.entries(NODE_TYPES).forEach(([key, val]) => {
+          if (sel.has(key) || sel.has(val.cluster)) {
+            lines.push(`- ${key}: ${val.label} (${val.description}) [cluster=${val.cluster}]`);
+          }
+        });
       }
+      if (!pick || lines.length === 0) {
+        // Fallback: include a summarized listing of major node types (first 120 entries to avoid overly large prompts)
+        const all = Object.entries(NODE_TYPES).slice(0, 120).map(([key, val]) => `- ${key}: ${val.label} (${val.description}) [cluster=${val.cluster}]`);
+        lines.push(...all);
+      }
+      ontologyText = `Ontology Reference:\n${lines.join('\n')}`;
     }
-  ],
-  "edges": [
-    {
-      "id": "edge-1-2",
-      "source": "node-1",
-      "target": "node-2",
-      "data": {"condition": "implies"}
-    }
-  ]
-}
 
-Position nodes logically from left to right, top to bottom. Use appropriate semantic node types.`;
+    const userPrompt = (prompts.text2wf?.user || 'User specification:\n\n{{input}}').replace('{{input}}', textInput);
+    const ontologyPrompt = includeOntology && ontologyMode !== 'exclude' ? `\n\n${ontologyText}` : '';
 
-    const userPrompt = `Convert this text into a semantic workflow:\n\n${textInput}`;
+    // Messages order: system (header + mode), user (input), optional system (ontology)
+    const messages = [
+      { role: 'system', content: header + `\nMode: ${ontologyMode}\n${modeNote}` },
+      { role: 'user', content: userPrompt },
+    ];
+    if (ontologyPrompt) messages.push({ role: 'system', content: ontologyPrompt });
 
     try {
-      const response = await this.callProvider(providerId, model, apiKey, [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt },
-      ]);
+      const response = await this.callProvider(providerId, model, apiKey, messages);
 
       const workflowData = this.parseWorkflowFromAIResponse(
-        response.choices?.[0]?.message?.content || ''
+        response.choices?.[0]?.message?.content || response.output || ''
       );
       return {
         success: true,
@@ -132,6 +145,7 @@ Position nodes logically from left to right, top to bottom. Use appropriate sema
         metadata: {
           originalText: textInput,
           generatedBy: `${providerId} - ${model}`,
+          options: { includeOntology, ontologyMode, selectedOntologies },
           tokensUsed: response.usage,
         }
       };
@@ -153,24 +167,13 @@ Position nodes logically from left to right, top to bottom. Use appropriate sema
       apiKey
     } = executionSettings;
 
-    // First, convert workflow to selected format for structured prompting
-    const structuredWorkflow = this.formatWorkflowForPrompting(workflow, outputFormat);
+  // First, use a stripped, sanitized workflow for prompting so only user content is sent
+  const safeWorkflow = stripWorkflowUtil(workflow);
+  const structuredWorkflow = this.formatWorkflowForPrompting(safeWorkflow || workflow, outputFormat);
 
-    const systemPrompt = `You are a semantic logic workflow executor. Execute the provided workflow step by step.
-
-Workflow Format: ${outputFormat.toUpperCase()}
-Your task:
-1. Process each node in the workflow according to its semantic type
-2. Follow the logical connections between nodes
-3. Provide reasoning for each step
-4. Return results in the same ${outputFormat} format structure
-
-Available Node Types and Their Purposes:
-${Object.entries(NODE_TYPES).map(([key, value]) => `- ${key}: ${value.label} - ${value.description}`).join('\n')}
-
-Process the workflow systematically and provide detailed reasoning for each node.`;
-
-    const userPrompt = `Execute this semantic workflow:\n\n${structuredWorkflow}`;
+  const prompts = getPromptDefaults();
+  const systemPrompt = (prompts.execute?.system || `You are a semantic logic workflow executor. Execute the provided workflow step by step.`).replace('{{format}}', outputFormat.toUpperCase()) + `\n\nAvailable Node Types:\n${Object.entries(NODE_TYPES).map(([key, value]) => `- ${key}: ${value.label} - ${value.description}`).join('\n')}`;
+  const userPrompt = (prompts.execute?.user || `Execute this semantic workflow:\n\n{{workflow}}`).replace('{{workflow}}', structuredWorkflow);
 
     try {
       const response = await this.callProvider(providerId, model, apiKey, [
@@ -214,41 +217,33 @@ Process the workflow systematically and provide detailed reasoning for each node
       description: 'Generic text content provided by the user (not a canonical ontology type).',
     };
 
-    const enhancementPrompts = {
-      improve: `Improve and refine this semantic node while maintaining its logical purpose and type.`,
-      optimize: `Optimize this semantic node for clarity, precision, and logical coherence.`,
-      refactor: `Refactor this semantic node to be more structured and academically rigorous.`,
-      enhance: `Enhance this semantic node with richer vocabulary and more sophisticated reasoning.`,
-      simplify: `Simplify this semantic node while preserving its essential meaning and logical function.`,
-      elaborate: `Elaborate on this semantic node with additional detail and nuanced reasoning.`
+    const prompts = getPromptDefaults();
+    const enhancementMap = {
+      improve: 'Improve and refine this semantic node while maintaining its logical purpose and type.',
+      optimize: 'Optimize this semantic node for clarity, precision, and logical coherence.',
+      refactor: 'Refactor this semantic node to be more structured and academically rigorous.',
+      enhance: 'Enhance this semantic node with richer vocabulary and more sophisticated reasoning.',
+      simplify: 'Simplify this semantic node while preserving its essential meaning and logical function.',
+      elaborate: 'Elaborate on this semantic node with additional detail and nuanced reasoning.',
     };
 
-    const systemPrompt = `You are a semantic logic node enhancer. Your task is to ${enhancementType} semantic workflow nodes.
+    const baseSystem = prompts.enhance?.system || `You are a semantic logic node enhancer. Your task is to ${enhancementType} semantic workflow nodes.`;
+    const systemPrompt = `${baseSystem}\n\nNode Type: ${node.data.type || 'N/A'} (${nodeType.label})\nPurpose: ${nodeType.description}\nCluster: ${node.data?.metadata?.cluster || 'Unknown'}\nEnhancement Type: ${enhancementType}`;
 
-Node Type: ${node.data.type || 'N/A'} (${nodeType.label})
-Purpose: ${nodeType.description}
-Cluster: ${node.data?.metadata?.cluster || 'Unknown'}
-
-Guidelines:
-1. Maintain the node's semantic type and logical purpose
-2. Preserve the core meaning while improving expression
-3. Use appropriate academic and technical vocabulary
-4. Ensure the enhanced content fits the node's semantic category
-5. Return ONLY the enhanced content, no additional formatting
-
-Enhancement Type: ${enhancementType}`;
-
-    const userPrompt = `${enhancementPrompts[enhancementType] || enhancementPrompts.improve}
+    const userPrompt = (prompts.enhance?.user || '{{content}}').replace('{{content}}', serializeNodeForAI(node) || node.data.content || '');
+  // Replace the raw content with a sanitized serialization respecting declared fileFormat when available
+  const safeNodeContent = serializeNodeForAI(node) || node.data.content || '';
+  const safeUserPrompt = `${enhancementPrompts[enhancementType] || enhancementPrompts.improve}
 
 Original Node Content:
-"${node.data.content || 'No content provided'}"
+"${safeNodeContent}"
 
 Enhanced Content:`;
 
     try {
       const response = await this.callProvider(providerId, model, apiKey, [
         { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt },
+        { role: 'user', content: safeUserPrompt },
       ]);
 
       return {

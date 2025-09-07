@@ -35,7 +35,7 @@ const FieldRow = ({ idx, field, onChange, onRemove }) => {
 				onChange={(e)=>onChange(idx, { ...field, type: e.target.value })}
 				style={ui.select}
 			>
-				{['text','longText','number','boolean','enum','multiEnum','date','object','array','tags','file'].map(t => (
+				{['text','longText','number','boolean','enum','multiEnum','date','object','array','tags','file','fileFormat'].map(t => (
 					<option key={t} value={t}>{t}</option>
 				))}
 			</select>
@@ -72,6 +72,10 @@ const FieldRow = ({ idx, field, onChange, onRemove }) => {
 					<textarea aria-label={`Field ${idx} value`} value={typeof field.value === 'string' ? field.value : JSON.stringify(Array.isArray(field.value) ? field.value : [], null, 2)} onChange={(e)=>{ const el = e.target; el.style.height='auto'; el.style.height=`${Math.min(Math.max(el.scrollHeight, 80), 400)}px`; onChange(idx, { ...field, value: e.target.value }); }} placeholder="[]" style={ui.ta} />
 				) : field.type === 'file' ? (
 					<textarea aria-label={`Field ${idx} value`} value={Array.isArray(field.value) ? field.value.join('\n') : (field.value || '')} onChange={(e)=>{ const el = e.target; el.style.height='auto'; el.style.height=`${Math.min(Math.max(el.scrollHeight, 80), 400)}px`; onChange(idx, { ...field, value: e.target.value.split(/\n+/).map(x=>x.trim()).filter(Boolean) }); }} placeholder="One URL per line" style={ui.ta} />
+				) : field.type === 'fileFormat' ? (
+					<select aria-label={`Field ${idx} value`} value={field.value || 'markdown'} onChange={(e)=>onChange(idx, { ...field, value: e.target.value })} style={ui.select}>
+						{['markdown','json','yaml','xml'].map(fmt => (<option key={fmt} value={fmt}>{fmt}</option>))}
+					</select>
 				) : (
 					<input value={field.value ?? ''} onChange={(e)=>onChange(idx, { ...field, value: e.target.value })} style={ui.input} />
 				)}

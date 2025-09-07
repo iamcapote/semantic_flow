@@ -11,6 +11,8 @@ import { toast } from '@/components/ui/use-toast';
 import { useNavigate } from 'react-router-dom';
 import { subscribeWorkflowUpdates } from '@/lib/workflowBus';
 import { stringifyDSL } from '@/lib/dsl';
+import { stripWorkflow } from '@/lib/sanitizer';
+import ChatWorkflowPanel from '@/components/ChatWorkflowPanel';
 
 // Local bevel token helper (aligns w/ win95-plus.css without extra imports)
 const bevel = {
@@ -40,7 +42,8 @@ const ChatPage = ({ embedded = false }) => {
   const [temperature, setTemperature] = useState(() => parseFloat(sessionStorage.getItem('chat_temp') || '0.7'));
   const [isRightPanelOpen, setIsRightPanelOpen] = useState(true);
   const [renamingId, setRenamingId] = useState(null);
-  const [injectionMode, setInjectionMode] = useState(() => sessionStorage.getItem('wf_injection_mode') || 'none'); // none | system | first
+  const [injectionMode, setInjectionMode] = useState(() => sessionStorage.getItem('wf_injection_mode') || 'none'); // none | system | assistant | first
+  const [workflowSelectionMode, setWorkflowSelectionMode] = useState(() => sessionStorage.getItem('wf_selection_mode') || 'full'); // full | stripped
   const [workflow, setWorkflow] = useState(null);
   const [workflowDSL, setWorkflowDSL] = useState('');
   const [showWorkflowPreview, setShowWorkflowPreview] = useState(false);
@@ -60,6 +63,7 @@ const ChatPage = ({ embedded = false }) => {
     ];
   });
   const [showStaging, setShowStaging] = useState(true); // default open as requested
+  const [editingStageId, setEditingStageId] = useState(null);
   const [expandedWorkflow, setExpandedWorkflow] = useState(false);
   const abortControllerRef = useRef(null);
   const [lastPayload, setLastPayload] = useState(null);
@@ -72,6 +76,16 @@ const ChatPage = ({ embedded = false }) => {
 
   useEffect(() => { if (!apiKey) navigate('/'); }, [apiKey, navigate]);
 
+  // When provider selection changes, load the provider-specific key from SecureKeyManager
+  useEffect(() => {
+    try {
+      const k = SecureKeyManager.getApiKey(providerId) || '';
+      setApiKey(k);
+    } catch (e) {
+      // ignore
+    }
+  }, [providerId]);
+
   useEffect(() => { scrollAreaRef.current && (scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight); }, [conversations]);
 
   useEffect(() => {
@@ -82,7 +96,8 @@ const ChatPage = ({ embedded = false }) => {
   sessionStorage.setItem('chat_model', model);
   sessionStorage.setItem('active_provider', providerId);
     sessionStorage.setItem('chat_temp', String(temperature));
-    sessionStorage.setItem('wf_injection_mode', injectionMode);
+  sessionStorage.setItem('wf_injection_mode', injectionMode);
+  sessionStorage.setItem('wf_selection_mode', workflowSelectionMode);
     sessionStorage.setItem('staged_first', stagedFirst);
     sessionStorage.setItem('staged_second', stagedSecond);
     try { sessionStorage.setItem('staged_messages_v2', JSON.stringify(stagedMessages)); } catch {}
@@ -116,14 +131,24 @@ const ChatPage = ({ embedded = false }) => {
   }, [isStreaming]);
 
   const buildSystemPrompt = useCallback(() => {
-    if (injectionMode === 'system' && workflowDSL) return systemMessage + '\n\n[WORKFLOW DSL]\n' + workflowDSL;
+    if (!workflow) return systemMessage;
+    const safe = (() => { try { return stripWorkflow(workflow); } catch { return null; } })();
+    const chosen = workflowSelectionMode === 'full' ? workflow : safe;
+    if (injectionMode === 'system' && chosen) {
+      return systemMessage + '\n\n[WORKFLOW CONTEXT]\n' + JSON.stringify(chosen, null, 2);
+    }
     return systemMessage;
-  }, [injectionMode, workflowDSL, systemMessage]);
+  }, [injectionMode, workflow, systemMessage, workflowSelectionMode]);
 
   const buildInitialUserContent = useCallback((raw) => {
-    if (injectionMode === 'first' && workflowDSL) return '[WORKFLOW CONTEXT]\n' + workflowDSL + (raw ? '\n\n' + raw : '');
+    if (!workflow) return raw;
+    const safe = (() => { try { return stripWorkflow(workflow); } catch { return null; } })();
+    const chosen = workflowSelectionMode === 'full' ? workflow : safe;
+    if (injectionMode === 'first' && chosen) {
+      return '[WORKFLOW CONTEXT]\n' + JSON.stringify(chosen, null, 2) + (raw ? '\n\n' + raw : '');
+    }
     return raw;
-  }, [injectionMode, workflowDSL]);
+  }, [injectionMode, workflow, workflowSelectionMode]);
 
   const generateTitle = async (messages) => {
     try {
@@ -131,8 +156,9 @@ const ChatPage = ({ embedded = false }) => {
         .map(msg => `${msg.role}: ${msg.content}`)
         .join('\n');
 
-      const provider = sessionStorage.getItem('active_provider') || 'openai';
-      const data = await aiRouter.chatCompletion(provider, apiKey, {
+  const provider = sessionStorage.getItem('active_provider') || 'openai';
+  const key = SecureKeyManager.getApiKey(provider) || apiKey;
+  const data = await aiRouter.chatCompletion(provider, key, {
         model: sessionStorage.getItem(`default_model_${provider}`) || 'gpt-4o-mini',
         messages: [
           { role: 'system', content: 'Generate a short, concise title (3-5 words) for this conversation based on its main topic.' },
@@ -212,7 +238,7 @@ const ChatPage = ({ embedded = false }) => {
     setIsStreaming(true);
 
     try {
-  const provider = providerId;
+    const provider = providerId;
   const sys = buildSystemPrompt();
       const history = conversations[currentConversationIndex].messages;
       const assembledMessages = [ { role: 'system', content: sys }, ...prependMessages, ...history, userMessage ];
@@ -225,7 +251,8 @@ const ChatPage = ({ embedded = false }) => {
       setLastPayload(payload);
       const controller = new AbortController();
       abortControllerRef.current = controller;
-      const response = await fetchChatCompletionRaw(provider, apiKey, payload);
+    const requestKey = SecureKeyManager.getApiKey(provider) || apiKey;
+    const response = await fetchChatCompletionRaw(provider, requestKey, payload);
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
@@ -305,39 +332,80 @@ const ChatPage = ({ embedded = false }) => {
     if (userMsgs) coreSend(userMsgs.content);
   };
 
-  // Multi-role staged send: send all staged messages (system staged merges into systemMessage extension, non-empty assistant seeds before user) then open prompt
-  const sendStagedSequence = () => {
-    const active = stagedMessages.filter(m => m.content.trim());
-    if (!active.length) return;
-    const prepend = [];
-    active.forEach(m => {
-      if (m.role === 'system') {
-        // Merge into base system via temporary prepend
-        prepend.push({ role: 'system', content: m.content });
-      } else if (m.role === 'assistant') {
-        prepend.push({ role: 'assistant', content: m.content });
-      } else {
-        prepend.push({ role: 'user', content: buildInitialUserContent(m.content) });
-      }
+  // Ordering helpers
+  const roleOrder = ['system','assistant','user'];
+  const normalizeOrder = useCallback((arr) => arr.slice().sort((a,b) => roleOrder.indexOf(a.role) - roleOrder.indexOf(b.role)), []);
+  const relabel = useCallback((arr) => {
+    const counts = { system:0, assistant:0, user:0 };
+    return arr.map(m => {
+      counts[m.role] += 1;
+      const idx = counts[m.role];
+      let label;
+      if (m.role === 'system') label = idx === 1 ? 'System Prompt' : `System Stage ${idx}`;
+      else if (m.role === 'assistant') label = idx === 1 ? 'Assistant Seed' : `Assistant Stage ${idx}`;
+      else label = `User Stage ${idx}`;
+      return { ...m, label };
     });
-    // Final staged user content if last is user, we treat last user as 'rawUserInput' so history picks proper auto titling
-    const lastUser = [...active].reverse().find(m => m.role === 'user');
-    const lastUserContent = lastUser ? lastUser.content : '(staged sequence)';
-    coreSend(lastUserContent, { prependMessages: prepend.filter(pm => pm.content !== lastUserContent || pm.role !== 'user') });
+  }, []);
+  const enforce = useCallback((arr) => relabel(normalizeOrder(arr)), [normalizeOrder, relabel]);
+
+  useEffect(() => { setStagedMessages(prev => enforce(prev)); }, []); // initial
+
+  const sendStagedSequence = () => {
+    const ordered = enforce(stagedMessages).filter(m => m.content.trim());
+    const hasUser = ordered.some(m => m.role === 'user');
+    if (!hasUser) {
+      toast({ title: 'User message required', description: 'Cannot send staged context without a user message.', variant: 'destructive' });
+      return;
+    }
+    const systemMsgs = ordered.filter(m => m.role === 'system').map(m => ({ role:'system', content:m.content }));
+    const assistantMsgs = ordered.filter(m => m.role === 'assistant').map(m => ({ role:'assistant', content:m.content }));
+    const userMsgs = ordered.filter(m => m.role === 'user');
+    const lastUser = userMsgs[userMsgs.length - 1];
+    const userPrepend = userMsgs.slice(0,-1).map(u => ({ role:'user', content: buildInitialUserContent(u.content) }));
+    const prepend = [...systemMsgs, ...assistantMsgs, ...userPrepend];
+    coreSend(lastUser.content, { prependMessages: prepend });
   };
 
   const updateStaged = (id, content) => {
-    setStagedMessages(prev => prev.map(m => m.id === id ? { ...m, content } : m));
+    setStagedMessages(prev => enforce(prev.map(m => m.id === id ? { ...m, content } : m)));
   };
 
   const addStaged = (role) => {
-    const count = stagedMessages.filter(m => m.role === role).length;
-    const labelBase = role === 'system' ? 'System' : role === 'assistant' ? 'Assistant' : 'User';
-    setStagedMessages(prev => [...prev, { id: `${role}-${Date.now()}`, role, label: `${labelBase} Stage ${count + 1}`, content: '' }]);
+    setStagedMessages(prev => enforce([...prev, { id: `${role}-${Date.now()}`, role, label: '', content: '' }]));
   };
 
+  // Sync workflow content into staging area based on injection mode & selection
+  useEffect(() => {
+    if (!workflow) return;
+    if (injectionMode === 'none') return; // do not auto-populate
+    setStagedMessages(prev => {
+      const safe = (() => { try { return stripWorkflow(workflow); } catch { return null; } })();
+      const chosen = workflowSelectionMode === 'full' ? workflow : safe;
+      if (!chosen) return prev;
+      const json = JSON.stringify(chosen, null, 2);
+      let out = [...prev];
+      const ensure = (role, fallbackLabel) => {
+        if (!out.some(m => m.role === role)) out.push({ id: `${role}-${Date.now()}`, role, label: fallbackLabel, content: '' });
+      };
+      if (injectionMode === 'system') ensure('system','System Prompt');
+      if (injectionMode === 'assistant') ensure('assistant','Assistant Seed');
+      if (injectionMode === 'first') ensure('user','User Stage 1');
+      out = out.map(m => {
+        if (injectionMode === 'system' && m.role === 'system') return { ...m, content: json };
+        if (injectionMode === 'assistant' && m.role === 'assistant') return { ...m, content: json };
+        if (injectionMode === 'first' && m.role === 'user') {
+          const firstUser = out.filter(x => x.role==='user')[0];
+          if (firstUser && m.id === firstUser.id) return { ...m, content: json };
+        }
+        return m;
+      });
+      return enforce(out);
+    });
+  }, [workflow, injectionMode, workflowSelectionMode, enforce]);
+
   const removeStaged = (id) => {
-    setStagedMessages(prev => prev.filter(m => m.id !== id));
+    setStagedMessages(prev => enforce(prev.filter(m => m.id !== id)));
   };
 
   const containerClass = embedded ? 'w95-chat-container w-full h-full flex overflow-hidden' : 'w95-chat-container w-full h-screen flex overflow-hidden';
@@ -460,21 +528,26 @@ const ChatPage = ({ embedded = false }) => {
                     <button type="button" onClick={() => addStaged('user')} className={`text-[10px] px-2 py-1 bg-[var(--w95-face)] ${bevel.out} border-2`}>+User</button>
                   </div>
                 </div>
-                <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fill,minmax(200px,1fr))' }}>
-                  {stagedMessages.map(sm => (
+                <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fill,minmax(220px,1fr))' }}>
+                  {enforce(stagedMessages).map(sm => (
                     <div key={sm.id} className={`flex flex-col bg-[var(--w95-face)] ${bevel.out} border-2 p-1 text-black`}>
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-[10px] font-semibold uppercase tracking-wide">{sm.label}</span>
-                        <button type="button" onClick={() => removeStaged(sm.id)} className={`text-[10px] px-1 bg-[var(--w95-face)] ${bevel.out} border`} aria-label="Remove staged">×</button>
+                        <div className="flex gap-1">
+                          <button type="button" onClick={() => setEditingStageId(sm.id)} className={`text-[10px] px-1 bg-[var(--w95-face)] ${bevel.out} border`} aria-label="Edit staged">✎</button>
+                          <button type="button" onClick={() => updateStaged(sm.id, '')} className={`text-[10px] px-1 bg-[var(--w95-face)] ${bevel.out} border`} aria-label="Clear staged">⟳</button>
+                          <button type="button" onClick={() => removeStaged(sm.id)} className={`text-[10px] px-1 bg-[var(--w95-face)] ${bevel.out} border`} aria-label="Remove staged">×</button>
+                        </div>
                       </div>
-                      <textarea value={sm.content} onChange={(e) => updateStaged(sm.id, e.target.value)} rows={3} className={`text-[11px] resize-y outline-none bg-white ${bevel.in} border-2 text-black p-1`} placeholder={`${sm.role} message...`} />
-                      <div className="flex justify-end mt-1">
-                        <button type="button" disabled={!sm.content.trim() || isStreaming} onClick={(e) => handleSubmit(e, sm.content, { prependMessages: stagedMessages.filter(s => s.id !== sm.id && s.content.trim()).map(s => ({ role: s.role, content: s.content })) })} className={`text-[10px] px-2 py-0.5 bg-[var(--w95-face)] ${bevel.out} border-2 disabled:opacity-40`}>Send Solo</button>
+                      <textarea value={sm.content} onChange={(e) => updateStaged(sm.id, e.target.value)} rows={4} className={`text-[11px] resize-y outline-none bg-white ${bevel.in} border-2 text-black p-1`} placeholder={`${sm.role} message...`} />
+                      <div className="flex justify-between mt-1">
+                        <span className="text-[9px] opacity-60">{sm.content.length} ch</span>
+                        <button type="button" disabled={!sm.content.trim() || isStreaming} onClick={(e) => handleSubmit(e, sm.content, { prependMessages: enforce(stagedMessages).filter(s => s.id !== sm.id && s.content.trim()).map(s => ({ role: s.role, content: s.content })) })} className={`text-[10px] px-2 py-0.5 bg-[var(--w95-face)] ${bevel.out} border-2 disabled:opacity-40`}>Send Solo</button>
                       </div>
                     </div>
                   ))}
                 </div>
-                <button type="button" onClick={sendStagedSequence} disabled={isStreaming || !stagedMessages.some(m => m.content.trim())} className={`text-[11px] px-3 py-1 bg-[var(--w95-face)] ${bevel.out} border-2 disabled:opacity-40 self-start`}>Send Sequence</button>
+                <button type="button" onClick={sendStagedSequence} disabled={isStreaming || !stagedMessages.some(m => m.role === 'user' && m.content.trim())} className={`text-[11px] px-3 py-1 bg-[var(--w95-face)] ${bevel.out} border-2 disabled:opacity-40 self-start`}>Send Sequence</button>
               </div>
             )}
             {showPayload && lastPayload && (
@@ -517,26 +590,18 @@ const ChatPage = ({ embedded = false }) => {
               <fieldset className="text-[11px]">
                 <legend className="font-semibold">Injection Mode</legend>
                 <div className="flex flex-col gap-1 mt-1">
-                  {['none','system','first'].map(mode => (
+                  {['none','system','assistant','first'].map(mode => (
                     <label key={mode} className="flex items-center gap-2 cursor-pointer">
                       <input type="radio" name="wf-injection" value={mode} checked={injectionMode === mode} onChange={(e) => setInjectionMode(e.target.value)} aria-label={`Injection mode ${mode}`} />
-                      <span className="capitalize">{mode === 'first' ? 'First Message' : mode}</span>
+                      <span className="capitalize">{mode === 'first' ? 'First User' : mode}</span>
                     </label>
                   ))}
                 </div>
               </fieldset>
-              <div className="flex gap-2 flex-wrap">
-                <button type="button" onClick={() => setShowWorkflowPreview(!showWorkflowPreview)} className={`flex-1 text-[11px] px-2 py-1 bg-[var(--w95-face)] ${bevel.out} border-2`}>{showWorkflowPreview ? 'Hide DSL' : 'Preview DSL'}</button>
-                <button type="button" onClick={() => setExpandedWorkflow(true)} disabled={!workflowDSL} className={`text-[11px] px-2 py-1 bg-[var(--w95-face)] ${bevel.out} border-2 disabled:opacity-40 flex items-center gap-1`}><Layers className="w-3 h-3" />Full</button>
-                <button type="button" onClick={() => navigator.clipboard.writeText(workflowDSL)} disabled={!workflowDSL} className={`text-[11px] px-2 py-1 bg-[var(--w95-face)] ${bevel.out} border-2 disabled:opacity-40`}>Copy</button>
-              </div>
-              {showWorkflowPreview && (
-                <div className={`bg-white max-h-40 overflow-auto mt-1 text-[10px] leading-4 whitespace-pre ${bevel.in} border-2 p-1`} aria-label="Workflow DSL preview">{workflowDSL || 'No workflow broadcast yet.'}</div>
-              )}
-              <div className="text-[10px] opacity-70 leading-4">System Preface staging block (if provided) augments base system prompt; workflow DSL included per injection selection.</div>
+              <ChatWorkflowPanel workflow={workflow} onCopy={txt => navigator.clipboard.writeText(txt)} onSelectionChange={setWorkflowSelectionMode} />
             </div>
             {/* Legacy single-stage inputs removed per request; multi-stage composer is default now */}
-            <div className={`p-2 text-[10px] leading-4 bg-[var(--w95-face)] ${bevel.out} border-2`}>Workflow inject modes: None | System (prepend DSL) | First (DSL in first user). Multi-stage composer (below input) is the primary staging tool.</div>
+            <div className={`p-2 text-[10px] leading-4 bg-[var(--w95-face)] ${bevel.out} border-2`}>Workflow inject modes: None | System (system stage) | Assistant (assistant seed stage) | First (first user stage). Full/Stripped selection controls injected JSON content.</div>
           </div>
           )}
           <button onClick={toggleRightPanel} className={`absolute top-2 ${isRightPanelOpen ? 'right-[288px]' : 'right-0'} w-6 h-12 bg-[var(--w95-face)] ${bevel.out} border-2 flex items-center justify-center text-xs transition-all`} aria-label={isRightPanelOpen ? 'Collapse right panel' : 'Expand right panel'}>
@@ -564,6 +629,27 @@ const ChatPage = ({ embedded = false }) => {
               {workflowDSL || 'No workflow broadcast.'}
             </div>
           </div>
+        </div>
+      )}
+      {editingStageId && (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center" role="dialog" aria-modal="true" aria-label="Edit staged message modal">
+          <div className="absolute inset-0 bg-[#00000088]" onClick={() => setEditingStageId(null)} />
+          {(() => { const sm = stagedMessages.find(s => s.id === editingStageId); if (!sm) return null; return (
+            <div className={`relative w-[70vw] h-[60vh] flex flex-col bg-[var(--w95-face)] ${bevel.out} border-2 p-2`}>
+              <div className="flex items-center justify-between mb-2">
+                <div className="font-bold text-sm">Edit: {sm.label}</div>
+                <div className="flex gap-2">
+                  <button onClick={() => { updateStaged(sm.id, ''); }} className={`text-[11px] px-2 py-1 bg-[var(--w95-face)] ${bevel.out} border-2`}>Clear</button>
+                  <button onClick={() => setEditingStageId(null)} className={`text-[11px] px-2 py-1 bg-[var(--w95-face)] ${bevel.out} border-2`}>Close</button>
+                </div>
+              </div>
+              <textarea value={sm.content} onChange={(e) => updateStaged(sm.id, e.target.value)} className={`flex-1 w-full resize-none outline-none bg-white ${bevel.in} border-2 p-2 text-[12px] font-mono`} />
+              <div className="mt-2 flex gap-2">
+                <button disabled={!sm.content.trim() || isStreaming} onClick={(e) => { handleSubmit(e, sm.content, { prependMessages: enforce(stagedMessages).filter(s => s.id !== sm.id && s.content.trim()).map(s => ({ role: s.role, content: s.content })) }); setEditingStageId(null); }} className={`text-[11px] px-3 py-1 bg-[var(--w95-face)] ${bevel.out} border-2 disabled:opacity-40`}>Send Solo</button>
+                <button disabled={isStreaming || !stagedMessages.some(m => m.role === 'user' && m.content.trim())} onClick={() => { sendStagedSequence(); setEditingStageId(null); }} className={`text-[11px] px-3 py-1 bg-[var(--w95-face)] ${bevel.out} border-2 disabled:opacity-40`}>Send Sequence</button>
+              </div>
+            </div>
+          ); })()}
         </div>
       )}
     </div>

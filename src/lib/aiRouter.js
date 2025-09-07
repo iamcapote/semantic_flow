@@ -24,6 +24,56 @@ const DEFAULTS = {
   },
 };
 
+// Default system/user prompt templates for AI Functions (editable by user via Router UI)
+const DEFAULT_PROMPTS = {
+  text2wf: {
+    system: `You are a semantic logic workflow converter. Your job is to convert the user's free-form specification into a structured workflow composed of the canonical semantic node ontology used by the system.\n\nInstructions:\n1) Analyze the input and extract atomic statements, hypotheses, evidence, reasoning steps, goals, and control points.\n2) Map extracted items to appropriate ontology node types when possible.\n3) Create edges that represent logical or causal flow.\n4) Return ONLY valid JSON with top-level { nodes: [...], edges: [...] } using node.data.type values from the ontology.`,
+    user: `User specification:\n\n{{input}}`,
+    // allow engine to append dynamic ontology reference by default
+    appendOntology: true,
+  },
+  execute: {
+    system: `You are a semantic logic workflow executor. Execute the provided workflow step by step.\n\nWorkflow Format: {{format}}\nYour task:\n1. Process each node in the workflow according to its semantic type\n2. Follow the logical connections between nodes\n3. Provide reasoning for each step\n4. Return results in the same format structure.`,
+    user: `Execute this semantic workflow:\n\n{{workflow}}`,
+  },
+  enhance: {
+    system: `You are a semantic logic node enhancer. Your job is to improve, optimize or refactor a single semantic node's content while preserving its logical purpose and type.\n\nGuidelines:\n1. Maintain the node's semantic type and logical purpose\n2. Preserve the core meaning while improving expression\n3. Use appropriate technical vocabulary\n4. Return ONLY the enhanced content, no additional formatting.`,
+    user: `Enhance this node content:\n\n{{content}}`,
+  },
+};
+
+const PROMPT_KEY = 'ai_prompt_defaults_v1';
+
+export function getPromptDefaults() {
+  try {
+    const raw = typeof window !== 'undefined' ? localStorage.getItem(PROMPT_KEY) : null;
+    if (!raw) return DEFAULT_PROMPTS;
+    const parsed = JSON.parse(raw);
+    // shallow merge
+    return {
+      text2wf: { ...DEFAULT_PROMPTS.text2wf, ...(parsed.text2wf || {}) },
+      execute: { ...DEFAULT_PROMPTS.execute, ...(parsed.execute || {}) },
+      enhance: { ...DEFAULT_PROMPTS.enhance, ...(parsed.enhance || {}) },
+    };
+  } catch (e) {
+    return DEFAULT_PROMPTS;
+  }
+}
+
+export function publishPromptDefaults(overrides) {
+  try {
+    const next = {
+      text2wf: { ...(overrides.text2wf || {}) },
+      execute: { ...(overrides.execute || {}) },
+      enhance: { ...(overrides.enhance || {}) },
+    };
+    if (typeof window !== 'undefined') localStorage.setItem(PROMPT_KEY, JSON.stringify(next));
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
 function getBase(providerId) {
   const key = `base_url_${providerId}`;
   const override = typeof window !== 'undefined' ? sessionStorage.getItem(key) : null;

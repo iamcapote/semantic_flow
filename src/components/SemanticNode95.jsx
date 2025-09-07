@@ -164,7 +164,9 @@ const SemanticNode95 = ({ id, data, isConnectable, selected, onNodeUpdate }) => 
     }
     if (typeof r.description === 'string') data.description = r.description;
     if (typeof r.content === 'string') data.content = r.content;
-    data.language = contentFormat;
+  // prefer explicit fileFormat field if present
+  data.fileFormat = r.fileFormat || contentFormat;
+  data.language = data.fileFormat || contentFormat;
     data.fields = [...fields];
     if (isBlankNode) {
       data.type = editType;
