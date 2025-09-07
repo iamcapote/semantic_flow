@@ -7,14 +7,46 @@ const win98 = {
   app: { minHeight: '100vh', background: '#008080', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 },
   window: { width: 920, maxWidth: '95vw', background: '#c0c0c0', color: '#000', border: '2px solid #808080', boxShadow: '4px 4px 0 #000' },
   title: { height: 28, background: '#000080', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 8px', fontWeight: 700 },
-  menu: { height: 28, display: 'flex', alignItems: 'center', gap: 12, padding: '0 8px', borderTop: '2px solid #fff', borderLeft: '2px solid #fff', borderRight: '2px solid #6d6d6d', borderBottom: '2px solid #6d6d6d', background: '#c0c0c0' },
+  menu: { height: 24, display: 'flex', alignItems: 'stretch', gap: 2, padding: '0 4px', borderTop: '2px solid #fff', borderLeft: '2px solid #fff', borderRight: '2px solid #6d6d6d', borderBottom: '2px solid #6d6d6d', background: '#c0c0c0', fontSize: 12 },
+  menuItem: { padding: '0 10px', display: 'flex', alignItems: 'center', cursor: 'default', userSelect: 'none', border: '1px solid transparent' },
+  menuItemHover: { border: '1px solid #808080', background: '#000080', color: '#fff' },
   body: { padding: 12, display: 'grid', gap: 12, gridTemplateColumns: '1fr 1fr' },
   panel: { background: '#fff', border: '2px solid #808080', boxShadow: '2px 2px 0 #000', padding: 12, minHeight: 220 },
-  btn: { background: '#C0C0C0', border: '1px solid #808080', boxShadow: 'inset -1px -1px 0 #FFF, inset 1px 1px 0 #000', padding: '6px 10px', cursor: 'pointer' },
+  btn: { background: '#C0C0C0', border: '1px solid #808080', boxShadow: 'inset -1px -1px 0 #FFF, inset 1px 1px 0 #000', padding: '6px 10px', cursor: 'pointer', fontSize: 13 },
+  btnBlock: { width: '100%', fontWeight: 600, textAlign: 'center' },
+  windowBtn: { width: 22, height: 20, lineHeight: '18px', padding: 0, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' },
   head: { background: '#000080', color: '#fff', padding: '4px 6px', fontWeight: 700, margin: '-12px -12px 12px -12px' },
   field: { display: 'grid', gap: 6 },
   foot: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 8, borderTop: '1px solid #808080' }
 };
+
+function MenuItem({ label }) {
+  const [hover, setHover] = useState(false);
+  return (
+    <div
+      style={{ ...(win98.menuItem), ...(hover ? win98.menuItemHover : {}) }}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+    >
+      {label}
+    </div>
+  );
+}
+
+function WindowBtn({ children, aria }) {
+  const [pressed, setPressed] = useState(false);
+  return (
+    <button
+      aria-label={aria}
+      style={{ ...win98.btn, ...win98.windowBtn, boxShadow: pressed ? 'inset 1px 1px 0 #000, inset -1px -1px 0 #FFF' : win98.btn.boxShadow }}
+      onMouseDown={() => setPressed(true)}
+      onMouseUp={() => setPressed(false)}
+      onMouseLeave={() => setPressed(false)}
+    >
+      {children}
+    </button>
+  );
+}
 
 export default function LandingPage({ onApiKeySet }) {
   const [showProviderSetup, setShowProviderSetup] = useState(false);
@@ -32,17 +64,17 @@ export default function LandingPage({ onApiKeySet }) {
         <div style={win98.title}>
           <span>Semantic Flow — Windows 95 Setup</span>
           <div style={{ display: 'flex', gap: 4 }}>
-            <button style={win98.btn} aria-label="min">_</button>
-            <button style={win98.btn} aria-label="max">□</button>
-            <button style={win98.btn} aria-label="close">X</button>
+            <WindowBtn aria="min">_</WindowBtn>
+            <WindowBtn aria="max">□</WindowBtn>
+            <WindowBtn aria="close">X</WindowBtn>
           </div>
         </div>
         <div style={win98.menu}>
-          <span>File</span>
-          <span>Edit</span>
-          <span>View</span>
-          <span>Help</span>
-          <span style={{ marginLeft: 'auto', fontSize: 12, opacity: 0.7 }}>{user ? `Signed in as ${user.username}` : 'Not signed in'}</span>
+          <MenuItem label="File" />
+          <MenuItem label="Edit" />
+          <MenuItem label="View" />
+          <MenuItem label="Help" />
+          <div style={{ marginLeft: 'auto', display:'flex', alignItems:'center', padding:'0 4px', opacity:0.75 }}>{user ? `Signed in as ${user.username}` : 'Not signed in'}</div>
         </div>
         <div style={win98.body}>
           {/* Brand / App info (spans two columns) */}
@@ -73,28 +105,32 @@ export default function LandingPage({ onApiKeySet }) {
               </div>
             </div>
           </div>
-          {/* Discourse SSO */}
+          {/* BIThub SSO (condensed) */}
           <div style={win98.panel}>
-            <div style={win98.head}>Discourse SSO (Example)</div>
-            <div style={{ fontSize: 13, lineHeight: 1.4, marginBottom: 12 }}>
-              Sign in via hub.bitwiki.org to unlock personas, seeds, and shared context. Additional SSO providers can be enabled server‑side.
+            <div style={win98.head}>Connect to BIThub</div>
+            <div style={{ background:'#f7f7f7', border:'1px solid #808080', padding:8, marginBottom:10, fontSize:12, lineHeight:1.45 }}>
+              <div style={{ fontWeight:700, marginBottom:4 }}>Single sign‑on workspace sync</div>
+              Use your BIThub account (<span style={{ fontFamily:'monospace' }}>hub.bitwiki.org</span>) to pull Personas, project Seeds, and Discourse‑linked threads into this session. Approval happens on BIThub, then you return with a scoped session. Secrets & SSO keys stay server‑side; nothing is persisted beyond the session.
+              <div style={{ marginTop:6, fontSize:11, opacity:0.85 }}>Benefits: instant prefs • shared memory layer • identity continuity.</div>
             </div>
             <div style={win98.field}>
-              <div style={{ fontSize: 12, opacity: 0.8 }}>Provider: https://hub.bitwiki.org</div>
-              <button style={win98.btn} onClick={login}>Sign in with Discourse</button>
+              <button style={{ ...win98.btn, ...win98.btnBlock }} onClick={login}>Login with BIThub</button>
             </div>
-            <div style={{ marginTop: 12, fontSize: 11, opacity: 0.7 }}>Secret is configured on the server and never exposed to the client.</div>
           </div>
 
-      {/* BYOK */}
+          {/* BYOK */}
           <div style={win98.panel}>
-    <div style={win98.head}>Bring Your Own Keys</div>
+            <div style={win98.head}>Bring Your Own Keys</div>
             {!showProviderSetup ? (
               <>
-                <div style={{ fontSize: 13, lineHeight: 1.4, marginBottom: 12 }}>
-      Configure model & tool providers (OpenAI, OpenRouter, Venice, etc.) to run the canvas without SSO. Keys are session-only and encrypted.
+                <div style={{ background:'#f7f7f7', border:'1px solid #808080', padding:8, marginBottom:10, fontSize:12, lineHeight:1.45 }}>
+                  <div style={{ fontWeight:700, marginBottom:4 }}>Local provider control</div>
+                  Add API keys for OpenAI, OpenRouter, Venice, Nous, Morpheus (and more) to drive AI assist, conversions, and execution. Keys are encrypted & session‑only (cleared on refresh/logout). Mix SSO context with BYOK models—or run fully offline from local storage.
+                  <div style={{ marginTop:6, fontSize:11, opacity:0.85 }}>Supports: multi‑provider switching • custom models • prompt templates.</div>
                 </div>
-        <button style={win98.btn} onClick={() => setShowProviderSetup(true)}>Configure Providers…</button>
+                <div style={win98.field}>
+                  <button style={{ ...win98.btn, ...win98.btnBlock }} onClick={() => setShowProviderSetup(true)}>Configure Providers…</button>
+                </div>
               </>
             ) : (
               <div style={{ background: '#f5f5f5', border: '1px solid #808080', padding: 8 }}>
@@ -106,7 +142,7 @@ export default function LandingPage({ onApiKeySet }) {
         <div style={win98.foot}>
           <div style={{ fontSize: 12 }}>Tip: You can switch between SSO and BYOK anytime from Router settings.</div>
           <div>
-            <button style={win98.btn} onClick={() => navigate('/')}>Enter App</button>
+            <button style={{ ...win98.btn, ...win98.btnBlock, minWidth:120 }} onClick={() => navigate('/')}>Enter App</button>
           </div>
         </div>
       </div>

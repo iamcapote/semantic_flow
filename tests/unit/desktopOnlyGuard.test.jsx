@@ -24,6 +24,8 @@ jest.mock('../../src/utils/debugNav', () => ({
 jest.mock('../../src/pages/Win95Suite', () => () => <div>Win95Suite</div>);
 jest.mock('../../src/pages/LearnPage', () => () => <div>LearnPage</div>);
 jest.mock('../../src/pages/LandingPage', () => ({ onApiKeySet }) => <button onClick={() => onApiKeySet?.()}>LandingPage</button>);
+// Mock Docs panel (raw markdown imports cause ENOENT under Jest)
+jest.mock('../../src/components/DocsPanel95', () => () => <div>DocsPanel95</div>);
 
 const setWidth = (w) => {
   Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: w });

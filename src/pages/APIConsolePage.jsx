@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import DiscourseViewer from '@/components/DiscourseViewer';
 import { SecureKeyManager } from '@/lib/security';
 import aiRouter, { publishSettings as publishAIRouterSettings, getPromptDefaults, publishPromptDefaults } from '@/lib/aiRouter';
 import PromptingEngine from '@/lib/promptingEngine';
@@ -122,6 +123,7 @@ export default function APIConsolePage() {
 
   // Features (Advanced toggle)
   const [features, setFeatures] = useState({ advanced: false, discourseTab: true });
+  const [showDiscourseViewer, setShowDiscourseViewer] = useState(false);
 
   // AI Functions (PromptingEngine) state
   const [aiTab, setAiTab] = useState('text2wf'); // 'text2wf' | 'execute' | 'enhance'
@@ -773,6 +775,18 @@ export default function APIConsolePage() {
                     </div>
                   </div>
 
+                  {/* Discourse Viewer Link (only when discourse provider active) */}
+                  {activeProvider === 'discourse' && (
+                    <div className="mt-4 text-xs">
+                      <div className="font-semibold mb-1">Viewer</div>
+                      <div className="mb-2 opacity-80 leading-snug">Browse Discourse in-place without leaving the Router console. Read‑only.</div>
+                      <div className="flex gap-2">
+                        <button onClick={()=>setShowDiscourseViewer(v=>!v)} className={`${win95.button} ${win95.outset} text-sm ${showDiscourseViewer?'':'bg-[#000080] text-white'} flex-1`}>{showDiscourseViewer ? 'Hide Viewer' : 'Show Viewer'}</button>
+                        <button onClick={()=>{ window.location.href='/discourse'; }} className={`${win95.button} ${win95.outset} text-sm flex-1`}>Full Page…</button>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Endpoints (advanced)
                       keep as a quick list with Use action */}
                   {features.advanced && (
@@ -1190,6 +1204,18 @@ export default function APIConsolePage() {
                 </div>
               </div>
             </div>
+
+            {/* Embedded Discourse Viewer (when discourse provider selected) */}
+            {activeProvider === 'discourse' && showDiscourseViewer && (
+              <div className={`col-span-12 ${win95.panel} ${win95.outset}`}>
+                <div className={win95.title}>Discourse Viewer (Embedded)</div>
+                <div className={`${win95.inset} p-0 bg-[var(--w95-face)]`}> 
+                  <div className="h-[640px] overflow-hidden">
+                    <DiscourseViewer embedded />
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Bottom: History Carousel (Advanced) */}
             {features.advanced && (

@@ -1,3 +1,4 @@
+import 'dotenv/config'; // Load environment variables from .env before reading them
 import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
@@ -251,12 +252,23 @@ export function createApp() {
     throw lastErr || new Error('fetch_failed');
   }
 
-  async function discourseGet(pathname) {
+  function getSessionUser(req) {
+    try {
+      const token = req.cookies?.sf_session;
+      if (!token) return null;
+      const payload = verifySession(token);
+      return payload?.user || null;
+    } catch { return null; }
+  }
+
+  async function discourseGet(pathname, req) {
     const url = `${DISCOURSE_BASE_URL}${pathname}`;
     const headers = { 'Accept': 'application/json' };
     if (API_KEY && API_KEY !== 'change-me') {
       headers['Api-Key'] = API_KEY;
-      headers['Api-Username'] = 'system';
+      // Impersonate session user if available per architecture (Api-Username=session.username)
+      const su = req ? getSessionUser(req) : null;
+      headers['Api-Username'] = su?.username || 'system';
     }
     const r = await fetchWithRetry(url, { headers });
     if (!r.ok) {
@@ -266,14 +278,15 @@ export function createApp() {
     return r.json();
   }
 
-  async function discoursePost(pathname, body) {
+  async function discoursePost(pathname, body, req) {
     if (!API_KEY || API_KEY === 'change-me') throw new Error('admin_key_missing');
     const url = `${DISCOURSE_BASE_URL}${pathname}`;
     const headers = {
       'Accept': 'application/json',
       'Content-Type': 'application/json',
       'Api-Key': API_KEY,
-      'Api-Username': 'system',
+      // Use session user if available (writes will still be authorized by Discourse ACLs)
+      'Api-Username': (req && getSessionUser(req)?.username) || 'system',
     };
     const r = await fetchWithRetry(url, { method: 'POST', headers, body: JSON.stringify(body || {}) });
     if (!r.ok) {
@@ -287,7 +300,7 @@ export function createApp() {
   app.get('/api/discourse/latest', async (req, res) => {
     try {
       const page = Number(req.query.page || 0);
-      const data = await discourseGet(`/latest.json?page=${page}`);
+      const data = await discourseGet(`/latest.json?page=${page}`, req);
       return res.json(data);
     } catch (e) {
       return res.status(502).json({ error: 'proxy_failed' });
@@ -298,7 +311,7 @@ export function createApp() {
   app.get('/api/discourse/topic/:id', async (req, res) => {
     try {
       const id = encodeURIComponent(req.params.id);
-      const data = await discourseGet(`/t/${id}.json`);
+      const data = await discourseGet(`/t/${id}.json`, req);
       return res.json(data);
     } catch (e) {
       return res.status(502).json({ error: 'proxy_failed' });
@@ -308,8 +321,14 @@ export function createApp() {
   // PM inbox for a username (read-only)
   app.get('/api/discourse/pm/:username', async (req, res) => {
     try {
+      // Username parity guard: only allow session user to access their own PM inbox
+      const sessionUser = getSessionUser(req);
+      if (!sessionUser) return res.status(401).json({ error: 'unauthenticated' });
+      if (String(req.params.username) !== String(sessionUser.username)) {
+        return res.status(403).json({ error: 'username_mismatch' });
+      }
       const u = encodeURIComponent(req.params.username);
-      const data = await discourseGet(`/topics/private-messages/${u}.json`);
+      const data = await discourseGet(`/topics/private-messages/${u}.json`, req);
       return res.json(data);
     } catch (e) {
       return res.status(502).json({ error: 'proxy_failed' });
@@ -382,12 +401,12 @@ export function createApp() {
         'Seed initialized by Semantic Flow.',
       ].join('\n');
 
-      const created = await discoursePost('/posts', {
+  const created = await discoursePost('/posts', {
         title,
         raw: bodyFrontMatter,
         category: Number(category_id),
         tags,
-      });
+  }, req);
       return res.json({ ok: true, topic: created?.topic });
     } catch (e) {
       const msg = String(e.message || e);
@@ -403,10 +422,10 @@ export function createApp() {
       const seedTopicId = req.params.seedTopicId;
       if (!pm_topic_id || !seedTopicId) return res.status(400).json({ error: 'missing_params' });
       const seedUrl = `${DISCOURSE_BASE_URL}/t/${encodeURIComponent(seedTopicId)}`;
-      const created = await discoursePost('/posts', {
+  const created = await discoursePost('/posts', {
         topic_id: Number(pm_topic_id),
         raw: `Attaching context seed: ${seedUrl}`,
-      });
+  }, req);
       return res.json({ ok: true, post: created });
     } catch (e) {
       const msg = String(e.message || e);
@@ -421,7 +440,7 @@ export function createApp() {
       const category_id = req.query.category_id;
       const tags = (req.query.tags || '').split(',').filter(Boolean);
       if (!category_id) return res.status(400).json({ error: 'missing_category' });
-      const data = await discourseGet(`/latest.json?category_id=${encodeURIComponent(category_id)}`);
+  const data = await discourseGet(`/latest.json?category_id=${encodeURIComponent(category_id)}`, req);
       let topics = data?.topic_list?.topics || [];
       if (tags.length) topics = topics.filter((t) => Array.isArray(t.tags) && tags.every((tg) => t.tags.includes(tg)));
       return res.json({ topics });
@@ -438,7 +457,7 @@ export function createApp() {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
       };
-      if (API_KEY && API_KEY !== 'change-me') { headers['Api-Key'] = API_KEY; headers['Api-Username'] = 'system'; }
+  if (API_KEY && API_KEY !== 'change-me') { headers['Api-Key'] = API_KEY; headers['Api-Username'] = (getSessionUser(req)?.username) || 'system'; }
       const upstream = await fetchWithRetry(url, { method: 'POST', headers, body: JSON.stringify(req.body || {}) });
       const text = await upstream.text();
       res.status(upstream.status);
@@ -457,7 +476,7 @@ export function createApp() {
         'Accept': 'text/event-stream',
         'Content-Type': 'application/json',
       };
-      if (API_KEY && API_KEY !== 'change-me') { headers['Api-Key'] = API_KEY; headers['Api-Username'] = 'system'; }
+  if (API_KEY && API_KEY !== 'change-me') { headers['Api-Key'] = API_KEY; headers['Api-Username'] = (getSessionUser(req)?.username) || 'system'; }
       const upstream = await fetch(url, { method: 'POST', headers, body: JSON.stringify(req.body || {}) });
       res.setHeader('Content-Type', 'text/event-stream');
       res.setHeader('Cache-Control', 'no-cache, no-transform');
@@ -479,9 +498,9 @@ export function createApp() {
   });
 
   // Personas list proxy (best-effort; returns [] if plugin/endpoint unavailable)
-  app.get('/api/ai/personas', async (_req, res) => {
+  app.get('/api/ai/personas', async (req, res) => {
     const headers = { 'Accept': 'application/json' };
-    if (API_KEY && API_KEY !== 'change-me') { headers['Api-Key'] = API_KEY; headers['Api-Username'] = 'system'; }
+    if (API_KEY && API_KEY !== 'change-me') { headers['Api-Key'] = API_KEY; headers['Api-Username'] = (getSessionUser(req)?.username) || 'system'; }
     async function tryPath(path) {
       try {
         const r = await fetchWithRetry(`${DISCOURSE_BASE_URL}${path}`, { headers });

@@ -1,521 +1,283 @@
-# Semantic Flow Discourse Integration Service
-
-This document outlines the planned Node.js service used by Semantic Flow for Discourse-powered collaboration.
-
-## Overview
-- **System of record:** Discourse hosts conversations, context seeds, and persona data.
-- **Service role:** Semantic Fow is an API layer that synchronises chats/PMs, manages persona metadata, and relays AI requests.
-- **Storage:** Only cache and minimal app metadata are persisted in the service; Discourse retains all content.
-- Essentially it uses Discourse API to send the AI calls instead of OpenAI or Open Router or Venice.
-
-## Authentication
-- Primary auth for users: Discourse Connect (SSO) via hub.bitwiki.org.
-- Server signs/validates SSO payloads; client never sees the SSO secret.
-- Session stored in httpOnly cookie `sf_session` (JWT signed with API_KEY). CSRF double-submit cookie `sf_csrf` for POST.
-- Admin key optional, used only for read proxy in v1.
+Discourse × AI App — Architecture and Implementation
+1) System model
 
-### SSO
-- Start: GET /api/sso/login → server builds base64 payload `nonce` + `return_sso_url`, signs HMAC-SHA256 with secret. Redirects to Discourse `/session/sso_provider`.
-- Callback: GET /api/sso/callback?sso&sig → server verifies signature and nonce, extracts user profile, sets cookies, redirects to `/discourse`.
-- Cookies: `sf_session` (httpOnly), `sf_csrf` (readable). Logout requires `x-csrf-token` header matching cookie.
-- Authenticated users see the Discourse tab; unauthenticated users see a login CTA.
+Identity: DiscourseConnect SSO. Map {app_user_id ↔ discourse_username} at login.
 
-## API Usage
-- Uses Private messages with personas. 
-- Posts into all possible categories and some are private categgories that activate ai workflows or can be used as contextual seeds.
+Authority: One server-only admin API key. Impersonate with Api-Username=<discourse_username>.
 
-Implemented server endpoints (v1.1, wired to unified Win95 UI tabs):
-- Read-only proxies:
-  - GET /api/discourse/latest?page=
-  - GET /api/discourse/topic/:id
-  - GET /api/discourse/pm/:username (user PM inbox)
-- Seeds lifecycle:
-  - POST /api/discourse/seed { title, category_id, tags[], raw?, idempotencyKey? }
-  - POST /api/discourse/seed/:seedTopicId/attach { pm_topic_id }
-  - GET /api/discourse/seeds?category_id=..&tags=a,b
-- Webhooks:
-  - POST /api/webhooks/discourse (HMAC verified via x-discourse-event-signature)
+Boundary: The server is the only caller of Discourse. Browsers never see keys or upstream URLs.
 
-Status notes (2025-09-01):
-- Unified UI: Discourse tab is SSO-gated inside Win95 Suite. Landing page offers SSO vs BYOK.
-- Proxies for latest/topic/PM and AI personas/stream are active; seeds lifecycle create/attach/index implemented.
-- SSE: /api/events broadcasts webhook projections; client auto-refreshes latest/PMs/topic when relevant.
-- Next: add cache warmers, persona sync job, and minimal seed indexer cache with TTL.
+Surfaces: Topics, Posts, PMs, Chat, AI, Automation, Tags, Categories, Users, Badges, Groups, Search, Revisions, Data Explorer, Solved.
 
-## Context Seeds
-- Seeds are reference topics located in dedicated private category; topic body contains JSON front‑matter and links.
-- Endpoint sketch:
-  - `createSeed(topic in Category X, tags Y)`
-  - `attachSeedToPM(topic_id)`
-  - `indexSeed(metadata cache)`
-- Idempotency enforced via `external_id` and custom topic fields.
-- Makes Discourse an API and contextual engine.
+2) Hard isolation guarantees (single key)
 
-## Webhooks
-- Subscriptions:
-  - `post_created`
-  - `topic_created`/`topic_updated`
-  - `user_events`
-  - `chat_message_created`
-- Handler pipeline: validate → dedupe → update cache → emit SSE/WebSocket events to the web client.
-  - Current: HMAC validation + logging stub; cache + SSE planned.
+Enforce all four:
 
-## Observability & Security
-- Structured logs per request with request hash and Discourse response id.
-- Metrics include API latency, rate limit hits and webhook lag.
-- Keys are rotated regularly; every write is audited.
+Impersonation lock
 
-## Deployment
-- Configured via environment variables for base URL, keys and webhook secrets.
-- Blue/green deploy; cache warmers preload categories and tags on cold start.
+Always set Api-Username = session.username. Never accept this from the client.
 
-Env vars (current):
-- DISCOURSE_BASE_URL=https://hub.bitwiki.org
-- DISCOURSE_SSO_SECRET=canvas_123
-- APP_BASE_URL=http://localhost:8081
-- API_KEY=optional_admin_key (enables seed write endpoints)
-- DISCOURSE_WEBHOOK_SECRET=shared_webhook_secret
-- PORT=3001
+Username parity on user-scoped routes
 
+Reject requests where any :username param ≠ session.username (e.g., PM inbox, bookmarks, user_status).
 
----
+Resource access via Discourse ACLs
 
-https://docs.discourse.org/
+Rely on Discourse permission checks by impersonation. No admin bypass. Do not use system as Api-Username for user reads.
 
-example of all fields for api calls:
+Proxy allowlist
 
+Only expose the endpoints below. Deny by default. Validate required params. Strip unknown fields.
 
-Allowed URLs	Allowed parameters (optional)
-topics			
+Recommended extras:
 
-write 
+Per-user and global rate limits. Respect Retry-After.
 
-​	
-topic_id
+Idempotency keys for create operations.
 
-update 
+Full audit log: {when, who, route, resource_ids, result}.
 
-​	
-topic_id
-category_id
+Data Explorer: server-admin only, gated per-query allowlist and required user filters.
 
-delete 
+3) Service layout
 
-​	
+auth/ SSO callback → create session {user_id, username}.
 
-recover 
+discourse/ proxy router → attaches headers {Api-Key, Api-Username} and enforces allowlist + parity rules.
 
-​	
+events/ webhook receiver → verifies HMAC, emits SSE to clients.
 
-read 
+ai/ helpers → PM with bot, Chat send, Automation trigger.
 
-​	
-topic_id
-external_id
+4) Endpoint allowlist (operations you may expose)
 
-read_lists 
+Below are the only upstream capabilities your proxy should call. For each, implement server handlers that validate inputs, set Api-Username=session.username, and pass through.
 
-​	
-category_id
+topics
 
-status 
+write: create topic. Required: title, raw. Optional: category_id, tags[].
+Params: topic_id (for special writes in workflows when applicable).
 
-​	
-topic_id
-category_id
-status
-enabled
-posts			
+update: update topic attributes. Required: topic_id. Optional: category_id.
 
-edit 
+read: get topic. One of: topic_id or external_id.
 
-​	
-id
+read_lists: list topics. Optional: category_id.
 
-delete 
+status: set status (closed, pinned, archived). Required: topic_id, status, enabled. Optional: category_id.
 
-​	
+posts
 
-recover 
+edit: update post. Required: id.
 
-​	
+list: list posts in topic. Required: topic_id or equivalent.
 
-list 
 
-​	
-revisions			
 
-read 
+tags
 
-​	
-post_id
+list: list tags.
 
-modify 
+tag_groups
 
-​	
-post_id
+list: list tag groups.
 
-permanently_delete 
+show: show tag group. Required: id.
 
-​	
-post_id
-tags			
+categories
 
-list 
+list: list categories.
 
-​	
-tag_groups			
+show: show category. Required: id.
 
-list 
+uploads
 
-​	
+create: upload file (multipart). Then reference upload_id in posts.
 
-show 
+users
 
-​	
-id
+bookmarks: list user bookmarks. Required: username (= session user).
 
-create 
+sync_sso: admin SSO sync. Required: sso, sig.
 
-​	
+show: show user. One of: username or external_id (+ optional external_provider).
 
-update 
+check_emails: list user emails. Required: username.
 
-​	
-id
-categories			
 
-list 
+log_out: log user out (admin action).
 
-​	
+anonymize: anonymize user (admin action).
 
-show 
+delete: delete user (admin action).
 
-​	
-id
-uploads			
+list: list users (admin, restrict tightly).
 
-create 
 
-​	
-users			
+badges
 
-bookmarks 
+assign_badge_to_user: assign badge. Required: username.
 
-​	
-username
 
-sync_sso 
+groups
 
-​	
-sso
-sig
+manage_groups: CRUD membership. Required: id.
 
-show 
+administer_groups: admin group settings.
 
-​	
-username
-external_id
-external_provider
+search
 
-check_emails 
+show: full-text search. Params: q, page.
 
-​	
-username
+query: quick search term. Param: term.
 
-update 
+discourse_connect
 
-​	
-username
+SSO provider endpoints (login and sync).
 
-log_out 
+logs
 
-​	
+messages: read admin logs. Restrict to ops dashboards. Never expose raw to end users.
 
-anonymize 
+automations_trigger
 
-​	
+post: trigger an Automation. Required: context object.
 
-suspend 
+Use server allowlist per automation id. Do not expose a generic “run any automation”.
 
-​	
+chat
 
-delete 
+create_message: post message to chat channel. Required: chat_channel_id, text.
+Guard: verify membership for session.user before posting. Alternatively use incoming webhook per channel with server-side ACL.
 
-​	
+Read helpers (optional): list channels for the user, read messages for a channel (respect membership).
 
-list 
+discourse_ai
 
-​	
-user_status			
+search: AI search features where enabled.
 
-read 
+stream_completion: streaming completion where enabled.
 
-​	
 
-update 
+5) High-value flows
+A) User ↔ AI bot via PM
 
-​	
-email			
+Create or reuse a PM topic with archetype=private_message, target_recipients=<bot_username>.
 
-receive_emails 
+Append user turns with POST /posts → Discourse AI posts bot replies.
 
-​	
-invites			
+Store PM topic_id in your app for thread continuity.
 
-create 
+Isolation: Api-Username=session.username. The bot sees the same data the user can see.
 
-​	
-badges			
+B) User ↔ AI via Chat
 
-create 
+Validate channel membership for session.user.
 
-​	
+Send with chat.create_message or per-channel webhook.
 
-show 
+Stream updates to client via your SSE fed by Discourse webhooks.
 
-​	
+C) Automation as tool calls
 
-update 
+Create Automations with “API call” or relevant triggers.
 
-​	
+Proxy endpoint: /automation/:id/trigger on your server → calls upstream automations_trigger.post with a strict context schema.
 
-delete 
+Use for tagging, triage, templated replies, status changes.
 
-​	
+D) Knowledge posts with uploads
 
-list_user_badges 
+POST /uploads → upload_id.
 
-​	
-username
+POST /posts with raw referencing the upload.
 
-assign_badge_to_user 
+Optionally tag and move topics via topics.update.
 
-​	
-username
+E) Solved workflow
 
-revoke_badge_from_user 
+When the user selects an answer, call solved.answer for the post.
 
-​	
-groups			
+6) Proxy design (Express pseudo)
+// global headers
+const H = (username: string) => ({
+  'Api-Key': process.env.DISCOURSE_API_KEY!,
+  'Api-Username': username,
+  'Content-Type': 'application/json',
+  'Accept': 'application/json'
+});
 
-manage_groups 
+// parity guard
+function requireUser(req, res, next) {
+  const u = req.session?.username;
+  if (!u) return res.status(401).end();
+  req.actAs = u;
+  next();
+}
 
-​	
-id
+// username parity on user-scoped paths
+function usernameParity(req, res, next) {
+  const u = req.actAs;
+  const p = req.params.username || req.body?.username;
+  if (p && p !== u) return res.status(403).json({ error: 'username mismatch' });
+  next();
+}
 
-administer_groups 
+// allowlist (example subset)
+const ALLOW = new Set([
+  'topics.write','topics.update','topics.delete','topics.recover','topics.read','topics.read_lists','topics.status',
+  'posts.edit','posts.delete','posts.recover','posts.list',
+  'revisions.read','revisions.modify','revisions.permanently_delete',
+  'tags.list','tag_groups.list','tag_groups.show','tag_groups.create','tag_groups.update',
+  'categories.list','categories.show',
+  'uploads.create',
+  'users.bookmarks','users.sync_sso','users.show','users.check_emails','users.update','users.log_out','users.anonymize','users.suspend','users.delete','users.list',
+  'user_status.read','user_status.update',
+  'email.receive_emails',
+  'invites.create',
+  'badges.create','badges.show','badges.update','badges.delete','badges.list_user_badges','badges.assign_badge_to_user','badges.revoke_badge_from_user',
+  'groups.manage_groups','groups.administer_groups',
+  'search.show','search.query',
+  'discourse_connect.sso',
+  'logs.messages',
+  'automations_trigger.post',
+  'chat.create_message',
+  'discourse_ai.search','discourse_ai.stream_completion','discourse_ai.update_personas',
+  'discourse_data_explorer.run_queries',
+  'solved.answer'
+]);
 
-​	
-search			
+function requireAllowed(key: string) {
+  return (req, res, next) => ALLOW.has(key) ? next() : res.status(403).end();
+}
 
-show 
+7) Webhooks → client
 
-​	
-q
-page
+Enable post_created, topic_created/updated, chat_message_created, and any AI/Automation events your instance emits.
 
-query 
+Verify HMAC. Push minimal projections over SSE: {type, topic_id, post_id, channel_id, actor, at}.
 
-​	
-term
-wordpress			
+8) Config
+DISCOURSE_BASE_URL=
+DISCOURSE_API_KEY=        # admin key
+APP_BASE_URL=
+WEBHOOK_SECRET=
+RATE_LIMITS_PER_USER=60/m
 
-publishing 
+9) Test checklist
 
-​	
+SSO login. Session has {username}.
 
-commenting 
+Create PM with AI bot. Get bot reply.
 
-​	
+Post to Chat channel user belongs to.
 
-discourse_connect 
+Trigger Automation with context. Observe side effects.
 
-​	
+Update topic status.
 
-utilities 
+Run whitelisted Data Explorer query with required params.
 
-​	
-logs			
+Webhooks received and streamed.
 
-messages 
-
-​	
-automations_trigger			
-
-post 
-
-​	
-context
-chat			
-
-create_message 
-
-​	
-chat_channel_id
-discourse_ai			
-
-search 
-
-​	
-
-stream_completion 
-
-​	
-
-update_personas 
-
-​	
-discourse_data_explorer			
-
-run_queries 
-
-​	
-id
-solved			
-
-answer 
-
-​
-
-**DiscourseHelper:**
-
-<details>
-  <summary>Searching</summary>
-  <p>Searching for: Provide a comprehensive list of all Discourse REST API endpoints, including their required and optional parameters, broken down by core features such as topics, posts, user management, chat, tags, badges, and categories. Detailed documentation and usage examples for every endpoint, ideally with sample payloads and best practices for building an integration with an external Node.js application acting as a chat system. Include any guides on authentication, rate limits, and handling AI-specific features such as Discourse AI bots, personas, and workflow context artifacts.</p>
-</details>
-<span></span>
-
-Here’s how to approach a comprehensive Node.js/Discourse API integration for your “realchat” context, along with reference material for endpoints, authentication, best practices, and leveraging Discourse AI features.
-
----
-
-## 1. Discourse REST API Documentation
-
-- **All endpoints and parameters:**  
-  The official docs have detailed sections for each resource (topics, posts, categories, users, uploads, chat, badges, tags, groups, etc.), with required/optional fields, URLs, and method details:  
-  [Discourse REST API Documentation](https://docs.discourse.org/)  
-  - Also see: [Discourse REST API Documentation (meta guide)](https://meta.discourse.org/t/discourse-rest-api-documentation/22706)
-
-- **Comprehensive practical API examples, including creating, updating, and interacting with PMs, topics, posts, etc.:**  
-  [Discourse REST API comprehensive examples](https://meta.discourse.org/t/discourse-rest-api-comprehensive-examples/274354)
-
----
-
-## 2. Authentication, API Key Scopes, and Rate Limits
-
-- **API keys:**
-  - Global/admin and user-scoped API keys are available depending on your integration needs.
-  - For acting "on behalf of users" (e.g., real chat), use user API keys:  
-    [User API keys specification](https://meta.discourse.org/t/user-api-keys-specification/48536)
-  - Index of integration/auth guides:  
-    [Integrations Index (key creation and scopes)](https://meta.discourse.org/t/integrations-index/308033)
-
-- **Rate limits and recommendations:**  
-  [API Rate Limits and Best Practices](https://meta.discourse.org/t/discourse-rest-api-documentation/22706#api-rate-limits-and-best-practice-discussion-13)
-
----
-
-## 3. Working with Topics, Posts, Private Messages, Categories
-
-- **Private messages:**  
-  Use the `archetype=private_message` parameter or appropriate topic endpoints to send/fetch PMs.  
-  [How to send/receive private messages via API (examples)](https://meta.discourse.org/t/discourse-rest-api-comprehensive-examples/274354#how-do-i-send-or-receive-private-messages-7)
-
-- **Categories, tags, topics, posts:**  
-  - [Posts: creating, updating, reading, deleting](https://docs.discourse.org/#tag/Posts)
-  - [Categories: listing and creating](https://docs.discourse.org/#tag/Categories)
-  - [Tags: listing and managing](https://docs.discourse.org/#tag/Tags)
-  - [Uploads (media)](https://docs.discourse.org/#tag/Uploads)
-
----
-
-## 4. Chat and Real-time Features
-
-- **Discourse Chat** (distinct from PMs):  
-  [Exploring features in Discourse Chat](https://meta.discourse.org/t/exploring-features-in-discourse-chat/239695)
-
-- **Webhooks for real-time/event-driven workflows:**  
-  [Using webhooks for integrations](https://meta.discourse.org/t/using-discourse-webhooks/49045)
-
----
-
-## 5. Discourse AI, Personas, Workflows, and Artifacts
-
-- **Enable/configure Discourse AI bot:**  
-  [Discourse AI - AI bot](https://meta.discourse.org/t/discourse-ai-ai-bot/266012)
-
-- **AI Personas for bot interactions:**  
-  [AI bot Personas guide](https://meta.discourse.org/t/ai-bot-personas/306099)
-
-- **Custom AI bot tools (extension via JavaScript, e.g., custom workflows):**  
-  [AI bot Custom Tools (JavaScript)](https://meta.discourse.org/t/ai-bot-custom-tools/314103)
-
-
----
-
-## 6. Special Considerations
-
-- **Badge, group, and user management via API:**  
-  - [Grant a custom badge through the API](https://meta.discourse.org/t/grant-a-custom-badge-through-the-api/103270)
-  - [User management endpoints](https://docs.discourse.org/#tag/Users)
-
-- **Reverse engineering for undocumented endpoints:**  
-  [Reverse engineer the Discourse API](https://meta.discourse.org/t/reverse-engineer-the-discourse-api/20576)
-
----
-
-## 7. Examples and Best Practices
-
-- Full payload/field examples (including PMs, chat, topics, etc.):  
-  [Discourse REST API comprehensive examples](https://meta.discourse.org/t/discourse-rest-api-comprehensive-examples/274354)
-
----
-
-
----
-
-### **Relevant Reading - Quick Links**
-
-- [Discourse API docs](https://docs.discourse.org/)
-- [Comprehensive API examples](https://meta.discourse.org/t/discourse-rest-api-comprehensive-examples/274354)
-- [User API keys](https://meta.discourse.org/t/user-api-keys-specification/48536)
-- [Discourse AI bot](https://meta.discourse.org/t/discourse-ai-ai-bot/266012)
-- [AI Personas](https://meta.discourse.org/t/ai-bot-personas/306099)
-- [Webhooks/events](https://meta.discourse.org/t/using-discourse-webhooks/49045)
-- [Discourse Chat features](https://meta.discourse.org/t/exploring-features-in-discourse-chat/239695)
-- [API authentication and integration master index](https://meta.discourse.org/t/integrations-index/308033)
-
----
-
-
-## Implemented (v1) specifics
-
-- Routes (server):
-  - GET /api/sso/login → Discourse Connect redirect
-  - GET /api/sso/callback → validate sig + nonce, set cookies, redirect to /discourse
-  - POST /api/logout → requires header x-csrf-token equal to cookie sf_csrf
-  - GET /api/me → current session
-  - GET /api/discourse/latest?page= → proxy to Discourse latest
-  - GET /api/discourse/topic/:id → proxy to Discourse topic
-
-- Cookies:
-  - sf_session: httpOnly JWT, SameSite=Lax; Secure in production
-  - sf_csrf: readable CSRF token for double‑submit defense
-
-- Client routes & nav:
-  - /discourse (SSO‑gated read‑only view)
-  - /api (Router: provider settings + feature toggles)
-  - Settings live under Router. Use the Advanced features toggle to show/hide expert panels.
-
-- Environment variables
-  - DISCOURSE_BASE_URL=https://hub.bitwiki.org
-  - DISCOURSE_SSO_SECRET=canvas_123
-  - APP_BASE_URL=http://localhost:8081 (dev) / production origin
-  - API_KEY=optional_service_key (optional; enables seed write endpoints in early v1)
-  - PORT=3001
-
-- Dev/E2E notes
-  - E2E runs via Vite preview server (8081) for stability
-  - PostCSS configured inline in Vite to avoid ESM/CJS conflicts
-
+Attempt cross-user access → blocked by parity guard.
