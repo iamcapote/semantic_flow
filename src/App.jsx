@@ -15,6 +15,7 @@ import { useAuth } from './lib/auth';
 import { detectOverlappingElements } from './utils/debugNav';
 import BlueScreen from "./components/BlueScreen";
 import './components/win95.css';
+import UpdateNotifier from './components/UpdateNotifier';
 
 const queryClient = new QueryClient();
 
@@ -123,6 +124,8 @@ const App = () => {
               <Route path="/setup" element={<LandingPage onApiKeySet={refreshApiKeyState} />} />
             </Routes>
           </BrowserRouter>
+          {/* Version / build update notifications */}
+          <UpdateNotifier />
         </TooltipProvider>
       </QueryClientProvider>
     </ThemeProvider>

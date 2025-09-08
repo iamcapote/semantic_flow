@@ -138,7 +138,16 @@ export default function DiscourseViewer({ embedded = false }) {
               <button onClick={()=>pmQuery.refetch?.()} className={`text-[10px] px-2 py-0.5 bg-[var(--w95-face)] ${bevel.out}`}>Reload</button>
             </div>
             <div className={`flex-1 overflow-auto bg-white text-[12px] ${bevel.in}`}>
-              {pmQuery.isError && <div className="p-2 text-red-700">Failed to load PMs.</div>}
+              {pmQuery.isError && (
+                <div className="p-2 text-red-700 space-y-1">
+                  <div>Failed to load PMs.</div>
+                  {pmQuery.error?.message?.includes('discourse_api_key_missing') && (
+                    <div className="text-[10px] text-red-800/80">Server missing Discourse API key; PMs unavailable.</div>
+                  )}
+                  {pmQuery.error?.status === 401 && <div className="text-[10px]">You are not authenticated.</div>}
+                  {pmQuery.error?.status === 403 && <div className="text-[10px]">Username mismatch.</div>}
+                </div>
+              )}
               {pmQuery.data && (
                 <ul>
                   {pmQuery.data?.topic_list?.topics?.slice(0,12).map(t => (

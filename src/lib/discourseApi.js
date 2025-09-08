@@ -12,7 +12,13 @@ export async function getTopic(id) {
 
 export async function getPMInbox(username) {
   const r = await fetch(`/api/discourse/pm/${encodeURIComponent(username)}`, { credentials: 'include' });
-  if (!r.ok) throw new Error('proxy_failed');
+  if (!r.ok) {
+    let detail = 'proxy_failed';
+    try { const j = await r.json(); if (j?.error) detail = j.error; if (j?.detail) detail += ':' + j.detail; } catch {}
+    const err = new Error(detail);
+    err.status = r.status;
+    throw err;
+  }
   return r.json();
 }
 

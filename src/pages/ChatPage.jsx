@@ -22,8 +22,10 @@ const bevel = {
 
 const ChatPage = ({ embedded = false }) => {
   const [apiKey, setApiKey] = useState(() => {
-    const provider = sessionStorage.getItem('active_provider') || 'openai';
-    return SecureKeyManager.getApiKey(provider) || '';
+    try {
+      const provider = sessionStorage.getItem('active_provider') || 'openai';
+      return SecureKeyManager.getApiKey(provider) || '';
+    } catch { return ''; }
   });
   const [systemMessage, setSystemMessage] = useState(
     () => sessionStorage.getItem('system_message') || 'You are a helpful assistant.'
@@ -74,16 +76,34 @@ const ChatPage = ({ embedded = false }) => {
 
   const filteredConversations = conversations.filter(c => c.title?.toLowerCase().includes(searchQuery.toLowerCase()));
 
-  useEffect(() => { if (!apiKey) navigate('/'); }, [apiKey, navigate]);
+  // Instead of redirecting when key missing (was causing silent bounce), we now show an inline notice.
+  const [missingKey, setMissingKey] = useState(false);
+  useEffect(() => {
+    const has = !!apiKey?.trim();
+    if (!has) {
+      // Attempt auto-discovery: pick first provider with a stored key if active provider empty
+      try {
+        const candidates = Object.keys(PROVIDER_CATALOG);
+        for (const pid of candidates) {
+          const k = SecureKeyManager.getApiKey(pid);
+            if (k) {
+              if (pid !== providerId) { setProviderId(pid); setModel(resolveModel(pid, sessionStorage.getItem(`default_model_${pid}`) || '')); }
+              setApiKey(k);
+              setMissingKey(false);
+              return;
+            }
+        }
+      } catch {}
+    }
+    setMissingKey(!has);
+  }, [apiKey, providerId]);
 
   // When provider selection changes, load the provider-specific key from SecureKeyManager
   useEffect(() => {
     try {
       const k = SecureKeyManager.getApiKey(providerId) || '';
       setApiKey(k);
-    } catch (e) {
-      // ignore
-    }
+    } catch {}
   }, [providerId]);
 
   useEffect(() => { scrollAreaRef.current && (scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight); }, [conversations]);
@@ -221,13 +241,9 @@ const ChatPage = ({ embedded = false }) => {
     if (!rawUserInput.trim()) return;
 
     if (!apiKey) {
-      toast({
-        title: "API Key Missing",
-        description: "Please set your OpenAI API key in the settings.",
-        variant: "destructive",
-      });
-      return;
-    }
+      toast({ title: 'API Key Missing', description: 'Add a provider key (Settings → AI Providers).', variant: 'destructive' });
+      setMissingKey(true);
+      return; }
     const prepared = buildInitialUserContent(rawUserInput.trim());
     const userMessage = { role: 'user', content: prepared };
     setConversations(prev => {
@@ -251,7 +267,7 @@ const ChatPage = ({ embedded = false }) => {
       setLastPayload(payload);
       const controller = new AbortController();
       abortControllerRef.current = controller;
-    const requestKey = SecureKeyManager.getApiKey(provider) || apiKey;
+  const requestKey = SecureKeyManager.getApiKey(provider) || apiKey;
     const response = await fetchChatCompletionRaw(provider, requestKey, payload);
 
       const reader = response.body.getReader();
@@ -465,6 +481,12 @@ const ChatPage = ({ embedded = false }) => {
         <div className="flex flex-1 min-h-0 overflow-hidden relative">
           <div className="flex flex-col flex-1 min-w-0 p-2 gap-2" aria-label="Chat messages panel">
             <div ref={scrollAreaRef} className={`flex-1 overflow-auto bg-white ${bevel.in} border-2 p-3 font-mono text-sm leading-6`}>
+              {missingKey && conversations[currentConversationIndex].messages.length === 0 && (
+                <div className="mb-4 text-xs bg-yellow-100 border border-yellow-400 text-yellow-900 p-2 rounded">
+                  <div className="font-semibold mb-1">No active provider key.</div>
+                  <div>Open Settings (gear icon) → AI Providers to add or activate a key. The app no longer redirects automatically.</div>
+                </div>
+              )}
               {conversations[currentConversationIndex].messages.map((message, index) => (
                 <div key={index} className="mb-4">
                   <div className="flex items-start gap-2">
@@ -495,7 +517,7 @@ const ChatPage = ({ embedded = false }) => {
                 <div className="flex items-center gap-2 text-xs opacity-70"><Loader2 className="w-3 h-3 animate-spin" /> streaming...</div>
               )}
             </div>
-            <form onSubmit={handleSubmit} className="flex gap-2" aria-label="Message input form">
+      <form onSubmit={handleSubmit} className="flex gap-2" aria-label="Message input form">
               <div className={`flex-1 bg-white ${bevel.in} border-2 flex items-center px-2`}>
                 <input
                   aria-label="Message"
@@ -503,17 +525,17 @@ const ChatPage = ({ embedded = false }) => {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   placeholder="Type message (Ctrl+Enter to send)"
-                  disabled={isStreaming}
+          disabled={isStreaming || missingKey}
                   onKeyDown={(e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { handleSubmit(e); } }}
                 />
               </div>
-              <button type="submit" disabled={isStreaming} className={`px-4 text-sm bg-[var(--w95-face)] ${bevel.out} border-2 disabled:opacity-50`}>{isStreaming ? 'Sending' : 'Send'}</button>
+        <button type="submit" disabled={isStreaming || missingKey} className={`px-4 text-sm bg-[var(--w95-face)] ${bevel.out} border-2 disabled:opacity-50`}>{missingKey ? 'Key Required' : (isStreaming ? 'Sending' : 'Send')}</button>
               {isStreaming && (
                 <button type="button" onClick={cancelStream} className={`px-3 text-sm bg-[var(--w95-face)] ${bevel.out} border-2`} aria-label="Cancel streaming"><XCircle className="w-4 h-4" /></button>
               )}
             </form>
             <div className="flex flex-wrap gap-2 mt-1">
-              <button onClick={(e) => handleSubmit(e)} disabled={isStreaming || !input.trim()} className={`text-[11px] px-2 py-1 bg-[var(--w95-face)] ${bevel.out} border-2 disabled:opacity-40`}>Send</button>
+        <button onClick={(e) => handleSubmit(e)} disabled={isStreaming || !input.trim() || missingKey} className={`text-[11px] px-2 py-1 bg-[var(--w95-face)] ${bevel.out} border-2 disabled:opacity-40`}>Send</button>
               <button onClick={retryLast} disabled={isStreaming || !lastPayload} className={`text-[11px] px-2 py-1 bg-[var(--w95-face)] ${bevel.out} border-2 disabled:opacity-40`} aria-label="Retry last">Retry</button>
               <button onClick={() => setShowStaging(s => !s)} className={`text-[11px] px-2 py-1 bg-[var(--w95-face)] ${bevel.out} border-2`} aria-label="Toggle multi staging">{showStaging ? 'Hide Multi-Stage' : 'Show Multi-Stage'}</button>
               <button onClick={() => setShowPayload(s => !s)} disabled={!lastPayload} className={`text-[11px] px-2 py-1 bg-[var(--w95-face)] ${bevel.out} border-2 disabled:opacity-40 flex items-center gap-1`} aria-label="Show last payload"><Eye className="w-3 h-3" />Payload</button>

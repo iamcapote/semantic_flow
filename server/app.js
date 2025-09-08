@@ -73,6 +73,13 @@ function verifySession(token) {
   }
 }
 
+// Build / deployment metadata (exposed via API)
+const BUILD_INFO = {
+  version: process.env.BUILD_VERSION || process.env.npm_package_version || 'dev',
+  commit: process.env.GIT_COMMIT || '',
+  startedAt: Date.now(),
+};
+
 export function createApp() {
   const app = express();
   // Resolve project paths for static serving (avoid import.meta for Jest compatibility)
@@ -124,12 +131,47 @@ export function createApp() {
     res.json({ ok: true, env: NODE_ENV });
   });
 
+  // Build/version metadata (lightweight)
+  app.get('/api/meta/version', (_req, res) => {
+    res.json({
+      ...BUILD_INFO,
+      uptime_ms: Date.now() - BUILD_INFO.startedAt,
+    });
+  });
+
+  // SSE stream for build/version notifications
+  const versionClients = new Set();
+  app.get('/api/meta/version/stream', (req, res) => {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache, no-transform');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders?.();
+
+    // Emit current build info immediately
+    res.write('event: version\n');
+    res.write(`data: ${JSON.stringify(BUILD_INFO)}\n\n`);
+
+    versionClients.add(res);
+    const keepAlive = setInterval(() => {
+      try {
+        res.write('event: ping\n');
+        res.write('data: {}\n\n');
+      } catch {}
+    }, 30000);
+
+    req.on('close', () => {
+      clearInterval(keepAlive);
+      versionClients.delete(res);
+    });
+  });
+
   // Public config (no secrets)
   app.get('/api/config', (_req, res) => {
     res.json({
       discourseBaseUrl: DISCOURSE_BASE_URL,
       ssoProvider: !!DISCOURSE_SSO_SECRET,
       appBaseUrl: APP_BASE_URL,
+  hasDiscourseApiKey: !!API_KEY && API_KEY !== 'change-me',
     });
   });
 
@@ -273,7 +315,10 @@ export function createApp() {
     const r = await fetchWithRetry(url, { headers });
     if (!r.ok) {
       const text = await r.text();
-      throw new Error(`Discourse error ${r.status}: ${text}`);
+      const err = new Error(`Discourse error ${r.status}: ${text}`);
+      // lightweight server side logging for diagnosis (omit large bodies)
+      try { console.warn('[discourseGet]', { url, status: r.status, snippet: text.slice(0,300) }); } catch {}
+      throw err;
     }
     return r.json();
   }
@@ -327,11 +372,17 @@ export function createApp() {
       if (String(req.params.username) !== String(sessionUser.username)) {
         return res.status(403).json({ error: 'username_mismatch' });
       }
+      if (!API_KEY || API_KEY === 'change-me') {
+        // Without an admin API key we cannot impersonate user to fetch PMs via API
+        return res.status(501).json({ error: 'discourse_api_key_missing', message: 'Server missing DISCOURSE API_KEY for private messages.' });
+      }
       const u = encodeURIComponent(req.params.username);
       const data = await discourseGet(`/topics/private-messages/${u}.json`, req);
       return res.json(data);
     } catch (e) {
-      return res.status(502).json({ error: 'proxy_failed' });
+      const msg = String(e && e.message || 'error');
+      const status = msg.includes('discourse_api_key_missing') ? 501 : 502;
+      return res.status(status).json({ error: 'proxy_failed', detail: msg });
     }
   });
 

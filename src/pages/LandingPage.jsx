@@ -55,7 +55,8 @@ export default function LandingPage({ onApiKeySet }) {
 
   const handleProviderSetupComplete = () => {
     onApiKeySet && onApiKeySet();
-    navigate('/');
+    // Move user directly into the main suite after configuring a key
+    navigate('/builder');
   };
 
   return (
@@ -142,7 +143,8 @@ export default function LandingPage({ onApiKeySet }) {
         <div style={win98.foot}>
           <div style={{ fontSize: 12 }}>Tip: You can switch between SSO and BYOK anytime from Router settings.</div>
           <div>
-            <button style={{ ...win98.btn, ...win98.btnBlock, minWidth:120 }} onClick={() => navigate('/')}>Enter App</button>
+            <button style={{ ...win98.btn, ...win98.btnBlock, minWidth:120 }}
+              onClick={() => navigate('/builder')}>Enter App</button>
           </div>
         </div>
       </div>
