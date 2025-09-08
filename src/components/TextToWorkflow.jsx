@@ -62,9 +62,9 @@ const TextToWorkflow = ({ onWorkflowGenerated, apiKey }) => {
       return;
     }
     
-    // Get API key from session storage for selected provider
-    const providerApiKey = SecureKeyManager.getApiKey(selectedProvider) || apiKey;
-    if (!providerApiKey) {
+    // Resolve key (internal provider does not require BYOK key)
+    const resolvedKey = SecureKeyManager.getApiKey(selectedProvider) || apiKey;
+    if (selectedProvider !== 'internal' && !resolvedKey) {
       toast({
         title: "API Key Missing",
         description: `Please configure your ${selectedProvider} API key in settings.`,
@@ -78,7 +78,7 @@ const TextToWorkflow = ({ onWorkflowGenerated, apiKey }) => {
     try {
       const result = await promptingEngine.convertTextToWorkflow(
         textInput,
-        providerApiKey,
+        (resolvedKey || 'internal-managed'),
         selectedProvider,
         selectedModel,
         {

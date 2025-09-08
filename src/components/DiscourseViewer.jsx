@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useAuth } from '@/lib/auth';
+import { useAuth, fetchPublicConfig, getBrandName } from '@/lib/auth';
 import { getLatest, getTopic, getPMInbox, subscribeEvents, aiStream, getPersonas } from '@/lib/discourseApi';
 
 /**
@@ -11,6 +11,8 @@ import { getLatest, getTopic, getPMInbox, subscribeEvents, aiStream, getPersonas
  */
 export default function DiscourseViewer({ embedded = false }) {
   const { user, loading, login, logout } = useAuth();
+  const [brand, setBrand] = useState('Discourse');
+  useEffect(() => { (async () => { try { await fetchPublicConfig(); setBrand(getBrandName()); } catch {} })(); }, []);
   const [page, setPage] = useState(0);
   const [topicId, setTopicId] = useState(null);
   const [eventsOn, setEventsOn] = useState(false);
@@ -70,13 +72,18 @@ export default function DiscourseViewer({ embedded = false }) {
   function startStream() {
     if (!topicId) return;
     setStreaming(true); setStreamText(''); setStreamError(null);
-    const stopper = aiStream({ persona, topic_id: topicId }, (chunk) => {
-      setStreamText(prev => {
-        if (chunk.includes('\n')) {
-          return prev + chunk.split(/\n/).map(l => l.startsWith('data:') ? l.slice(5).trim() + '\n' : (!l.startsWith('event:') && !l.startsWith('id:') && !l.startsWith(':') ? l : '')).join('');
-        }
-        return prev + chunk;
-      });
+    const stopper = aiStream({ persona, topic_id: topicId, query: 'Summarize this topic.' }, (ev) => {
+      if (!ev) return;
+      if (ev.type === 'meta') {
+        setStreamText(prev => prev + `[meta topic_id=${ev.data.topic_id} persona_id=${ev.data.persona_id}]\n`);
+      } else if (ev.type === 'token') {
+        setStreamText(prev => prev + (ev.data.text || ''));
+      } else if (ev.type === 'error') {
+        setStreamError(ev.data.error || ev.data.message || 'stream_error');
+      } else if (ev.type === 'done') {
+        setStreamText(prev => prev + '\n[done]');
+        setStreaming(false);
+      }
     });
     stopRef.current = () => { stopper(); setStreaming(false); };
   }
@@ -87,9 +94,9 @@ export default function DiscourseViewer({ embedded = false }) {
   if (!user) {
     return (
       <div className={`w95-font ${embedded ? '' : 'mt-8'} max-w-xl mx-auto p-4`} style={{ background: 'var(--w95-face)', boxShadow: embedded ? 'none' : '3px 3px 0 #000', border: '2px solid var(--w95-shadow)' }}>
-        <h1 className="text-lg font-semibold mb-2" style={{ color: 'var(--w95-text)' }}>Discourse (Read‑Only)</h1>
-        <p className="mb-3 text-[13px]">Sign in with Discourse SSO to view topics, PMs, and AI personas. Posting is disabled.</p>
-        <button className="px-4 py-1 text-sm" style={{ background: '#000080', color: '#fff', border: '2px solid #000', boxShadow: 'inset -1px -1px 0 #fff, inset 1px 1px 0 #000' }} onClick={login}>Sign in with Discourse</button>
+  <h1 className="text-lg font-semibold mb-2" style={{ color: 'var(--w95-text)' }}>{brand} (Read‑Only)</h1>
+  <p className="mb-3 text-[13px]">Sign in with {brand} SSO to view topics, PMs, and AI personas. Posting is disabled.</p>
+  <button className="px-4 py-1 text-sm" style={{ background: '#000080', color: '#fff', border: '2px solid #000', boxShadow: 'inset -1px -1px 0 #fff, inset 1px 1px 0 #000' }} onClick={login}>Sign in with {brand}</button>
       </div>
     );
   }
@@ -206,7 +213,7 @@ export default function DiscourseViewer({ embedded = false }) {
       </div>
       {!embedded && (
         <div className="h-6 flex items-center justify-between px-3 text-[10px] bg-[var(--w95-face)] border-t border-[var(--w95-shadow)] text-black">
-          <span>Discourse Read‑Only Mode</span>
+          <span>{brand} Read‑Only Mode</span>
           <span>Topics: {latestQuery.data?.topic_list?.topics?.length || 0}</span>
         </div>
       )}

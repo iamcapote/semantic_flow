@@ -2,6 +2,10 @@
 // Reads/writes sessionStorage so settings flow across pages.
 
 const DEFAULTS = {
+  internal: {
+    base: '/api/ai',
+    headers: {},
+  },
   openai: {
     base: 'https://api.openai.com/v1',
     headers: {},

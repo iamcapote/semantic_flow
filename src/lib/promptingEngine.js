@@ -11,6 +11,21 @@ export class PromptingEngine {
     this.userId = userId;
     this.providers = [
       {
+        providerId: 'internal',
+        name: (typeof window !== 'undefined' && (window.__PUBLIC_CONFIG__?.brand || 'Internal')), // brand injected at runtime
+        baseURL: '/api/ai', // logical namespace; streaming endpoint proxied server-side
+        // Models are dynamically discoverable; seed with stored dynamic list or a safe placeholder.
+        models: (() => {
+          try {
+            const raw = typeof window !== 'undefined' ? sessionStorage.getItem('internal_models') : null;
+            if (raw) { const arr = JSON.parse(raw); if (Array.isArray(arr) && arr.length) return arr; }
+          } catch {}
+          return ['Llama-3.3-70b | Venice AI'];
+        })(),
+        headers: {},
+        managed: true,
+      },
+      {
         providerId: 'openai',
         name: 'OpenAI',
         baseURL: 'https://api.openai.com/v1',
@@ -71,7 +86,52 @@ export class PromptingEngine {
   }
 
   async callProvider(providerId, model, apiKey, messages) {
-  return chatCompletion(providerId, apiKey, { model, messages });
+    if (providerId === 'internal') {
+      // Aggregate internal streaming (persona-based) into a single completion-like response.
+      const query = messages.map(m => `${m.role.toUpperCase()}: ${m.content}`).join('\n\n');
+      const persona = (typeof window !== 'undefined' && sessionStorage.getItem('internal_active_persona')) || '0-NULL';
+      const body = { persona, query };
+      try {
+        const res = await fetch('/api/ai/stream', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        if (!res.ok || !res.body) throw new Error('internal_stream_failed');
+        const reader = res.body.getReader();
+        const dec = new TextDecoder();
+        let buf = '';
+        let content = '';
+        while (true) {
+          const { value, done } = await reader.read();
+            if (done) break;
+            buf += dec.decode(value, { stream: true });
+            const parts = buf.split(/\n\n/);
+            buf = parts.pop();
+            for (const raw of parts) {
+              const lines = raw.split(/\n/);
+              let ev = '';
+              let dataLines = [];
+              for (const l of lines) {
+                if (l.startsWith('event:')) ev = l.slice(6).trim();
+                else if (l.startsWith('data:')) dataLines.push(l.slice(5).trim());
+              }
+              let dataStr = dataLines.join('\n');
+              let data; try { data = JSON.parse(dataStr); } catch { data = {}; }
+              if (ev === 'token' && data.text) content += data.text;
+            }
+        }
+        return {
+          choices: [{ message: { role: 'assistant', content } }],
+          usage: null,
+          provider: 'internal',
+          model: model || 'Llama-3.3-70b | Venice AI',
+        };
+      } catch (e) {
+        throw new Error(`internal: ${e.message || e}`);
+      }
+    }
+    return chatCompletion(providerId, apiKey, { model, messages });
   }
 
   // Mode 1: Text-to-Workflow Conversion

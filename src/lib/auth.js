@@ -38,10 +38,18 @@ export function useAuth() {
   return { user, loading, login, logout, refresh };
 }
 
-export async function fetchPublicConfig() {
+let _publicConfigCache = null;
+export async function fetchPublicConfig(force = false) {
+  if (!force && _publicConfigCache) return _publicConfigCache;
   const r = await fetch('/api/config', { credentials: 'include' });
   if (!r.ok) throw new Error('config_failed');
-  return r.json();
+  const data = await r.json();
+  _publicConfigCache = data;
+  return data;
+}
+
+export function getBrandName() {
+  return _publicConfigCache?.brand || 'Discourse';
 }
 
 export function getCSRFCookie() {

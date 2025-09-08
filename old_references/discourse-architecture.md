@@ -101,183 +101,183 @@ bookmarks: list user bookmarks. Required: username (= session user).
 sync_sso: admin SSO sync. Required: sso, sig.
 
 show: show user. One of: username or external_id (+ optional external_provider).
+Discourse × AI App — Architecture (Refactored w/ Confirmed Upstream Behaviors)
 
-check_emails: list user emails. Required: username.
+Version: 2025-09-08
+Scope: Integrate Discourse (BIThub) SSO + AI personas streaming as a first‑party inference provider; enforce security isolation; supply internal provider fallback when no BYOK model key is configured.
 
+## 1. System Model (Confirmed)
+Identity: DiscourseConnect SSO (nonce + HMAC). We map { session.sub ↔ discourse_username } at login and sign a server‑HMAC session cookie (`sf_session`).
+Authority: Single server admin API key (ENV: API_KEY) never leaves server. All upstream calls impersonate the session user via `Api-Username=<username>` (never accepted from client input).
+Boundary: Browser only hits our Express `/api/*`. Server alone knows `DISCOURSE_BASE_URL` + `API_KEY`.
+Surfaces (current & near‑term): Topics, Posts, PMs, AI Personas Streaming, AI Search (pending real endpoint), Seeds (context topics), Webhooks → SSE fanout, (future) Chat, Automations, Uploads.
+Branding: Dynamic brand via env (`BITHUB` or `BITHUB_NAME`) exposed at `/api/config` → client picks up without rebuild.
 
-log_out: log user out (admin action).
+## 2. Isolation & Security Guarantees
+We enforce four invariants (all implemented / partially implemented):
+1. Impersonation Lock: Always set `Api-Username=session.username` (fallback `system` only when NO user context & strictly read‑only). Do not trust any user‑supplied username fields.
+2. Username Parity: Any route that scopes by username (`/pm/:username`, bookmarks, etc.) must match session username or 403.
+3. Upstream ACL Reliance: No privilege escalation; Discourse permission model filters accessible resources.
+4. Proxy Allowlist: Only implement explicit handlers; never forward arbitrary paths.
 
-anonymize: anonymize user (admin action).
+Additional hardening (to implement / expand):
+- Rate limiting: token bucket per user + global concurrency caps; integrate Retry-After honoring for 429 responses.
+- Structured audit log: `{ts, username, route, verb, upstreamPath, status, resourceIds}` persisted (file or DB) for 7–30 days.
+- Idempotency: `idempotencyKey` supported on seed creation; extend to topic writes & automations.
+- Input scrubbing: Reject unknown fields; whitelist exact JSON schema per handler.
 
-delete: delete user (admin action).
+## 3. Confirmed Upstream AI Endpoints & Behaviors
+Probed endpoints (2025-09-08):
+Working:
+  - Streaming (personas): `POST /admin/plugins/discourse-ai/ai-personas/stream-reply`
+    Payload accepted keys: `username` (required), one of `persona_id` or `persona_name`, `query`, optional `model`.
+    Response protocol: newline-delimited JSON (NOT classic SSE) 
+      First object: `{"topic_id":<id>,"bot_user_id":<id>,"persona_id":<id>}` 
+      Subsequent: `{"partial":"<token_fragment>"}` per incremental token(s).
+    Error (invalid persona): 422 + single JSON error object (no stream).
+  - Personas list (admin variant): `GET /admin/plugins/discourse-ai/ai-personas.json` (note the exact path segment `ai-personas`)
 
-list: list users (admin, restrict tightly).
+Non-working / 404 (on current instance):
+  - `GET /discourse_ai/personas`
+  - `GET /admin/plugins/discourse-ai/personas.json` (missing `ai-` segment) 
+  - `GET /discourse_ai/bot/personas`
+  - `POST /discourse_ai/stream_completion`
+  - `POST /discourse_ai/search` (returned 404; current server code still attempts this path via `/api/ai/search` proxy; needs adaptive fallback or removal until enabled upstream)
 
+Implication: Our server wrapper must (a) target the confirmed working stream path, (b) implement a robust line parser converting newline JSON objects into a unified event stream for the client, (c) degrade gracefully when upstream returns a terminal JSON error.
 
-badges
+## 4. Internal Inference Provider Design (BIThub / Discourse Personas)
+Goal: When SSO is configured and API_KEY present, app provides a first‑party “Internal / BIThub” provider requiring zero user keys; chat + workflow features leverage personas streaming.
 
-assign_badge_to_user: assign badge. Required: username.
+Abstraction:
+`InternalProvider` capabilities:
+  sendChat({ persona, query, topicId? }) → stream tokens
+  listPersonas() → cached normalized list (id, name, description)
+  search(opts) → (deferred until upstream search path confirmed; implement stub returning 501 or empty)
 
+Client Changes (planned):
+ 1. Provider catalog adds entry `{ id: 'internal', name: <brand>, type: 'discourse-persona', managed: true }`.
+ 2. Auto-select `internal` after successful SSO if no BYOK provider selected.
+ 3. Chat component: if provider === 'internal', use new stream adapter instead of OpenAI-style adapter.
+ 4. Stream Parser: accumulate fragments by decoding each line → JSON → if `partial` append to buffer; ignore non-partial keys after first metadata object.
+ 5. Persona selection UI surfaced in chat (reuse list from `/api/ai/personas` proxy which normalizes working admin path).
 
-groups
+Server Changes (planned):
+ 1. Replace existing `/api/ai/stream` proxy target from `/discourse_ai/stream_completion` → `/admin/plugins/discourse-ai/ai-personas/stream-reply`.
+ 2. Accept input: `{ persona, topic_id?, query, model? }` (internal canonical shape) and transform to upstream: `{ username: session.username, persona_id|persona_name, query }` choosing id vs name heuristically (numeric string → id, else persona_name). Include model if provided.
+ 3. Stream piping: current implementation treats upstream as SSE; adjust to treat as raw text; do not inject `event:` lines; pass through raw lines (client parser updated accordingly) OR optionally wrap into SSE by prefixing `data:` (preferred for consistency). Decision: Migrate to real SSE to align with rest of app.
+ 4. Error translation: if first line is not JSON header or upstream status !200, emit SSE `event:error` with detail.
+ 5. Persona list proxy: Expand `/api/ai/personas` to attempt `GET /admin/plugins/discourse-ai/ai-personas.json` first, parse, normalize; fallback to in-memory static defaults on failure.
 
-manage_groups: CRUD membership. Required: id.
+## 5. Endpoint Allowlist (Refined Practical Subset)
+Only implement what we actively use now + near term. All others remain deferred.
+Active/Planned:
+  - topics: read_lists, read, (write seeds via existing `/api/discourse/seed` abstraction), status (future)
+  - posts: list (via topic read), create (for seeds / future PM bot), edit (future)
+  - pm inbox (user scoped parity enforced)
+  - ai: personas list, stream-reply (wrapped as `/api/ai/stream`), (search deferred)
+  - seeds: create, attach, index (already implemented)
+  - auth: sso login/callback/logout/me
+  - events: SSE for webhooks
+Deferred / not yet routed through proxy (keep out of surface until needed & audited): uploads, automations_trigger, chat.create_message, data explorer, badges, groups, user admin, solved.answer.
 
-administer_groups: admin group settings.
-
-search
-
-show: full-text search. Params: q, page.
-
-query: quick search term. Param: term.
-
-discourse_connect
-
-SSO provider endpoints (login and sync).
-
-logs
-
-messages: read admin logs. Restrict to ops dashboards. Never expose raw to end users.
-
-automations_trigger
-
-post: trigger an Automation. Required: context object.
-
-Use server allowlist per automation id. Do not expose a generic “run any automation”.
-
-chat
-
-create_message: post message to chat channel. Required: chat_channel_id, text.
-Guard: verify membership for session.user before posting. Alternatively use incoming webhook per channel with server-side ACL.
-
-Read helpers (optional): list channels for the user, read messages for a channel (respect membership).
-
-discourse_ai
-
-search: AI search features where enabled.
-
-stream_completion: streaming completion where enabled.
-
-
-5) High-value flows
-A) User ↔ AI bot via PM
-
-Create or reuse a PM topic with archetype=private_message, target_recipients=<bot_username>.
-
-Append user turns with POST /posts → Discourse AI posts bot replies.
-
-Store PM topic_id in your app for thread continuity.
-
-Isolation: Api-Username=session.username. The bot sees the same data the user can see.
-
-B) User ↔ AI via Chat
-
-Validate channel membership for session.user.
-
-Send with chat.create_message or per-channel webhook.
-
-Stream updates to client via your SSE fed by Discourse webhooks.
-
-C) Automation as tool calls
-
-Create Automations with “API call” or relevant triggers.
-
-Proxy endpoint: /automation/:id/trigger on your server → calls upstream automations_trigger.post with a strict context schema.
-
-Use for tagging, triage, templated replies, status changes.
-
-D) Knowledge posts with uploads
-
-POST /uploads → upload_id.
-
-POST /posts with raw referencing the upload.
-
-Optionally tag and move topics via topics.update.
-
-E) Solved workflow
-
-When the user selects an answer, call solved.answer for the post.
-
-6) Proxy design (Express pseudo)
-// global headers
-const H = (username: string) => ({
-  'Api-Key': process.env.DISCOURSE_API_KEY!,
-  'Api-Username': username,
-  'Content-Type': 'application/json',
-  'Accept': 'application/json'
-});
-
-// parity guard
-function requireUser(req, res, next) {
-  const u = req.session?.username;
-  if (!u) return res.status(401).end();
-  req.actAs = u;
-  next();
-}
-
-// username parity on user-scoped paths
-function usernameParity(req, res, next) {
-  const u = req.actAs;
-  const p = req.params.username || req.body?.username;
-  if (p && p !== u) return res.status(403).json({ error: 'username mismatch' });
-  next();
-}
-
-// allowlist (example subset)
+Allowlist Representation Example:
+```
 const ALLOW = new Set([
-  'topics.write','topics.update','topics.delete','topics.recover','topics.read','topics.read_lists','topics.status',
-  'posts.edit','posts.delete','posts.recover','posts.list',
-  'revisions.read','revisions.modify','revisions.permanently_delete',
-  'tags.list','tag_groups.list','tag_groups.show','tag_groups.create','tag_groups.update',
-  'categories.list','categories.show',
-  'uploads.create',
-  'users.bookmarks','users.sync_sso','users.show','users.check_emails','users.update','users.log_out','users.anonymize','users.suspend','users.delete','users.list',
-  'user_status.read','user_status.update',
-  'email.receive_emails',
-  'invites.create',
-  'badges.create','badges.show','badges.update','badges.delete','badges.list_user_badges','badges.assign_badge_to_user','badges.revoke_badge_from_user',
-  'groups.manage_groups','groups.administer_groups',
-  'search.show','search.query',
-  'discourse_connect.sso',
-  'logs.messages',
-  'automations_trigger.post',
-  'chat.create_message',
-  'discourse_ai.search','discourse_ai.stream_completion','discourse_ai.update_personas',
-  'discourse_data_explorer.run_queries',
-  'solved.answer'
+  'topics.read','topics.read_lists','topics.write_seed','topics.status',
+  'posts.create','posts.list','pm.inbox',
+  'ai.personas','ai.stream','ai.search',
+  'auth.sso','auth.logout','auth.me',
+  'seeds.create','seeds.attach','seeds.index',
+  'events.sse'
 ]);
+```
 
-function requireAllowed(key: string) {
-  return (req, res, next) => ALLOW.has(key) ? next() : res.status(403).end();
-}
+## 6. Streaming Protocol Adapter
+Upstream: newline JSON objects.
+We standardize client consumption as pseudo-SSE events:
+```
+event: meta
+data: {"topic_id":...,"persona_id":...}
 
-7) Webhooks → client
+event: token
+data: {"text":"fragment"}
 
-Enable post_created, topic_created/updated, chat_message_created, and any AI/Automation events your instance emits.
+event: done
+data: {}
+```
+Server adapter logic:
+  - Read upstream line buffer → try JSON.parse
+  - If object has `partial`, emit `token` with accumulated raw fragment
+  - First non-partial line containing `topic_id` → emit `meta`
+  - Detect end via upstream close → emit `done`
+  - On error (HTTP != 200 OR JSON parse fail on first line) emit `error`
 
-Verify HMAC. Push minimal projections over SSE: {type, topic_id, post_id, channel_id, actor, at}.
+Client Chat logic (internal provider):
+  - Maintain incremental text state
+  - Provide cancel function (AbortController)
+  - If `error` event received, surface UI banner
 
-8) Config
-DISCOURSE_BASE_URL=
-DISCOURSE_API_KEY=        # admin key
-APP_BASE_URL=
-WEBHOOK_SECRET=
-RATE_LIMITS_PER_USER=60/m
+## 7. Error Handling & Resilience
+Upstream statuses observed: 200 (stream), 404 (unknown endpoint), 422 (invalid persona), 5xx (potential; not yet observed). Strategy:
+  - 404 at proxy bind-time → fast fail & static capability downgrade (hide personas UI until healthy).
+  - 422 mid-call → stop streaming, surface persona selection error.
+  - 5xx / network: retries with exponential backoff for persona list; NO automatic retry for a single user stream (user re-triggers).
+  - Circuit breaker: track consecutive upstream failures; after threshold hide internal provider & show maintenance banner.
 
-9) Test checklist
+## 8. Observability
+Metrics (in-memory w/ periodic log flush):
+  - ai_stream_requests_total{persona}
+  - ai_stream_tokens_total (count of `partial` objects)
+  - ai_stream_failures_total{reason}
+  - personas_list_latency_ms (histogram)
+Log sampling: full payloads omitted except on error (redact query after debug phase; store length only).
 
-SSO login. Session has {username}.
+## 9. Performance Considerations
+Streaming backpressure: use Node stream pipe; avoid buffering entire response. Flush tokens immediately; throttle UI updates (batch per animation frame) for large outputs.
+Persona list cache TTL: 60s in-memory with background refresh on expiry.
+Seed indexing: apply pagination limit; optionally prefetch categories asynchronously.
 
-Create PM with AI bot. Get bot reply.
+## 10. Future Extensions
+1. Chat channel integration: map internal provider responses into Discourse Chat via `chat.create_message` creating a mirrored user-bot thread (webhook to reflect). Security requires channel membership parity.
+2. Automations as tools: Provide server toolkit registry with schema validation; unify with internal provider for multi-step workflows.
+3. Knowledge ingestion: Background job to classify & tag new topics; leverage persona or summarizer persona.
+4. Hybrid search: Once `/discourse_ai/search` becomes available, implement unified `semantic + lexical` ranking; fallback gracefully when 404.
+5. Multi-persona conversation: Support per-turn persona switching with explicit persona_id tagging in message metadata.
 
-Post to Chat channel user belongs to.
+## 11. Test Matrix (Updated)
+Auth: SSO login success, invalid nonce rejection, session expiry.
+Personas: list success, list 404 fallback, invalid persona 422 path.
+Streaming: normal stream, cancel mid-stream, upstream error injection, large output (>100 partial objects) performance.
+Security: username parity (PM, seeds attach), blocked cross-user, missing API_KEY -> graceful feature degradation.
+Resilience: simulate consecutive upstream 404 for stream-reply -> circuit breaker triggers.
+Branding: brand change reflected without rebuild via `/api/config`.
 
-Trigger Automation with context. Observe side effects.
+## 12. Implementation Delta vs Current Codebase
+Current issues:
+  - `/api/ai/stream` proxy targets non-working `/discourse_ai/stream_completion`.
+  - Personas proxy attempts several paths; only `ai-personas.json` variant is valid; add it first & log outcome.
+  - Client `aiStream` treats stream as raw bytes (not structured) and expects SSE markers; must adapt JSON line parsing OR server conversion.
+Planned remediation order:
+  1. Server: retarget stream proxy & wrap JSON lines as SSE tokens.
+  2. Server: strengthen `/api/ai/personas` path attempt order; cache + TTL.
+  3. Client: internal provider + parser; migrate DiscourseViewer & Chat to provider abstraction.
+  4. Remove warning banner about missing BYOK when internal provider active.
 
-Update topic status.
+## 13. Configuration Keys Recap
+```
+DISCOURSE_BASE_URL=https://hub.bitwiki.org
+DISCOURSE_SSO_SECRET=...
+DISCOURSE_WEBHOOK_SECRET=...
+APP_BASE_URL=... (codespace / deployed origin)
+API_KEY=<admin key>
+BITHUB / BITHUB_NAME=<brand override>
+PORT=8081
+```
 
-Run whitelisted Data Explorer query with required params.
+## 14. Open Questions / Validation Needed
+- Confirm eventual availability & payload schema for `/discourse_ai/search` (currently 404) to finalize AI search integration.
+- Determine canonical persona identifier strategy (preferring numeric `persona_id`, fallback to `persona_name`).
+- Decide on server SSE wrapping vs direct JSON lines (current plan: wrap for uniformity).
+- Choose persistence for audit + metrics (file rotate vs lightweight sqlite).
 
-Webhooks received and streamed.
-
-Attempt cross-user access → blocked by parity guard.

@@ -55,8 +55,13 @@ export default function DiscourseConfig() {
   }
 
   function streamSample() {
-    setBusy(true); let acc = ''; const stop = aiStream({ persona, topic_id: 0 }, (chunk) => { acc += chunk; });
-    setTimeout(() => { stop(); setBusy(false); print('Streamed sample bytes: ' + acc.length); }, 1500);
+    setBusy(true); let acc = ''; const stop = aiStream({ persona, topic_id: 0, query: 'Say hello.' }, (ev) => {
+      if (ev.type === 'token') acc += ev.data.text || '';
+      if (ev.type === 'done') { stop(); setBusy(false); print('Streamed sample chars: ' + acc.length); }
+      if (ev.type === 'error') { stop(); setBusy(false); print('ERR stream: ' + (ev.data.error || ev.data.message)); }
+    });
+    // Safety timeout
+    setTimeout(() => { if (busy) { stop(); setBusy(false); print('Stream timeout chars: ' + acc.length); } }, 4000);
   }
 
   return (

@@ -80,8 +80,8 @@ const WorkflowExecutionModal = ({ workflow, trigger, onExecutionComplete }) => {
     }
 
     // Get API key from session storage for selected provider
-    const providerApiKey = SecureKeyManager.getApiKey(selectedProvider);
-    if (!providerApiKey) {
+  const providerApiKey = SecureKeyManager.getApiKey(selectedProvider);
+  if (selectedProvider !== 'internal' && !providerApiKey) {
       toast({
         title: "API Key Missing",
         description: `Please configure your ${selectedProvider} API key in settings.`,
@@ -102,7 +102,7 @@ const WorkflowExecutionModal = ({ workflow, trigger, onExecutionComplete }) => {
           maxTokens: maxTokens[0],
           providerId: selectedProvider,
           model: selectedModel,
-          apiKey: providerApiKey
+          apiKey: providerApiKey || 'internal-managed'
         }
       );
 

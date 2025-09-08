@@ -3,6 +3,14 @@
 // Avoid inventing new models; update here if upstream definitions change.
 
 export const PROVIDER_CATALOG = {
+  internal: {
+    name: (typeof window !== 'undefined' && (window.__PUBLIC_CONFIG__?.brand || 'BIThub')),
+    // Real models are determined upstream per persona (default_llm.display_name). We expose a small
+    // curated list populated at runtime; start with the primary Venice AI default as safe placeholder.
+    models: ['Llama-3.3-70b | Venice AI'],
+    defaultModel: 'Llama-3.3-70b | Venice AI',
+    managed: true,
+  },
   openai: {
     name: 'OpenAI',
     models: ['gpt-4o', 'gpt-4o-mini', 'gpt-4', 'o1-preview', 'o1-mini'],

@@ -1,7 +1,7 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import SimpleProviderSetup from '@/components/SimpleProviderSetup';
-import { useAuth } from '@/lib/auth';
+import { useAuth, fetchPublicConfig, getBrandName } from '@/lib/auth';
 
 const win98 = {
   app: { minHeight: '100vh', background: '#008080', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 },
@@ -51,6 +51,8 @@ function WindowBtn({ children, aria }) {
 export default function LandingPage({ onApiKeySet }) {
   const [showProviderSetup, setShowProviderSetup] = useState(false);
   const { user, loading, login } = useAuth();
+  const [brand, setBrand] = useState('Discourse');
+  useEffect(() => { (async () => { try { await fetchPublicConfig(); setBrand(getBrandName()); } catch {} })(); }, []);
   const navigate = useNavigate();
 
   const handleProviderSetupComplete = () => {
@@ -106,16 +108,16 @@ export default function LandingPage({ onApiKeySet }) {
               </div>
             </div>
           </div>
-          {/* BIThub SSO (condensed) */}
+          {/* SSO (dynamic brand) */}
           <div style={win98.panel}>
-            <div style={win98.head}>Connect to BIThub</div>
+            <div style={win98.head}>Connect to {brand}</div>
             <div style={{ background:'#f7f7f7', border:'1px solid #808080', padding:8, marginBottom:10, fontSize:12, lineHeight:1.45 }}>
               <div style={{ fontWeight:700, marginBottom:4 }}>Single sign‑on workspace sync</div>
-              Use your BIThub account (<span style={{ fontFamily:'monospace' }}>hub.bitwiki.org</span>) to pull Personas, project Seeds, and Discourse‑linked threads into this session. Approval happens on BIThub, then you return with a scoped session. Secrets & SSO keys stay server‑side; nothing is persisted beyond the session.
+              Use your {brand} account (<span style={{ fontFamily:'monospace' }}>hub.bitwiki.org</span>) to pull Personas, project Seeds, and {brand}‑linked threads into this session. Approval happens on {brand}, then you return with a scoped session. Secrets & SSO keys stay server‑side; nothing is persisted beyond the session.
               <div style={{ marginTop:6, fontSize:11, opacity:0.85 }}>Benefits: instant prefs • shared memory layer • identity continuity.</div>
             </div>
             <div style={win98.field}>
-              <button style={{ ...win98.btn, ...win98.btnBlock }} onClick={login}>Login with BIThub</button>
+              <button style={{ ...win98.btn, ...win98.btnBlock }} onClick={login}>Login with {brand}</button>
             </div>
           </div>
 

@@ -39,16 +39,38 @@ export async function aiSearch(payload) {
   return r.json();
 }
 
+// aiStream now expects server SSE events: meta/token/done/error
+// onEvent is called with objects: { type, data }
 export function aiStream(payload, onEvent) {
   const ctrl = new AbortController();
-  fetch('/api/ai/stream', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), signal: ctrl.signal }).then(async (res) => {
+  fetch('/api/ai/stream', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+    signal: ctrl.signal,
+  }).then(async (res) => {
     const reader = res.body?.getReader();
     const dec = new TextDecoder();
+    let buf = '';
     while (reader) {
       const { value, done } = await reader.read();
       if (done) break;
-      const text = dec.decode(value, { stream: true });
-      onEvent && onEvent(text);
+      buf += dec.decode(value, { stream: true });
+      // Split into SSE events
+      const parts = buf.split(/\n\n/);
+      buf = parts.pop();
+      for (const raw of parts) {
+        const lines = raw.split(/\n/);
+        let ev = 'message';
+        let dataLines = [];
+        for (const l of lines) {
+          if (l.startsWith('event:')) ev = l.slice(6).trim();
+          else if (l.startsWith('data:')) dataLines.push(l.slice(5).trim());
+        }
+        let data = dataLines.join('\n');
+        try { data = data ? JSON.parse(data) : {}; } catch { data = { raw: dataLines.join('\n') }; }
+        onEvent && onEvent({ type: ev, data });
+      }
     }
   }).catch(()=>{});
   return () => ctrl.abort();

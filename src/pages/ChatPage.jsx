@@ -3,6 +3,8 @@ import ReactMarkdown from 'react-markdown';
 import SettingsModal from '@/components/SettingsModal';
 import { Loader2, PlusCircle, ChevronLeft, ChevronRight, Search, Brackets, Workflow, Cog, Rocket, Trash2, Download, Edit3, XCircle, Layers, Eye, Plug } from 'lucide-react';
 import { PROVIDER_CATALOG, getActiveProviderId, resolveModel } from '@/lib/providerCatalog';
+import { getPersonas, aiStream } from '@/lib/discourseApi';
+import { useAuth, fetchPublicConfig, getBrandName } from '@/lib/auth';
 import { SecureKeyManager } from '@/lib/security';
 import aiRouter, { fetchChatCompletionRaw } from '@/lib/aiRouter';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
@@ -22,10 +24,8 @@ const bevel = {
 
 const ChatPage = ({ embedded = false }) => {
   const [apiKey, setApiKey] = useState(() => {
-    try {
-      const provider = sessionStorage.getItem('active_provider') || 'openai';
-      return SecureKeyManager.getApiKey(provider) || '';
-    } catch { return ''; }
+    const provider = sessionStorage.getItem('active_provider') || 'openai';
+    return SecureKeyManager.getApiKey(provider) || '';
   });
   const [systemMessage, setSystemMessage] = useState(
     () => sessionStorage.getItem('system_message') || 'You are a helpful assistant.'
@@ -39,7 +39,75 @@ const ChatPage = ({ embedded = false }) => {
   const [isStreaming, setIsStreaming] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const authCtx = useAuth?.() || {};
   const [providerId, setProviderId] = useState(() => getActiveProviderId());
+  const [brand, setBrand] = useState('BIThub');
+  const [personas, setPersonas] = useState([]);
+  const [activePersona, setActivePersona] = useState('0-NULL');
+  const [internalStreaming, setInternalStreaming] = useState(false);
+  // Auto-switch to internal provider when SSO auth present and no BYOK key
+  const [defaultPersonaId, setDefaultPersonaId] = useState(null);
+  useEffect(() => {
+    (async () => {
+      try { const cfg = await fetchPublicConfig(); setBrand(getBrandName()); setDefaultPersonaId(cfg?.internalDefaultPersonaId || null); } catch {}
+      const isAuthed = !!authCtx?.user;
+      const hasKey = !!apiKey || !!SecureKeyManager.getApiKey(providerId);
+      if (isAuthed && !hasKey) {
+        setProviderId('internal');
+        sessionStorage.setItem('active_provider', 'internal');
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authCtx?.user]);
+
+  // Load personas when internal provider active
+  useEffect(() => {
+    if (providerId !== 'internal') return;
+    (async () => {
+      try {
+        const data = await getPersonas();
+        let list = data?.personas || [];
+        if (!list.length) list = [{ id: '0-NULL', name: '0-NULL' }];
+        // Only inject 0-NULL placeholder if there are no real personas
+        if (list.length && list[0].id !== '0-NULL' && !list.some(p => String(p.id) === '0-NULL')) {
+          // leave list as-is (real personas available)
+        } else if (!list.some(p => String(p.id) === '0-NULL')) {
+          list.unshift({ id: '0-NULL', name: '0-NULL' });
+        }
+        setPersonas(list);
+        // If current active persona is placeholder but numeric personas exist, auto-switch to first numeric id.
+        if (String(activePersona) === '0-NULL') {
+          const numeric = list.find(p => /^[0-9]+$/.test(String(p.id)));
+          if (numeric) setActivePersona(String(numeric.id));
+        }
+        if (!list.find(p => String(p.id) === String(activePersona))) setActivePersona(String(list[0].id));
+        // Derive internal model list dynamically from persona metadata default_llm.display_name if available
+        try {
+          const modelNames = Array.from(new Set(
+            (list || []).map(p => p.default_llm?.display_name).filter(Boolean)
+          ));
+          if (modelNames.length) {
+            PROVIDER_CATALOG.internal.models = modelNames;
+            PROVIDER_CATALOG.internal.defaultModel = modelNames[0];
+            const current = sessionStorage.getItem('chat_model');
+            if (!current || !modelNames.includes(current)) {
+              setModel(modelNames[0]);
+            }
+            try { sessionStorage.setItem('internal_models', JSON.stringify(modelNames)); } catch {}
+          }
+        } catch {}
+      } catch {
+        setPersonas([{ id: '0-NULL', name: '0-NULL' }]);
+      }
+    })();
+  }, [providerId]);
+
+  // Persist active persona so other AI feature modals (PromptingEngine internal provider) can reuse.
+  useEffect(() => {
+    if (providerId === 'internal') {
+      try { sessionStorage.setItem('internal_active_persona', String(activePersona)); } catch {}
+    }
+  }, [activePersona, providerId]);
   const [model, setModel] = useState(() => resolveModel(getActiveProviderId(), sessionStorage.getItem('chat_model') || ''));
   const [temperature, setTemperature] = useState(() => parseFloat(sessionStorage.getItem('chat_temp') || '0.7'));
   const [isRightPanelOpen, setIsRightPanelOpen] = useState(true);
@@ -76,34 +144,17 @@ const ChatPage = ({ embedded = false }) => {
 
   const filteredConversations = conversations.filter(c => c.title?.toLowerCase().includes(searchQuery.toLowerCase()));
 
-  // Instead of redirecting when key missing (was causing silent bounce), we now show an inline notice.
-  const [missingKey, setMissingKey] = useState(false);
-  useEffect(() => {
-    const has = !!apiKey?.trim();
-    if (!has) {
-      // Attempt auto-discovery: pick first provider with a stored key if active provider empty
-      try {
-        const candidates = Object.keys(PROVIDER_CATALOG);
-        for (const pid of candidates) {
-          const k = SecureKeyManager.getApiKey(pid);
-            if (k) {
-              if (pid !== providerId) { setProviderId(pid); setModel(resolveModel(pid, sessionStorage.getItem(`default_model_${pid}`) || '')); }
-              setApiKey(k);
-              setMissingKey(false);
-              return;
-            }
-        }
-      } catch {}
-    }
-    setMissingKey(!has);
-  }, [apiKey, providerId]);
+  // Allow chat access even without a local provider key (SSO-only sessions may rely on server-side Discourse AI)
+  useEffect(() => { /* intentionally no redirect when apiKey missing */ }, [apiKey]);
 
   // When provider selection changes, load the provider-specific key from SecureKeyManager
   useEffect(() => {
     try {
       const k = SecureKeyManager.getApiKey(providerId) || '';
       setApiKey(k);
-    } catch {}
+    } catch (e) {
+      // ignore
+    }
   }, [providerId]);
 
   useEffect(() => { scrollAreaRef.current && (scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight); }, [conversations]);
@@ -175,10 +226,13 @@ const ChatPage = ({ embedded = false }) => {
       const concatenatedMessages = messages
         .map(msg => `${msg.role}: ${msg.content}`)
         .join('\n');
-
-  const provider = sessionStorage.getItem('active_provider') || 'openai';
-  const key = SecureKeyManager.getApiKey(provider) || apiKey;
-  const data = await aiRouter.chatCompletion(provider, key, {
+      const provider = sessionStorage.getItem('active_provider') || 'openai';
+      if (provider === 'internal') {
+        const firstUser = messages.find(m => m.role === 'user');
+        return (firstUser?.content || 'New Chat').slice(0, 40).replace(/\s+/g, ' ').trim() || 'New Chat';
+      }
+      const key = SecureKeyManager.getApiKey(provider) || apiKey;
+      const data = await aiRouter.chatCompletion(provider, key, {
         model: sessionStorage.getItem(`default_model_${provider}`) || 'gpt-4o-mini',
         messages: [
           { role: 'system', content: 'Generate a short, concise title (3-5 words) for this conversation based on its main topic.' },
@@ -239,23 +293,54 @@ const ChatPage = ({ embedded = false }) => {
 
   const coreSend = async (rawUserInput, { prependMessages = [] } = {}) => {
     if (!rawUserInput.trim()) return;
-
-    if (!apiKey) {
-      toast({ title: 'API Key Missing', description: 'Add a provider key (Settings → AI Providers).', variant: 'destructive' });
-      setMissingKey(true);
-      return; }
+    if (providerId !== 'internal' && !apiKey) {
+      toast({ title: 'API Key Missing', description: 'Set your API key in settings or use internal provider.', variant: 'destructive' });
+      return;
+    }
     const prepared = buildInitialUserContent(rawUserInput.trim());
     const userMessage = { role: 'user', content: prepared };
-    setConversations(prev => {
-      const upd = [...prev];
-      upd[currentConversationIndex].messages.push(userMessage);
-      return upd;
-    });
+    setConversations(prev => { const upd = [...prev]; upd[currentConversationIndex].messages.push(userMessage); return upd; });
     setIsStreaming(true);
 
     try {
-    const provider = providerId;
-  const sys = buildSystemPrompt();
+      const provider = providerId;
+      if (provider === 'internal') {
+        let assistantMessage = { role: 'assistant', content: '' };
+        setConversations(prev => { const upd = [...prev]; upd[currentConversationIndex].messages.push(assistantMessage); return upd; });
+        setInternalStreaming(true);
+        const sys = buildSystemPrompt();
+        const history = conversations[currentConversationIndex].messages;
+        // Auto-switch off placeholder if real numeric persona exists
+        if (String(activePersona) === '0-NULL') {
+          const numeric = personas.find(p => /^[0-9]+$/.test(String(p.id)));
+          if (numeric) setActivePersona(String(numeric.id));
+          else if (defaultPersonaId && /^[0-9]+$/.test(String(defaultPersonaId))) setActivePersona(String(defaultPersonaId));
+        }
+        const assembled = [ { role:'system', content: sys }, ...prependMessages, ...history, userMessage ];
+        const personaToSend = (/^[0-9]+$/.test(String(activePersona)) ? activePersona : (personas.find(p => /^[0-9]+$/.test(String(p.id)))?.id || activePersona));
+    const internalPayload = { persona: personaToSend, topic_id: 0, query: assembled.map(m => `${m.role.toUpperCase()}: ${m.content}`).join('\n\n') };
+    const stopper = aiStream(internalPayload, (ev) => {
+          if (ev.type === 'token') {
+            assistantMessage.content += ev.data.text || '';
+            setConversations(prev => { const upd = [...prev]; const msgs = upd[currentConversationIndex].messages; msgs[msgs.length - 1] = { ...assistantMessage }; return upd; });
+          } else if (ev.type === 'error') {
+      const errTxt = ev.data.error || ev.data.message || ev.data.detail_first || ev.data.detail_second || ev.data.detail || (ev.data.status_first ? `status ${ev.data.status_first}` : ev.data.status ? `status ${ev.data.status}` : 'unknown');
+      // Include structured JSON for deeper debugging
+      let meta = '';
+      try { meta = '\nDETAIL: ' + JSON.stringify({ ...ev.data, internalPayload }, null, 2).slice(0, 1200); } catch {}
+      assistantMessage.content += `\n[error: ${errTxt}]${meta}`;
+            setInternalStreaming(false); setIsStreaming(false);
+          } else if (ev.type === 'done') {
+            setInternalStreaming(false); setIsStreaming(false);
+            if (autoTitle && conversations[currentConversationIndex].title === 'New Chat') {
+              generateTitle([userMessage, assistantMessage]).then(t => setConversations(prev => { const upd = [...prev]; upd[currentConversationIndex].title = t; return upd; }));
+            }
+          }
+        });
+        abortControllerRef.current = { abort: () => { try { stopper(); } catch {} } };
+        return;
+      }
+      const sys = buildSystemPrompt();
       const history = conversations[currentConversationIndex].messages;
       const assembledMessages = [ { role: 'system', content: sys }, ...prependMessages, ...history, userMessage ];
       const payload = {
@@ -267,7 +352,7 @@ const ChatPage = ({ embedded = false }) => {
       setLastPayload(payload);
       const controller = new AbortController();
       abortControllerRef.current = controller;
-  const requestKey = SecureKeyManager.getApiKey(provider) || apiKey;
+    const requestKey = SecureKeyManager.getApiKey(provider) || apiKey;
     const response = await fetchChatCompletionRaw(provider, requestKey, payload);
 
       const reader = response.body.getReader();
@@ -336,11 +421,7 @@ const ChatPage = ({ embedded = false }) => {
     coreSend(toSend, options);
   };
 
-  const cancelStream = () => {
-    try { abortControllerRef.current?.abort(); } catch {}
-    abortControllerRef.current = null;
-    setIsStreaming(false);
-  };
+  const cancelStream = () => { try { abortControllerRef.current?.abort(); } catch {}; abortControllerRef.current = null; setIsStreaming(false); setInternalStreaming(false); };
 
   const retryLast = () => {
     if (!lastPayload) return;
@@ -479,14 +560,13 @@ const ChatPage = ({ embedded = false }) => {
           <SettingsModal apiKey={apiKey} setApiKey={setApiKey} systemMessage={systemMessage} setSystemMessage={setSystemMessage} />
         </div>
         <div className="flex flex-1 min-h-0 overflow-hidden relative">
+          {!apiKey && providerId !== 'internal' && (
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 z-10 mt-1 px-3 py-1 text-[11px] bg-[#fffbcc] text-black border border-yellow-700 shadow" role="alert" aria-live="polite">
+              No local API key configured (BYOK). Operating in SSO / read-only mode; add a provider key for full chat.
+            </div>
+          )}
           <div className="flex flex-col flex-1 min-w-0 p-2 gap-2" aria-label="Chat messages panel">
             <div ref={scrollAreaRef} className={`flex-1 overflow-auto bg-white ${bevel.in} border-2 p-3 font-mono text-sm leading-6`}>
-              {missingKey && conversations[currentConversationIndex].messages.length === 0 && (
-                <div className="mb-4 text-xs bg-yellow-100 border border-yellow-400 text-yellow-900 p-2 rounded">
-                  <div className="font-semibold mb-1">No active provider key.</div>
-                  <div>Open Settings (gear icon) → AI Providers to add or activate a key. The app no longer redirects automatically.</div>
-                </div>
-              )}
               {conversations[currentConversationIndex].messages.map((message, index) => (
                 <div key={index} className="mb-4">
                   <div className="flex items-start gap-2">
@@ -517,7 +597,7 @@ const ChatPage = ({ embedded = false }) => {
                 <div className="flex items-center gap-2 text-xs opacity-70"><Loader2 className="w-3 h-3 animate-spin" /> streaming...</div>
               )}
             </div>
-      <form onSubmit={handleSubmit} className="flex gap-2" aria-label="Message input form">
+            <form onSubmit={handleSubmit} className="flex gap-2" aria-label="Message input form">
               <div className={`flex-1 bg-white ${bevel.in} border-2 flex items-center px-2`}>
                 <input
                   aria-label="Message"
@@ -525,17 +605,17 @@ const ChatPage = ({ embedded = false }) => {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   placeholder="Type message (Ctrl+Enter to send)"
-          disabled={isStreaming || missingKey}
+                  disabled={isStreaming}
                   onKeyDown={(e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { handleSubmit(e); } }}
                 />
               </div>
-        <button type="submit" disabled={isStreaming || missingKey} className={`px-4 text-sm bg-[var(--w95-face)] ${bevel.out} border-2 disabled:opacity-50`}>{missingKey ? 'Key Required' : (isStreaming ? 'Sending' : 'Send')}</button>
+              <button type="submit" disabled={isStreaming} className={`px-4 text-sm bg-[var(--w95-face)] ${bevel.out} border-2 disabled:opacity-50`}>{isStreaming ? 'Sending' : 'Send'}</button>
               {isStreaming && (
                 <button type="button" onClick={cancelStream} className={`px-3 text-sm bg-[var(--w95-face)] ${bevel.out} border-2`} aria-label="Cancel streaming"><XCircle className="w-4 h-4" /></button>
               )}
             </form>
             <div className="flex flex-wrap gap-2 mt-1">
-        <button onClick={(e) => handleSubmit(e)} disabled={isStreaming || !input.trim() || missingKey} className={`text-[11px] px-2 py-1 bg-[var(--w95-face)] ${bevel.out} border-2 disabled:opacity-40`}>Send</button>
+              <button onClick={(e) => handleSubmit(e)} disabled={isStreaming || !input.trim()} className={`text-[11px] px-2 py-1 bg-[var(--w95-face)] ${bevel.out} border-2 disabled:opacity-40`}>Send</button>
               <button onClick={retryLast} disabled={isStreaming || !lastPayload} className={`text-[11px] px-2 py-1 bg-[var(--w95-face)] ${bevel.out} border-2 disabled:opacity-40`} aria-label="Retry last">Retry</button>
               <button onClick={() => setShowStaging(s => !s)} className={`text-[11px] px-2 py-1 bg-[var(--w95-face)] ${bevel.out} border-2`} aria-label="Toggle multi staging">{showStaging ? 'Hide Multi-Stage' : 'Show Multi-Stage'}</button>
               <button onClick={() => setShowPayload(s => !s)} disabled={!lastPayload} className={`text-[11px] px-2 py-1 bg-[var(--w95-face)] ${bevel.out} border-2 disabled:opacity-40 flex items-center gap-1`} aria-label="Show last payload"><Eye className="w-3 h-3" />Payload</button>
@@ -585,7 +665,7 @@ const ChatPage = ({ embedded = false }) => {
           {isRightPanelOpen && (
           <div className="w-72 p-2 flex flex-col gap-2 bg-[var(--w95-face)] border-l-2 border-[var(--w95-shadow)] w95-right-panel" aria-label="Chat configuration panel">
             <div className={`p-2 bg-[var(--w95-face)] ${bevel.out} border-2 space-y-2`}>
-              <div className="w95-subpanel-header"><Cog className="w-3 h-3" /> Runtime</div>
+              <div className="w95-subpanel-header"><Cog className="w-3 h-3" /> {providerId === 'internal' ? `${brand} Runtime` : 'Runtime'}</div>
               <label className="text-[11px]">Provider
                 <div className={`mt-1 h-7 bg-white ${bevel.in} border-2 flex items-center px-1`}>
                   <select className="w-full bg-transparent text-xs outline-none" value={providerId} onChange={(e) => { const pid = e.target.value; setProviderId(pid); const next = resolveModel(pid, model); setModel(next); }} aria-label="Provider select">
@@ -593,6 +673,15 @@ const ChatPage = ({ embedded = false }) => {
                   </select>
                 </div>
               </label>
+              {providerId === 'internal' && (
+                <label className="text-[11px]">Persona
+                  <div className={`mt-1 h-7 bg-white ${bevel.in} border-2 flex items-center px-1`}>
+                    <select className="w-full bg-transparent text-xs outline-none" value={activePersona} onChange={(e) => setActivePersona(e.target.value)} aria-label="Persona select">
+                      {personas.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                    </select>
+                  </div>
+                </label>
+              )}
               <label className="text-[11px]">Model
                 <div className={`mt-1 h-7 bg-white ${bevel.in} border-2 flex items-center px-1`}>
                   <select className="w-full bg-transparent text-xs outline-none" value={model} onChange={(e) => setModel(e.target.value)} aria-label="Model select">

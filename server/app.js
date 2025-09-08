@@ -15,6 +15,10 @@ const DISCOURSE_SSO_SECRET = process.env.DISCOURSE_SSO_SECRET || '';
 const APP_BASE_URL = process.env.APP_BASE_URL || 'http://localhost:8081';
 const API_KEY = process.env.API_KEY || 'change-me';
 const DISCOURSE_WEBHOOK_SECRET = process.env.DISCOURSE_WEBHOOK_SECRET || '';
+// Optional default internal persona id (numeric) used when persona list cannot be fetched
+const INTERNAL_DEFAULT_PERSONA_ID = process.env.INTERNAL_DEFAULT_PERSONA_ID || process.env.BITHUB_DEFAULT_PERSONA_ID || '';
+// Optional branding override (e.g., BIThub) – falls back to "Discourse" when unset
+const DISCOURSE_BRAND = process.env.BITHUB || process.env.BITHUB_NAME || 'Discourse';
 const NODE_ENV = process.env.NODE_ENV || 'development';
 
 // Helpers
@@ -171,7 +175,8 @@ export function createApp() {
       discourseBaseUrl: DISCOURSE_BASE_URL,
       ssoProvider: !!DISCOURSE_SSO_SECRET,
       appBaseUrl: APP_BASE_URL,
-  hasDiscourseApiKey: !!API_KEY && API_KEY !== 'change-me',
+  brand: DISCOURSE_BRAND,
+  internalDefaultPersonaId: INTERNAL_DEFAULT_PERSONA_ID || null,
     });
   });
 
@@ -315,10 +320,7 @@ export function createApp() {
     const r = await fetchWithRetry(url, { headers });
     if (!r.ok) {
       const text = await r.text();
-      const err = new Error(`Discourse error ${r.status}: ${text}`);
-      // lightweight server side logging for diagnosis (omit large bodies)
-      try { console.warn('[discourseGet]', { url, status: r.status, snippet: text.slice(0,300) }); } catch {}
-      throw err;
+      throw new Error(`Discourse error ${r.status}: ${text}`);
     }
     return r.json();
   }
@@ -372,17 +374,11 @@ export function createApp() {
       if (String(req.params.username) !== String(sessionUser.username)) {
         return res.status(403).json({ error: 'username_mismatch' });
       }
-      if (!API_KEY || API_KEY === 'change-me') {
-        // Without an admin API key we cannot impersonate user to fetch PMs via API
-        return res.status(501).json({ error: 'discourse_api_key_missing', message: 'Server missing DISCOURSE API_KEY for private messages.' });
-      }
       const u = encodeURIComponent(req.params.username);
       const data = await discourseGet(`/topics/private-messages/${u}.json`, req);
       return res.json(data);
     } catch (e) {
-      const msg = String(e && e.message || 'error');
-      const status = msg.includes('discourse_api_key_missing') ? 501 : 502;
-      return res.status(status).json({ error: 'proxy_failed', detail: msg });
+      return res.status(502).json({ error: 'proxy_failed' });
     }
   });
 
@@ -519,37 +515,158 @@ export function createApp() {
     }
   });
 
-  // Stream completion proxy (pipes text/event-stream)
+  // AI Personas streaming proxy (adapts newline-delimited JSON -> SSE events)
+  // Upstream confirmed working endpoint: POST /admin/plugins/discourse-ai/ai-personas/stream-reply
+  // Input (internal canonical): { persona, topic_id?, query, model? }
+  // Output SSE events: meta -> token -> done (or error)
+  const AI_STREAM_METRICS = { requests: 0, perPersona: Object.create(null), tokens: 0, failures: 0 };
   app.post('/api/ai/stream', async (req, res) => {
+    const sessionUser = getSessionUser(req);
+    const { persona, topic_id, query, model } = req.body || {};
+    // Basic validation
+    if (!persona || !query) {
+      res.setHeader('Content-Type', 'application/json');
+      return res.status(400).json({ error: 'missing_params', detail: 'persona and query are required' });
+    }
+    // Prepare upstream payload
+    const upstreamPayload = {
+      // Use system impersonation for confirmed working AI endpoints (matches test curl) regardless of session user
+      username: 'system',
+      query,
+    };
+    let personaSent = persona;
+    if (personaSent === '0-NULL' && INTERNAL_DEFAULT_PERSONA_ID && /^[0-9]+$/.test(INTERNAL_DEFAULT_PERSONA_ID)) {
+      personaSent = INTERNAL_DEFAULT_PERSONA_ID;
+    }
+    if (/^[0-9]+$/.test(String(personaSent))) upstreamPayload.persona_id = Number(personaSent);
+    else upstreamPayload.persona_name = String(personaSent);
+    if (typeof topic_id === 'number' || /^[0-9]+$/.test(String(topic_id))) upstreamPayload.topic_id = Number(topic_id);
+    if (model) upstreamPayload.model = model;
+
+    // Metrics bookkeeping
+    AI_STREAM_METRICS.requests++;
+    AI_STREAM_METRICS.perPersona[persona] = (AI_STREAM_METRICS.perPersona[persona] || 0) + 1;
+
+    // Headers
+    const headers = { 'Accept': 'application/json', 'Content-Type': 'application/json' };
+    if (API_KEY && API_KEY !== 'change-me') {
+      headers['Api-Key'] = API_KEY;
+      // Force system for AI endpoints as upstream requires elevated persona access
+      headers['Api-Username'] = 'system';
+    }
+
+    // Open SSE channel to client
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache, no-transform');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders?.();
+
+    const upstreamUrl = `${DISCOURSE_BASE_URL}/admin/plugins/discourse-ai/ai-personas/stream-reply`;
+    let metaEmitted = false;
     try {
-      const url = `${DISCOURSE_BASE_URL}/discourse_ai/stream_completion`;
-      const headers = {
-        'Accept': 'text/event-stream',
-        'Content-Type': 'application/json',
-      };
-  if (API_KEY && API_KEY !== 'change-me') { headers['Api-Key'] = API_KEY; headers['Api-Username'] = (getSessionUser(req)?.username) || 'system'; }
-      const upstream = await fetch(url, { method: 'POST', headers, body: JSON.stringify(req.body || {}) });
-      res.setHeader('Content-Type', 'text/event-stream');
-      res.setHeader('Cache-Control', 'no-cache, no-transform');
-      res.setHeader('Connection', 'keep-alive');
-      res.flushHeaders?.();
-      if (!upstream.ok || !upstream.body) {
-        res.write(`event: error\n` + `data: {"status":${upstream.status}}\n\n`);
+      async function attempt(payload, label) {
+        console.log('[ai-stream] attempt', label, payload);
+        try {
+          const up = await fetch(upstreamUrl, { method: 'POST', headers, body: JSON.stringify(payload) });
+          if (!up.ok || !up.body) {
+            let detail = '';
+            try { detail = await up.text(); } catch {}
+            return { ok: false, status: up.status, detail, label };
+          }
+          return { ok: true, upstream: up, label };
+        } catch (e) {
+          return { ok: false, status: 599, detail: String(e.message || e), label };
+        }
+      }
+  let first = await attempt(upstreamPayload, 'primary');
+      if (!first.ok) {
+        console.warn('[ai-stream] primary attempt failed', { status: first.status, snippet: first.detail?.slice(0,200) });
+      }
+      let chosen = first;
+      let usedPayload = upstreamPayload;
+      let second = null;
+      if (!first.ok) {
+        if (upstreamPayload.persona_id) {
+          const alt = { ...upstreamPayload, persona_name: String(persona) }; delete alt.persona_id;
+          second = await attempt(alt, 'fallback_name');
+          if (!second.ok) console.warn('[ai-stream] fallback_name failed', { status: second.status, snippet: second.detail?.slice(0,200) });
+          if (second.ok) { chosen = second; usedPayload = alt; }
+        } else if (upstreamPayload.persona_name && /^[0-9]+$/.test(String(persona))) {
+          const alt = { ...upstreamPayload, persona_id: Number(persona) }; delete alt.persona_name;
+          second = await attempt(alt, 'fallback_id');
+          if (!second.ok) console.warn('[ai-stream] fallback_id failed', { status: second.status, snippet: second.detail?.slice(0,200) });
+          if (second.ok) { chosen = second; usedPayload = alt; }
+        }
+      }
+      if (!chosen.ok) {
+        AI_STREAM_METRICS.failures++;
+        res.write('event: error\n');
+  res.write('data: ' + JSON.stringify({ error: 'upstream_failure', status_first: first.status, detail_first: first.detail?.slice(0,800), status_second: second?.status || null, detail_second: second?.detail?.slice(0,800) || null, persona_sent: persona, persona_effective: personaSent, attempted_payloads: { primary: upstreamPayload, fallback: usedPayload !== upstreamPayload ? usedPayload : null } }) + '\n\n');
         return res.end();
       }
+      const upstream = chosen.upstream;
+      console.log('[ai-stream] streaming start', chosen.label, usedPayload);
+      const decoder = new TextDecoder();
+      let buffer = '';
       upstream.body.on('data', (chunk) => {
-        res.write(chunk);
+        buffer += decoder.decode(chunk, { stream: true });
+        let idx;
+        while ((idx = buffer.indexOf('\n')) >= 0) {
+          const line = buffer.slice(0, idx).trim();
+          buffer = buffer.slice(idx + 1);
+          if (!line) continue;
+          let obj = null;
+          try { obj = JSON.parse(line); } catch (e) {
+            if (!metaEmitted) {
+              AI_STREAM_METRICS.failures++;
+              res.write('event: error\n');
+              res.write('data: ' + JSON.stringify({ error: 'bad_upstream_line', line: line.slice(0,400), persona_sent: persona }) + '\n\n');
+              return res.end();
+            }
+            continue;
+          }
+          if (obj.partial) {
+            AI_STREAM_METRICS.tokens++;
+            res.write('event: token\n');
+            res.write('data: ' + JSON.stringify({ text: obj.partial }) + '\n\n');
+          } else if (!metaEmitted && (obj.topic_id || obj.persona_id)) {
+            metaEmitted = true;
+            res.write('event: meta\n');
+            res.write('data: ' + JSON.stringify(obj) + '\n\n');
+          }
+        }
       });
-      upstream.body.on('end', () => res.end());
-      upstream.body.on('error', () => res.end());
+      upstream.body.on('end', () => {
+        if (!res.writableEnded) {
+          res.write('event: done\n');
+          res.write('data: {}\n\n');
+          res.end();
+        }
+      });
+      upstream.body.on('error', () => {
+        AI_STREAM_METRICS.failures++;
+        try { res.write('event: error\n' + 'data: ' + JSON.stringify({ error: 'upstream_stream_error' }) + '\n\n'); } catch {}
+        res.end();
+      });
     } catch (e) {
-      try { res.write(`event: error\n` + `data: {"message":"proxy_error"}\n\n`); } catch {}
+      AI_STREAM_METRICS.failures++;
+      try { res.write('event: error\n' + 'data: ' + JSON.stringify({ error: 'proxy_exception', message: String(e.message || e) }) + '\n\n'); } catch {}
       return res.end();
     }
   });
 
-  // Personas list proxy (best-effort; returns [] if plugin/endpoint unavailable)
+  // Metrics endpoint for debugging internal AI stream behavior
+  app.get('/api/ai/metrics', (_req, res) => {
+    res.json({ ...AI_STREAM_METRICS, now: Date.now() });
+  });
+
+  // Personas list proxy with caching & updated endpoint ordering
+  const PERSONAS_CACHE = { ts: 0, data: null };
   app.get('/api/ai/personas', async (req, res) => {
+    const now = Date.now();
+    if (PERSONAS_CACHE.data && (now - PERSONAS_CACHE.ts) < 60_000) {
+      return res.json(PERSONAS_CACHE.data);
+    }
     const headers = { 'Accept': 'application/json' };
     if (API_KEY && API_KEY !== 'change-me') { headers['Api-Key'] = API_KEY; headers['Api-Username'] = (getSessionUser(req)?.username) || 'system'; }
     async function tryPath(path) {
@@ -559,16 +676,17 @@ export function createApp() {
         return await r.json();
       } catch { return null; }
     }
-    // Try likely endpoints in order
+    // Preferred confirmed path first
     const candidates = [
+      '/admin/plugins/discourse-ai/ai-personas.json',
       '/discourse_ai/personas',
-      '/admin/plugins/discourse-ai/personas.json',
+      '/admin/plugins/discourse-ai/personas.json', // legacy guess
       '/discourse_ai/bot/personas',
     ];
+    let personas = [];
     for (const p of candidates) {
       const data = await tryPath(p);
       if (data) {
-        // Normalize a simple list: [{id, name, description?}]
         const items = Array.isArray(data)
           ? data
           : Array.isArray(data?.personas)
@@ -576,20 +694,24 @@ export function createApp() {
             : Array.isArray(data?.rows)
               ? data.rows
               : [];
-        const personas = items.map((it) => ({
+        personas = items.map((it) => ({
           id: it.id || it.slug || it.name,
           name: it.name || it.title || it.slug || String(it.id || ''),
           description: it.description || it.summary || '',
+          default_llm: it.default_llm || null,
+          slug: it.slug || null,
         })).filter((x) => x.id);
-        return res.json({ personas });
+        if (personas.length) break;
       }
     }
-    // Fallback default
-    return res.json({ personas: [
-      { id: 'default', name: 'Default' },
-      { id: 'coder', name: 'Coder' },
-      { id: 'researcher', name: 'Researcher' },
-    ]});
+    if (!personas.length) {
+      // Minimal safe fallback – avoid inventing fictional personas that cause confusion.
+      personas = [
+        { id: '0-NULL', name: '0-NULL', description: 'Neutral baseline persona.' },
+      ];
+    }
+    PERSONAS_CACHE.data = { personas }; PERSONAS_CACHE.ts = Date.now();
+    return res.json({ personas });
   });
 
   // Static files in production; SPA fallback. In dev, redirect root to APP_BASE_URL.
