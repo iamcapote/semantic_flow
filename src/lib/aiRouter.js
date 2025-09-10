@@ -35,14 +35,35 @@ const DEFAULT_PROMPTS = {
     user: `User specification:\n\n{{input}}`,
     // allow engine to append dynamic ontology reference by default
     appendOntology: true,
+    variants: {
+      standard: 'Produce a faithful structured workflow capturing all major logical elements.',
+      concise: 'Produce a minimal workflow capturing only core semantic steps.',
+      verbose: 'Produce an exhaustive workflow including fine-grained reasoning nodes.',
+      experimental: 'Favor novel node type suggestions when mapping is ambiguous.',
+    },
   },
   execute: {
     system: `You are a semantic logic workflow executor. Execute the provided workflow step by step.\n\nWorkflow Format: {{format}}\nYour task:\n1. Process each node in the workflow according to its semantic type\n2. Follow the logical connections between nodes\n3. Provide reasoning for each step\n4. Return results in the same format structure.`,
     user: `Execute this semantic workflow:\n\n{{workflow}}`,
+    variants: {
+      standard: 'Perform a normal execution with balanced detail.',
+      trace: 'Include a detailed reasoning trace for each node.',
+      concise: 'Minimize verbosity; provide only essential outputs.',
+      diagnostics: 'Highlight potential logical gaps or missing dependencies as you execute.',
+    },
   },
   enhance: {
     system: `You are a semantic logic node enhancer. Your job is to improve, optimize or refactor a single semantic node's content while preserving its logical purpose and type.\n\nGuidelines:\n1. Maintain the node's semantic type and logical purpose\n2. Preserve the core meaning while improving expression\n3. Use appropriate technical vocabulary\n4. Return ONLY the enhanced content, no additional formatting.`,
     user: `Enhance this node content:\n\n{{content}}`,
+    // Variant-specific instructions (editable) used when user picks a specific enhancementType
+    variants: {
+      improve: 'Improve and refine this semantic node while maintaining its logical purpose and type.',
+      optimize: 'Optimize this semantic node for clarity, precision, and logical coherence.',
+      refactor: 'Refactor this semantic node to be more structured and academically rigorous.',
+      enhance: 'Enhance this semantic node with richer vocabulary and more sophisticated reasoning.',
+      simplify: 'Simplify this semantic node while preserving its essential meaning and logical function.',
+      elaborate: 'Elaborate on this semantic node with additional detail and nuanced reasoning.',
+    },
   },
 };
 
@@ -55,9 +76,30 @@ export function getPromptDefaults() {
     const parsed = JSON.parse(raw);
     // shallow merge
     return {
-      text2wf: { ...DEFAULT_PROMPTS.text2wf, ...(parsed.text2wf || {}) },
-      execute: { ...DEFAULT_PROMPTS.execute, ...(parsed.execute || {}) },
-      enhance: { ...DEFAULT_PROMPTS.enhance, ...(parsed.enhance || {}) },
+      text2wf: {
+        ...DEFAULT_PROMPTS.text2wf,
+        ...(parsed.text2wf || {}),
+        variants: {
+          ...(DEFAULT_PROMPTS.text2wf.variants || {}),
+          ...(((parsed.text2wf || {}).variants) || {}),
+        },
+      },
+      execute: {
+        ...DEFAULT_PROMPTS.execute,
+        ...(parsed.execute || {}),
+        variants: {
+          ...(DEFAULT_PROMPTS.execute.variants || {}),
+          ...(((parsed.execute || {}).variants) || {}),
+        },
+      },
+      enhance: {
+        ...DEFAULT_PROMPTS.enhance,
+        ...(parsed.enhance || {}),
+        variants: {
+          ...(DEFAULT_PROMPTS.enhance.variants || {}),
+            ...(((parsed.enhance || {}).variants) || {}),
+        },
+      },
     };
   } catch (e) {
     return DEFAULT_PROMPTS;
@@ -67,9 +109,20 @@ export function getPromptDefaults() {
 export function publishPromptDefaults(overrides) {
   try {
     const next = {
-      text2wf: { ...(overrides.text2wf || {}) },
-      execute: { ...(overrides.execute || {}) },
-      enhance: { ...(overrides.enhance || {}) },
+      text2wf: {
+        ...(overrides.text2wf || {}),
+        variants: { ...((overrides.text2wf || {}).variants || {}) },
+      },
+      execute: {
+        ...(overrides.execute || {}),
+        variants: { ...((overrides.execute || {}).variants || {}) },
+      },
+      enhance: {
+        ...(overrides.enhance || {}),
+        variants: {
+          ...((overrides.enhance || {}).variants || {}),
+        },
+      },
     };
     if (typeof window !== 'undefined') localStorage.setItem(PROMPT_KEY, JSON.stringify(next));
     return true;

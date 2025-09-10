@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import PromptingEngine from '@/lib/promptingEngine';
+import { getPromptDefaults, publishPromptDefaults } from '@/lib/aiRouter';
 import { SecureKeyManager } from '@/lib/security';
 
 const ui = {
@@ -30,6 +31,13 @@ export default function NodeEnhancementModal95({ node, onNodeUpdate, trigger }) 
   // When node content is empty, allow manual input
   const [manualInput, setManualInput] = useState('');
   const [engine] = useState(() => new PromptingEngine('demo-user'));
+  const [prompts, setPrompts] = useState(()=>getPromptDefaults());
+  const variantMap = prompts?.enhance?.variants || {};
+  const core = ['improve','optimize','refactor','enhance','simplify','elaborate'];
+  const allVariants = [...new Set([...core, ...Object.keys(variantMap)])];
+  const [addingVariant, setAddingVariant] = useState(false);
+  const [newKey, setNewKey] = useState('');
+  const [newText, setNewText] = useState('');
 
   useEffect(() => {
     const load = async () => {
@@ -121,11 +129,28 @@ export default function NodeEnhancementModal95({ node, onNodeUpdate, trigger }) 
                   <label style={{ display: 'grid', gap: 4 }}>
                     <span style={ui.small}>Enhancement type</span>
                     <select value={enhancementType} onChange={(e)=>setEnhancementType(e.target.value)} style={ui.select}>
-                      {['improve','optimize','refactor','enhance','simplify','elaborate'].map(t => (
+                      {allVariants.map(t => (
                         <option key={t} value={t}>{t}</option>
                       ))}
+                      <option value="__new">+ new variant…</option>
                     </select>
                   </label>
+                  {enhancementType==='__new' && (
+                    <div style={{ display:'grid', gap:4, border:'1px dashed #808080', padding:6 }}>
+                      <input style={ui.select} placeholder="variant key" value={newKey} onChange={e=>setNewKey(e.target.value)} />
+                      <textarea style={ui.ta} placeholder="Instruction text" value={newText} onChange={e=>setNewText(e.target.value)} />
+                      <div style={{ display:'flex', gap:6 }}>
+                        <button style={ui.btn} onClick={()=>{
+                          const key = (newKey||'').trim().toLowerCase();
+                          if(!key.match(/^[a-z0-9_-]{3,32}$/)){ alert('Invalid key'); return; }
+                          if(!newText.trim()){ alert('Enter instruction text'); return; }
+                          const next = { ...prompts, enhance: { ...(prompts.enhance||{}), variants: { ...(prompts.enhance?.variants||{}), [key]: newText } } };
+                          setPrompts(next); publishPromptDefaults(next); setEnhancementType(key); setNewKey(''); setNewText('');
+                        }}>Save</button>
+                        <button style={ui.btn} onClick={()=>{ setEnhancementType('improve'); setNewKey(''); setNewText(''); }}>Cancel</button>
+                      </div>
+                    </div>
+                  )}
                   <label style={{ display: 'grid', gap: 4 }}>
                     <span style={ui.small}>Provider</span>
                     <select value={providerId} onChange={(e)=>setProviderId(e.target.value)} style={ui.select}>

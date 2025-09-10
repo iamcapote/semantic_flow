@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import DiscourseViewer from '@/components/DiscourseViewer';
 import { SecureKeyManager } from '@/lib/security';
 import aiRouter, { publishSettings as publishAIRouterSettings, getPromptDefaults, publishPromptDefaults } from '@/lib/aiRouter';
@@ -35,6 +35,174 @@ const endpoints = [
   { id: 'cores', name: 'cores' },
   { id: 'workspaces', name: 'workspaces' },
 ];
+
+// Prompt configuration dialog and preview
+function PromptConfigDialog({ feature, open, onClose, templates, setTemplates, activeVariant, setActiveVariant }) {
+  const metaMap = {
+    text2wf: { label: 'Text → Workflow', tokens: ['{{input}}'], core: ['standard','concise','verbose','experimental'] },
+    execute: { label: 'Execute Workflow', tokens: ['{{workflow}}','{{format}}'], core: ['standard','trace','concise','diagnostics'] },
+    enhance: { label: 'Enhance Content', tokens: ['{{content}}'], core: ['improve','optimize','refactor','enhance','simplify','elaborate'] },
+  };
+  if(!open) return null;
+  const meta = metaMap[feature];
+  const t = templates[feature] || {};
+  const variants = t.variants || {};
+  const ordered = [...new Set([...meta.core, ...Object.keys(variants)])];
+  const [editing, setEditing] = useState(null);
+  const [newKey, setNewKey] = useState('');
+  const [newText, setNewText] = useState('');
+  const dialogRef = useRef(null);
+  const previouslyFocused = useRef(null);
+  const updateVariant = (k, v) => {
+    const next = { ...templates, [feature]: { ...t, variants: { ...variants, [k]: v } } };
+    setTemplates(next);
+  };
+  const removeVariant = (k) => {
+    if (meta.core.includes(k)) { alert('Core variant cannot be removed'); return; }
+    const copy = { ...variants }; delete copy[k];
+    const next = { ...templates, [feature]: { ...t, variants: copy } };
+    setTemplates(next);
+    if (activeVariant === k) setActiveVariant(meta.core[0]);
+  };
+  const addVariant = () => {
+    const key = (newKey||'').trim().toLowerCase();
+    if(!key.match(/^[a-z0-9_-]{3,32}$/)){ alert('Key 3-32 chars a-z0-9_-'); return; }
+    if(!newText.trim()){ alert('Enter text'); return; }
+    if(variants[key]) { alert('Variant exists'); return; }
+    const next = { ...templates, [feature]: { ...t, variants: { ...variants, [key]: newText } } };
+    setTemplates(next); setActiveVariant(key); setNewKey(''); setNewText('');
+  };
+  const saveAll = () => { publishPromptDefaults(templates); alert('Saved'); };
+  const reload = () => { const fresh = getPromptDefaults(); setTemplates(fresh); alert('Reloaded'); };
+  // Focus management & trap
+  useEffect(() => {
+    if(open){
+      previouslyFocused.current = document.activeElement;
+      // Defer to next tick for rendering
+      setTimeout(() => {
+        const first = dialogRef.current?.querySelector('textarea, input, select, button');
+        first && first.focus();
+      }, 0);
+    }
+  }, [open]);
+  useEffect(() => {
+    if(!open) return; // attach only when open
+    const handleKey = (e) => {
+      if(e.key === 'Escape') { e.preventDefault(); onClose(); }
+      if(e.key === 'Tab') {
+        const focusables = Array.from(dialogRef.current.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'))
+          .filter(el => !el.hasAttribute('disabled'));
+        if(!focusables.length) return;
+        const idx = focusables.indexOf(document.activeElement);
+        let nextIdx = idx;
+        if(e.shiftKey) {
+          nextIdx = idx <= 0 ? focusables.length - 1 : idx - 1;
+        } else {
+          nextIdx = idx === focusables.length - 1 ? 0 : idx + 1;
+        }
+        e.preventDefault();
+        (focusables[nextIdx] || focusables[0]).focus();
+      }
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [open, onClose]);
+  // Restore focus when closed
+  useEffect(() => {
+    if(!open && previouslyFocused.current) {
+      try { previouslyFocused.current.focus(); } catch {}
+    }
+  }, [open]);
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-start justify-center p-4 bg-black/45"
+      onMouseDown={(e)=>{ if(e.target === e.currentTarget) onClose(); }}
+      role="dialog" aria-modal="true" aria-label={`Configure ${meta.label}`}
+    >
+      <div ref={dialogRef} className={`${win95.panel} ${win95.outset} w-full max-w-3xl bg-[#c0c0c0] shadow-[4px_4px_0_#000]`} style={{imageRendering:'pixelated'}}>
+        <div className={win95.title + ' flex justify-between items-center select-none'}>
+          <span>Configure · {meta.label}</span>
+          <div className="flex gap-2">
+            <button onClick={saveAll} className={`${win95.miniButton} ${win95.outset} text-xs`}>Save</button>
+            <button onClick={reload} className={`${win95.miniButton} ${win95.outset} text-xs`}>Reload</button>
+            <button onClick={onClose} className={`${win95.miniButton} ${win95.outset} text-xs`}>Close</button>
+          </div>
+        </div>
+        <div className={`${win95.inset} p-3 grid gap-4 text-xs max-h-[70vh] overflow-auto`}> 
+          <div>
+            <div className="font-semibold mb-1">System Prompt</div>
+            <textarea value={t.system||''} onChange={(e)=>setTemplates(p=>({...p,[feature]:{...t, system:e.target.value}}))} className={`${win95.inset} w-full h-24 p-2 font-mono resize-none bg-white text-black`} />
+          </div>
+            <div>
+              <div className="font-semibold mb-1">User Prompt Template</div>
+              <textarea value={t.user||''} onChange={(e)=>setTemplates(p=>({...p,[feature]:{...t, user:e.target.value}}))} className={`${win95.inset} w-full h-20 p-2 font-mono resize-none bg-white text-black`} />
+              <div className="mt-1 text-[10px] opacity-70 flex flex-wrap gap-2">Tokens: {meta.tokens.map(tok => <code key={tok} className="px-1 border bg-white">{tok}</code>)} <span className="opacity-50">auto-replaced</span></div>
+            </div>
+            <div>
+              <div className="font-semibold mb-2">Variants</div>
+              <div className="grid gap-2">
+                {ordered.map(k => (
+                  <div key={k} className="bg-white border p-2">
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center gap-2">
+                        <input type="radio" name={`active-${feature}`} checked={activeVariant===k} onChange={()=>setActiveVariant(k)} />
+                        <span className="font-semibold text-[11px]">{k}</span>
+                        {meta.core.includes(k) && <span className="text-[9px] px-1 border bg-[#c0c0c0]">core</span>}
+                      </div>
+                      <div className="flex gap-1">
+                        <button onClick={()=>setEditing(editing===k?null:k)} className={`${win95.miniButton} ${win95.outset} text-[10px]`}>{editing===k?'Done':'Edit'}</button>
+                        {!meta.core.includes(k) && <button onClick={()=>{ if(window.confirm('Delete variant?')) removeVariant(k); }} className={`${win95.miniButton} ${win95.outset} text-[10px]`}>Del</button>}
+                      </div>
+                    </div>
+                    {editing===k ? (
+                      <textarea value={variants[k]||''} onChange={(e)=>updateVariant(k,e.target.value)} className={`${win95.inset} w-full h-16 p-1 font-mono text-[11px] resize-none bg-white text-black`} />
+                    ) : (
+                      <div className="text-[11px] whitespace-pre-wrap max-h-24 overflow-auto opacity-80">{(variants[k]||'').slice(0,300) || '(empty)'}</div>
+                    )}
+                  </div>
+                ))}
+                <div className="bg-white border p-2 grid gap-1">
+                  <div className="font-semibold text-[11px]">Add Variant</div>
+                  <input value={newKey} onChange={(e)=>setNewKey(e.target.value)} placeholder="key (e.g. precise2)" className={`${win95.inset} ${win95.inputField} text-xs`} />
+                  <textarea value={newText} onChange={(e)=>setNewText(e.target.value)} placeholder="Instruction text" className={`${win95.inset} w-full h-16 p-1 font-mono text-[11px] resize-none bg-white text-black`} />
+                  <div className="flex gap-2">
+                    <button onClick={addVariant} className={`${win95.button} ${win95.outset} text-xs bg-[#000080] text-white`}>Add</button>
+                    <button onClick={()=>{ setNewKey(''); setNewText(''); }} className={`${win95.button} ${win95.outset} text-xs`}>Clear</button>
+                  </div>
+                </div>
+              </div>
+              <PromptPreview feature={feature} variant={activeVariant} t={t} variants={variants} />
+            </div>
+        </div>
+        <div className="px-3 py-2 border-t border-[#6d6d6d] flex justify-end gap-2 bg-[#b0b0b0]">
+          <button onClick={onClose} className={`${win95.button} ${win95.outset} text-xs`}>Close</button>
+          <button onClick={saveAll} className={`${win95.button} ${win95.outset} text-xs bg-[#000080] text-white`}>Save</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PromptPreview({ feature, variant, t, variants }) {
+  const examples = {
+    text2wf: 'Build a task manager with CRUD and tagging.',
+    execute: '{"nodes":[],"edges":[]}',
+    enhance: 'Clarify impact of temperature rise on crop yield.',
+  };
+  const rawUser = (t.user||'')
+    .replace('{{input}}', examples.text2wf)
+    .replace('{{workflow}}', examples.execute)
+    .replace('{{content}}', examples.enhance);
+  const sys = (t.system||'').replace('{{format}}','JSON');
+  const variantLine = variants[variant] ? `\nVariant Instruction: ${variants[variant]}` : '';
+  const final = [sys?`SYSTEM>\n${sys}`:'', `USER>\n${rawUser}${variantLine}`].filter(Boolean).join('\n\n');
+  return (
+    <div className="mt-3">
+      <div className="font-semibold mb-1">Preview</div>
+      <div className={`${win95.inset} bg-white p-2 font-mono text-[11px] max-h-48 overflow-auto whitespace-pre-wrap`}>{final}</div>
+    </div>
+  );
+}
 
 export default function APIConsolePage() {
   // Provider state
@@ -137,7 +305,27 @@ export default function APIConsolePage() {
   const [engine] = useState(() => new PromptingEngine('router-user'));
   // Prompt templates (system/user) editable by user
   const [promptTemplates, setPromptTemplates] = useState(() => getPromptDefaults());
-  const [showPromptsEditor, setShowPromptsEditor] = useState(false);
+  // Enhancement variant selection
+  const [aiEnhancementType, setAiEnhancementType] = useState('improve');
+  // Enhancement mode: 'node' (chosen node+field) or 'adhoc' (free text)
+  const [aiEnhanceMode, setAiEnhanceMode] = useState('node');
+  // Variants for text2wf & execute
+  const [aiText2WfVariant, setAiText2WfVariant] = useState('standard');
+  const [aiExecuteVariant, setAiExecuteVariant] = useState('standard');
+  // (Legacy removed) per-variant inline creation state replaced by centralized customization panels
+  const enhancementVariants = useMemo(() => {
+    const base = promptTemplates?.enhance?.variants || {};
+    // Ensure core defaults exist even if user removed
+    const core = ['improve','optimize','refactor','enhance','simplify','elaborate'];
+    const merged = { ...core.reduce((acc,k)=>({ ...acc, [k]: base[k] || '' }), {}), ...base };
+    return merged;
+  }, [promptTemplates]);
+  const text2wfVariants = useMemo(()=> ({ ...(promptTemplates.text2wf?.variants||{}) }), [promptTemplates]);
+  const executeVariants = useMemo(()=> ({ ...(promptTemplates.execute?.variants||{}) }), [promptTemplates]);
+  // Per-tab customization toggles
+  // Unified prompt configuration dialog state
+  const [promptDialogFeature, setPromptDialogFeature] = useState(null); // 'text2wf' | 'execute' | 'enhance' | null
+  const promptDialogOpen = !!promptDialogFeature;
   const [availableProviders, setAvailableProviders] = useState([]);
   const [aiIncludeOntology, setAiIncludeOntology] = useState(true);
   const [aiOntologyMode, setAiOntologyMode] = useState('force_framework');
@@ -542,6 +730,7 @@ export default function APIConsolePage() {
         includeOntology: !!aiIncludeOntology,
         ontologyMode: aiOntologyMode,
         selectedOntologies: aiSelectedClusters,
+        variant: aiText2WfVariant !== '__new' ? aiText2WfVariant : 'standard',
       });
       if (!res.success) throw new Error(res.error || 'Failed');
       setAiOutput(JSON.stringify(res.workflow, null, 2));
@@ -557,7 +746,7 @@ export default function APIConsolePage() {
     if (!wf || !wf.nodes?.length) { alert('Workflow has no nodes.'); return; }
     setAiRunning(true); setAiOutput('');
     try {
-  const res = await engine.executeWorkflowWithFormat(wf, aiExecFormat, { temperature: aiTemp, maxTokens: Math.max(256, aiMax), providerId: prov, model: effectiveModel, apiKey: key });
+  const res = await engine.executeWorkflowWithFormat(wf, aiExecFormat, { temperature: aiTemp, maxTokens: Math.max(256, aiMax), providerId: prov, model: effectiveModel, apiKey: key, variant: aiExecuteVariant !== '__new' ? aiExecuteVariant : 'standard' });
       if (!res.success) throw new Error(res.error || 'Failed');
       setAiOutput(String(res.execution?.result || ''));
     } catch (e) { setAiOutput('Error: ' + (e.message || String(e))); }
@@ -569,17 +758,20 @@ export default function APIConsolePage() {
   const key = SecureKeyManager.getApiKey(prov) || activeKey;
     if (!key) { alert(`Missing API key for ${prov}`); return; }
     let node;
-    if (selNode && selField) {
+    if (aiEnhanceMode === 'node') {
+      if (!aiWf) { alert('Load a workflow first.'); return; }
+      if (!selNode || !selField) { alert('Select a node and field to enhance.'); return; }
       const content = String(selFieldValue || '');
       if (!content.trim()) { alert('Selected field is empty.'); return; }
       node = { id: selNode.id, data: { ...(selNode.data || {}), content } };
-    } else {
-      node = { id: 'ad-hoc', data: { type: 'UTIL-BLANK', content: String(aiInput || '') } };
-      if (!node.data.content.trim()) { alert('Enter text to enhance.'); return; }
+    } else { // adhoc
+      const content = String(aiInput || '');
+      if (!content.trim()) { alert('Enter ad-hoc text to enhance.'); return; }
+      node = { id: 'ad-hoc', data: { type: 'UTIL-BLANK', content } };
     }
     setAiRunning(true); setAiOutput('');
     try {
-      const res = await engine.enhanceNode(node, 'improve', { temperature: aiTemp, maxTokens: Math.max(256, aiMax), providerId: prov, model: effectiveModel, apiKey: key });
+      const res = await engine.enhanceNode(node, aiEnhancementType || 'improve', { temperature: aiTemp, maxTokens: Math.max(256, aiMax), providerId: prov, model: effectiveModel, apiKey: key });
       if (!res.success) throw new Error(res.error || 'Failed');
       setAiOutput(String(res.enhancement?.enhancedContent || ''));
     } catch (e) { setAiOutput('Error: ' + (e.message || String(e))); }
@@ -985,6 +1177,20 @@ export default function APIConsolePage() {
                           </div>
                         </div>
                       </div>
+                      <div className="col-span-3 grid grid-cols-3 gap-2 mt-2">
+                        <div>
+                          <div className="mb-1">Variant</div>
+                          <select value={aiText2WfVariant} onChange={(e)=>setAiText2WfVariant(e.target.value)} className={`${win95.inset} ${win95.inputField} text-xs`}>
+                            {Object.keys(text2wfVariants).map(v=> <option key={v} value={v}>{v}</option>)}
+                          </select>
+                        </div>
+                        <div className="col-span-2 text-[11px] opacity-70 flex items-end">
+                          {(text2wfVariants[aiText2WfVariant] || '').slice(0,160) || 'No instruction text.'}
+                        </div>
+                        <div className="col-span-3 mt-1">
+                          <button onClick={()=>setPromptDialogFeature('text2wf')} className={`${win95.miniButton} ${win95.outset} text-xs`}>Edit Prompts…</button>
+                        </div>
+                      </div>
                     </div>
                   )}
                   {features.advanced && (
@@ -997,8 +1203,8 @@ export default function APIConsolePage() {
                     </div>
                   )}
 
-                  {/* Body/Input and actions */}
-                  {aiTab !== 'execute' && (
+                  {/* Body/Input: per tab */}
+                  {aiTab === 'text2wf' && (
                     <div className="mb-2">
                       <div className="mb-1 text-sm">Input</div>
                       <textarea value={aiInput} onChange={(e)=>setAiInput(e.target.value)} className={`${win95.inset} w-full h-28 p-2 font-mono text-xs resize-none bg-white text-black`} />
@@ -1014,29 +1220,73 @@ export default function APIConsolePage() {
                       <div className="flex gap-2 mt-2">
                         <button onClick={loadWorkflowFromLocal} className={`${win95.button} ${win95.outset} text-sm`}>Refresh from Builder</button>
                       </div>
+                      <div className="mt-3 grid grid-cols-3 gap-2">
+                        <div>
+                          <div className="mb-1">Variant</div>
+                          <select value={aiExecuteVariant} onChange={(e)=>setAiExecuteVariant(e.target.value)} className={`${win95.inset} ${win95.inputField} text-xs`}>
+                            {Object.keys(executeVariants).map(v=> <option key={v} value={v}>{v}</option>)}
+                          </select>
+                        </div>
+                        <div className="col-span-2 text-[11px] opacity-70 flex items-end">{(executeVariants[aiExecuteVariant]||'').slice(0,160) || 'No instruction text.'}</div>
+                        <div className="col-span-3 mt-1">
+                          <button onClick={()=>setPromptDialogFeature('execute')} className={`${win95.miniButton} ${win95.outset} text-xs`}>Edit Prompts…</button>
+                        </div>
+                      </div>
                     </div>
                   )}
                   {aiTab === 'enhance' && (
                     <div className="mb-2 text-xs">
-                      <div className="mb-1">Pick Node & Field (optional)</div>
-                      <div className="grid grid-cols-2 gap-2">
-                        <select value={selNodeId} onChange={(e)=>setSelNodeId(e.target.value)} className={`${win95.inset} ${win95.inputField} text-xs`}>
-                          <option value="">— ad‑hoc —</option>
-                          {(aiWf?.nodes||[]).map(n => (
-                            <option key={n.id} value={n.id}>{(n.data?.label || n.id).slice(0,64)}</option>
-                          ))}
-                        </select>
-                        <select value={selField} onChange={(e)=>setSelField(e.target.value)} className={`${win95.inset} ${win95.inputField} text-xs`} disabled={!selNodeId}>
-                          <option value="">— choose field —</option>
-                          {nodeFields.map(f => (<option key={f.name} value={f.name}>{f.name}</option>))}
-                        </select>
+                      <div className="mb-2 flex flex-wrap items-center gap-4">
+                        <div className="flex items-center gap-2">
+                          <label className="font-semibold text-[11px]">Mode:</label>
+                          <label className="flex items-center gap-1 text-[11px]"><input type="radio" name="enhMode" value="node" checked={aiEnhanceMode==='node'} onChange={()=>setAiEnhanceMode('node')} /> Node Field</label>
+                          <label className="flex items-center gap-1 text-[11px]"><input type="radio" name="enhMode" value="adhoc" checked={aiEnhanceMode==='adhoc'} onChange={()=>setAiEnhanceMode('adhoc')} /> Ad‑hoc Text</label>
+                        </div>
+                        {aiEnhanceMode==='node' && !aiWf && (
+                          <button onClick={loadWorkflowFromLocal} className={`${win95.button} ${win95.outset} text-xs`}>Load workflow</button>
+                        )}
                       </div>
-                      {!aiWf && (
-                        <div className="flex gap-2 mt-2">
-                          <button onClick={loadWorkflowFromLocal} className={`${win95.button} ${win95.outset} text-sm`}>Load workflow</button>
+                      {aiEnhanceMode==='node' && (
+                        <>
+                          <div className="mb-1">Select Node & Field</div>
+                          <div className="grid grid-cols-2 gap-2 mb-2">
+                            <select value={selNodeId} onChange={(e)=>setSelNodeId(e.target.value)} className={`${win95.inset} ${win95.inputField} text-xs`}>
+                              <option value="">— choose node —</option>
+                              {(aiWf?.nodes||[]).map(n => (
+                                <option key={n.id} value={n.id}>{(n.data?.label || n.id).slice(0,64)}</option>
+                              ))}
+                            </select>
+                            <select value={selField} onChange={(e)=>setSelField(e.target.value)} className={`${win95.inset} ${win95.inputField} text-xs`} disabled={!selNodeId}>
+                              <option value="">— choose field —</option>
+                              {nodeFields.map(f => (<option key={f.name} value={f.name}>{f.name}</option>))}
+                            </select>
+                          </div>
+                        </>
+                      )}
+                      {aiEnhanceMode==='adhoc' && (
+                        <div className="mb-2">
+                          <div className="mb-1">Ad‑hoc Text</div>
+                          <textarea value={aiInput} onChange={(e)=>setAiInput(e.target.value)} className={`${win95.inset} w-full h-24 p-2 font-mono text-xs resize-none bg-white text-black`} />
                         </div>
                       )}
-                      {(selNodeId && selField) && (
+                      {/* (Removed duplicate node/field selectors in favor of mode-specific UI above) */}
+                      <div className="mt-3 grid grid-cols-2 gap-2">
+                        <div>
+                          <div className="mb-1">Variant</div>
+                          <select value={aiEnhancementType} onChange={(e)=>setAiEnhancementType(e.target.value)} className={`${win95.inset} ${win95.inputField} text-xs`}>
+                            {Object.keys(enhancementVariants).map(v => (
+                              <option key={v} value={v}>{v}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="text-[11px] opacity-70 flex items-end">
+                          {enhancementVariants[aiEnhancementType] ? enhancementVariants[aiEnhancementType].slice(0,140) : 'No instruction text (uses default).'}
+                        </div>
+                        <div className="col-span-2 mt-1">
+                          <button onClick={()=>setPromptDialogFeature('enhance')} className={`${win95.miniButton} ${win95.outset} text-xs`}>Edit Prompts…</button>
+                        </div>
+                      </div>
+                      {aiEnhanceMode==='node' && (selNodeId && selField) && (
                         <div className="mt-2">
                           <div className="mb-1">Selected field value</div>
                           <div className={`${win95.inset} p-2 bg-white text-black max-h-28 overflow-auto font-mono`}>{String(selFieldValue || '—')}</div>
@@ -1067,30 +1317,7 @@ export default function APIConsolePage() {
                   </div>
                 </div>
                   {/* Prompt templates editor */}
-                  <div className={`${win95.panel} ${win95.outset} m-2`}>
-                    <div className={win95.title}>Prompt Templates</div>
-                    <div className={`${win95.inset} p-2`}> 
-                      <label className="flex items-center gap-2 mb-2"><input type="checkbox" checked={showPromptsEditor} onChange={(e)=>setShowPromptsEditor(e.target.checked)} /> Edit prompt templates</label>
-                      {showPromptsEditor && (
-                        <div className="space-y-2 text-xs">
-                          {['text2wf','execute','enhance'].map(mode => (
-                            <div key={mode} className="mb-2">
-                              <div className="font-semibold">{mode === 'text2wf' ? 'Text → Workflow' : mode === 'execute' ? 'Execute Workflow' : 'Enhance Content'}</div>
-                              <div className="mt-1 text-[11px] opacity-80">System prompt</div>
-                              <textarea value={(promptTemplates[mode]?.system)||''} onChange={(e)=>setPromptTemplates(prev=>({...prev,[mode]:{...prev[mode],system:e.target.value}}))} className={`${win95.inset} w-full h-20 p-2 font-mono text-xs resize-none bg-white text-black`} />
-                              <div className="mt-1 text-[11px] opacity-80">User prompt</div>
-                              <textarea value={(promptTemplates[mode]?.user)||''} onChange={(e)=>setPromptTemplates(prev=>({...prev,[mode]:{...prev[mode],user:e.target.value}}))} className={`${win95.inset} w-full h-16 p-2 font-mono text-xs resize-none bg-white text-black`} />
-                            </div>
-                          ))}
-                          <div className="flex gap-2">
-                            <button onClick={()=>{ publishPromptDefaults(promptTemplates); alert('Prompts saved'); }} className={`${win95.button} ${win95.outset} text-sm bg-[#000080] text-white`}>Save Prompts</button>
-                            <button onClick={()=>{ const p=getPromptDefaults(); setPromptTemplates(p); alert('Reloaded prompts'); }} className={`${win95.button} ${win95.outset} text-sm`}>Reload</button>
-                            <button onClick={()=>{ setPromptTemplates(getPromptDefaults()); try{ localStorage.removeItem('ai_prompt_defaults_v1'); alert('Reset prompts to defaults'); }catch{} }} className={`${win95.button} ${win95.outset} text-sm`}>Reset to Defaults</button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                  {/* Removed global Prompt Templates editor; customization is now contextual per tab */}
               </div>
 
               {/* Presets list */}
@@ -1306,7 +1533,7 @@ export default function APIConsolePage() {
           </div>
         </div>
         {/* Key Manager Modal */}
-        {keyManagerOpen && (
+  {keyManagerOpen && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
             <div className={`${win95.panel} ${win95.outset} w-full max-w-lg bg-[#c0c0c0]`}>
               <div className={win95.title}>Manage Provider Keys</div>
@@ -1337,6 +1564,24 @@ export default function APIConsolePage() {
             </div>
           </div>
         )}
+        {/* Unified Prompt Configuration Dialog */}
+        <PromptConfigDialog
+          feature={promptDialogFeature}
+          open={promptDialogOpen}
+          onClose={()=>setPromptDialogFeature(null)}
+          templates={promptTemplates}
+          setTemplates={setPromptTemplates}
+          activeVariant={
+            promptDialogFeature==='text2wf' ? aiText2WfVariant : (
+              promptDialogFeature==='execute' ? aiExecuteVariant : (
+                promptDialogFeature==='enhance' ? aiEnhancementType : null))
+          }
+          setActiveVariant={(v)=>{
+            if(promptDialogFeature==='text2wf') setAiText2WfVariant(v);
+            else if(promptDialogFeature==='execute') setAiExecuteVariant(v);
+            else if(promptDialogFeature==='enhance') setAiEnhancementType(v);
+          }}
+        />
       </div>
     </div>
   );

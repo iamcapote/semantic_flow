@@ -144,7 +144,7 @@ export class PromptingEngine {
    * }
    */
   async convertTextToWorkflow(textInput, apiKey, providerId = 'openai', model = 'gpt-4o', options = {}) {
-    const { includeOntology = true, ontologyMode = 'force_framework', selectedOntologies = [] } = options || {};
+    const { includeOntology = true, ontologyMode = 'force_framework', selectedOntologies = [], variant } = options || {};
 
   // Load prompt defaults (user-editable)
   const prompts = getPromptDefaults();
@@ -183,7 +183,8 @@ export class PromptingEngine {
       ontologyText = `Ontology Reference:\n${lines.join('\n')}`;
     }
 
-    const userPrompt = (prompts.text2wf?.user || 'User specification:\n\n{{input}}').replace('{{input}}', textInput);
+    const variantInstruction = variant && prompts.text2wf?.variants?.[variant] ? `\nVariant Instruction: ${prompts.text2wf.variants[variant]}` : '';
+    const userPrompt = ((prompts.text2wf?.user || 'User specification:\n\n{{input}}') + variantInstruction).replace('{{input}}', textInput);
     const ontologyPrompt = includeOntology && ontologyMode !== 'exclude' ? `\n\n${ontologyText}` : '';
 
     // Messages order: system (header + mode), user (input), optional system (ontology)
@@ -232,8 +233,9 @@ export class PromptingEngine {
   const structuredWorkflow = this.formatWorkflowForPrompting(safeWorkflow || workflow, outputFormat);
 
   const prompts = getPromptDefaults();
+  const variantInstruction = executionSettings.variant && prompts.execute?.variants?.[executionSettings.variant] ? `\nVariant Instruction: ${prompts.execute.variants[executionSettings.variant]}` : '';
   const systemPrompt = (prompts.execute?.system || `You are a semantic logic workflow executor. Execute the provided workflow step by step.`).replace('{{format}}', outputFormat.toUpperCase()) + `\n\nAvailable Node Types:\n${Object.entries(NODE_TYPES).map(([key, value]) => `- ${key}: ${value.label} - ${value.description}`).join('\n')}`;
-  const userPrompt = (prompts.execute?.user || `Execute this semantic workflow:\n\n{{workflow}}`).replace('{{workflow}}', structuredWorkflow);
+  const userPrompt = ((prompts.execute?.user || `Execute this semantic workflow:\n\n{{workflow}}`) + variantInstruction).replace('{{workflow}}', structuredWorkflow);
 
     try {
       const response = await this.callProvider(providerId, model, apiKey, [
@@ -285,6 +287,7 @@ export class PromptingEngine {
       enhance: 'Enhance this semantic node with richer vocabulary and more sophisticated reasoning.',
       simplify: 'Simplify this semantic node while preserving its essential meaning and logical function.',
       elaborate: 'Elaborate on this semantic node with additional detail and nuanced reasoning.',
+      ...(prompts.enhance?.variants || {}),
     };
 
     const baseSystem = prompts.enhance?.system || `You are a semantic logic node enhancer. Your task is to ${enhancementType} semantic workflow nodes.`;
@@ -293,12 +296,8 @@ export class PromptingEngine {
     const userPrompt = (prompts.enhance?.user || '{{content}}').replace('{{content}}', serializeNodeForAI(node) || node.data.content || '');
   // Replace the raw content with a sanitized serialization respecting declared fileFormat when available
   const safeNodeContent = serializeNodeForAI(node) || node.data.content || '';
-  const safeUserPrompt = `${enhancementPrompts[enhancementType] || enhancementPrompts.improve}
-
-Original Node Content:
-"${safeNodeContent}"
-
-Enhanced Content:`;
+  const variantInstruction = enhancementMap[enhancementType] || enhancementMap.improve;
+  const safeUserPrompt = `${variantInstruction}\n\nOriginal Node Content:\n"${safeNodeContent}"\n\nEnhanced Content:`;
 
     try {
       const response = await this.callProvider(providerId, model, apiKey, [

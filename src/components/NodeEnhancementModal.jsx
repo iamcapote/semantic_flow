@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Sparkles, Loader2, CheckCircle, ArrowRight, RotateCcw } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import PromptingEngine from '@/lib/promptingEngine';
+import { getPromptDefaults, publishPromptDefaults } from '@/lib/aiRouter';
 import { SecureKeyManager } from '@/lib/security';
 
 const NodeEnhancementModal = ({ node, onNodeUpdate, trigger }) => {
@@ -24,14 +25,23 @@ const NodeEnhancementModal = ({ node, onNodeUpdate, trigger }) => {
   const [promptingEngine] = useState(() => new PromptingEngine('demo-user'));
   const [enhancementResult, setEnhancementResult] = useState(null);
 
-  const enhancementTypes = [
-    { value: 'improve', label: 'Improve', description: 'Refine and enhance the content' },
-    { value: 'optimize', label: 'Optimize', description: 'Improve clarity and precision' },
-    { value: 'refactor', label: 'Refactor', description: 'Restructure for academic rigor' },
-    { value: 'enhance', label: 'Enhance', description: 'Add sophisticated vocabulary' },
-    { value: 'simplify', label: 'Simplify', description: 'Make clearer and more accessible' },
-    { value: 'elaborate', label: 'Elaborate', description: 'Add detail and nuance' }
+  const [promptTemplates, setPromptTemplates] = useState(() => getPromptDefaults());
+  const enhancementVariants = promptTemplates?.enhance?.variants || {};
+  const coreTypes = [
+    { value: 'improve', label: 'Improve', description: enhancementVariants.improve || 'Refine and enhance the content' },
+    { value: 'optimize', label: 'Optimize', description: enhancementVariants.optimize || 'Improve clarity and precision' },
+    { value: 'refactor', label: 'Refactor', description: enhancementVariants.refactor || 'Restructure for academic rigor' },
+    { value: 'enhance', label: 'Enhance', description: enhancementVariants.enhance || 'Add sophisticated vocabulary' },
+    { value: 'simplify', label: 'Simplify', description: enhancementVariants.simplify || 'Make clearer and more accessible' },
+    { value: 'elaborate', label: 'Elaborate', description: enhancementVariants.elaborate || 'Add detail and nuance' },
   ];
+  const extraCustom = Object.keys(enhancementVariants)
+    .filter(k => !coreTypes.find(c => c.value === k))
+    .map(k => ({ value: k, label: k, description: enhancementVariants[k].slice(0,80) }));
+  const enhancementTypes = [...coreTypes, ...extraCustom];
+  const [creatingVariant, setCreatingVariant] = useState(false);
+  const [variantKey, setVariantKey] = useState('');
+  const [variantText, setVariantText] = useState('');
 
   // Load available providers on component mount
   useEffect(() => {
@@ -195,8 +205,38 @@ const NodeEnhancementModal = ({ node, onNodeUpdate, trigger }) => {
                       </div>
                     </SelectItem>
                   ))}
+                  <div className="px-2 py-1">
+                    <button type="button" onClick={()=>setCreatingVariant(true)} className="text-xs text-blue-600 hover:underline">+ New Variant…</button>
+                  </div>
                 </SelectContent>
               </Select>
+              {creatingVariant && (
+                <div className="mt-2 space-y-2 border rounded p-2 bg-muted/30">
+                  <div className="text-xs font-medium">Create Custom Variant</div>
+                  <input
+                    className="w-full px-2 py-1 text-sm border rounded"
+                    placeholder="variant key (e.g. clarify)"
+                    value={variantKey}
+                    onChange={e=>setVariantKey(e.target.value)}
+                  />
+                  <Textarea
+                    placeholder="Instruction text for this variant"
+                    value={variantText}
+                    onChange={e=>setVariantText(e.target.value)}
+                    className="h-24 text-xs"
+                  />
+                  <div className="flex gap-2">
+                    <Button type="button" size="sm" onClick={()=>{
+                      const key = (variantKey||'').trim().toLowerCase();
+                      if(!key.match(/^[a-z0-9_-]{3,32}$/)){ toast({ title:'Invalid Key', description:'Use 3-32 chars a-z0-9_-', variant:'destructive'}); return; }
+                      if(!variantText.trim()){ toast({ title:'Missing Text', description:'Enter instruction text', variant:'destructive'}); return; }
+                      const next = { ...promptTemplates, enhance: { ...(promptTemplates.enhance||{}), variants: { ...(promptTemplates.enhance?.variants||{}), [key]: variantText } } };
+                      setPromptTemplates(next); publishPromptDefaults(next); setEnhancementType(key); setVariantKey(''); setVariantText(''); setCreatingVariant(false); toast({ title:'Variant Saved', description:`Created ${key}`});
+                    }}>Save</Button>
+                    <Button type="button" size="sm" variant="secondary" onClick={()=>{ setCreatingVariant(false); setVariantKey(''); setVariantText(''); }}>Cancel</Button>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Provider Selection */}
