@@ -575,105 +575,7 @@
   outline-offset: 1px;
 }
 
-/* Inspector Panel */
-.w95-inspector {
-  width: 220px;
-}
-
-.w95-inspector-content {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.w95-inspector-header {
-  font-size: 13px;
-  margin-bottom: 4px;
-}
-
-.w95-highlight {
-  color: var(--w95-accent);
-}
-
-.w95-form-group {
-  margin-bottom: 10px;
-}
-
-.w95-form-group label {
-  display: block;
-  margin-bottom: 4px;
-  font-size: 13px;
-}
-
-.w95-input {
-  width: 100%;
-  padding: 4px 6px;
-  border: 1px solid var(--w95-shadow);
-  box-shadow: inset -1px -1px 0 var(--w95-highlight), inset 1px 1px 0 var(--w95-shadow);
-  font-size: 13px;
-}
-
-.w95-form-section {
-  background-color: var(--w95-sunken);
-  border: 1px solid var(--w95-shadow);
-  padding: 8px;
-  margin-bottom: 10px;
-}
-
-.w95-checkbox-group {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 6px;
-}
-
-.w95-checkbox {
-  width: 14px;
-  height: 14px;
-  border: 1px solid var(--w95-shadow);
-  background-color: var(--w95-sunken);
-  box-shadow: inset -1px -1px 0 var(--w95-highlight), inset 1px 1px 0 var(--w95-shadow);
-  cursor: pointer;
-}
-
-.w95-checkbox.w95-checked {
-  background-color: var(--w95-accent);
-}
-
-.w95-checkbox.w95-checked:after {
-  content: '✓';
-  color: white;
-  font-size: 10px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100%;
-}
-
-.w95-history-section {
-  background-color: var(--w95-sunken);
-  border: 1px solid var(--w95-shadow);
-  padding: 8px;
-  margin-bottom: 10px;
-}
-
-.w95-history-entry {
-  font-family: Consolas, 'Lucida Console', 'Courier New', monospace;
-  font-size: 12px;
-  margin-bottom: 2px;
-}
-
-.w95-action-buttons {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.w95-inspector-empty {
-  color: #808080;
-  font-style: italic;
-  font-size: 13px;
-}
+/* Inspector styles removed (consolidated into node modal) */
 
 /* Status Bar */
 .w95-status-bar {
@@ -714,6 +616,20 @@
   padding: 6px;
   background-color: #F5F5F5;
 }
+
+/* Node Modal Overlay */
+.w95-node-modal-overlay { position: fixed; inset:0; background: rgba(0,0,0,0.35); display:flex; align-items:flex-start; justify-content:center; padding:40px; z-index:1000; }
+.w95-node-modal { width:760px; max-width:90%; max-height:calc(100vh - 80px); background: var(--w95-face); border:2px solid var(--w95-shadow); box-shadow:4px 4px 0 #000; display:flex; flex-direction:column; font-family:'MS Sans Serif', Tahoma, Arial, sans-serif; }
+.w95-node-modal-body { padding:12px; overflow-y:auto; }
+.w95-node-modal-footer { padding:8px; display:flex; gap:8px; background:#D0D0D0; border-top:2px solid var(--w95-shadow); }
+
+/* Focus Mode (when a node modal is open) */
+.w95-window.focus-mode .w95-flow-canvas .react-flow__node { opacity: 0.25; transition: opacity 160ms ease; }
+.w95-window.focus-mode .w95-flow-canvas .react-flow__node.selected { opacity: 1 !important; }
+.w95-window.focus-mode .w95-flow-canvas .react-flow__edges path { transition: opacity 160ms ease; }
+.w95-window.focus-mode .w95-panel.w95-palette { filter: grayscale(0.6) brightness(0.9); opacity: 0.7; }
+.w95-window.focus-mode .w95-status-bar { opacity: 0.5; }
+
 
 /* For smaller screens (disabled; app enforces desktop-only) */
 /*

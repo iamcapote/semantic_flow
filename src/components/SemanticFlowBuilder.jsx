@@ -12,13 +12,13 @@ import 'reactflow/dist/style.css';
 
 // Import components
 import SemanticNode95 from './SemanticNode95';
-import NodeEnhancementModal from './NodeEnhancementModal95';
+import NodeModal95 from './NodeModal95';
 import WorkflowExecutionModal95 from './WorkflowExecutionModal95';
 import { createWorkflowSchema, createNode, createEdge, generateId } from '@/lib/graphSchema';
 import { emitNodeSelected } from '@/lib/workflowBus';
 import { upsertField } from '@/lib/nodeModel';
 import { NODE_TYPES, CLUSTER_COLORS, ONTOLOGY_CLUSTERS, getClusterSummary } from '@/lib/ontology';
-import { exportWorkflow } from '@/lib/exportUtils';
+// (exportWorkflow helper not used after simplification)
 
 // Import styling
 import './win95-plus.css';
@@ -45,12 +45,14 @@ const SemanticFlowBuilder = () => {
   const [zoomLevel, setZoomLevel] = useState(100);
   const [activeToolId, setActiveToolId] = useState('select');
   const [searchQuery, setSearchQuery] = useState('');
-  const [showAIGenerator, setShowAIGenerator] = useState(false);
+  // (removed unused showAIGenerator state)
   const [aiPrompt, setAiPrompt] = useState('');
   const [openCluster, setOpenCluster] = useState({});
   const fileInputRef = useRef(null);
   const [locked, setLocked] = useState(false);
   const [toolbarOpen, setToolbarOpen] = useState(false);
+  // Node modal state
+  const [modalNodeId, setModalNodeId] = useState(null);
   // Sidebar visibility
   const [showPalette, setShowPalette] = useState(() => {
     try {
@@ -58,12 +60,7 @@ const SemanticFlowBuilder = () => {
       return v === null ? true : v === 'true';
     } catch { return true; }
   });
-  const [showInspector, setShowInspector] = useState(() => {
-    try {
-      const v = localStorage.getItem('builder-showInspector');
-      return v === null ? true : v === 'true';
-    } catch { return true; }
-  });
+  // Inspector removed; modal now canonical editor
 
   // Save workflow to localStorage when it changes
   useEffect(() => {
@@ -87,9 +84,7 @@ const SemanticFlowBuilder = () => {
   useEffect(() => {
     try { localStorage.setItem('builder-showPalette', String(showPalette)); } catch {}
   }, [showPalette]);
-  useEffect(() => {
-    try { localStorage.setItem('builder-showInspector', String(showInspector)); } catch {}
-  }, [showInspector]);
+  // (inspector preference removed)
 
   // Update parent workflow when nodes/edges change
   useEffect(() => {
@@ -320,24 +315,7 @@ const SemanticFlowBuilder = () => {
     reader.readAsText(file);
   }, [reactFlowInstance, setNodes, setEdges, setWorkflow, updateNodeData]);
 
-  const handleExport = useCallback((format) => {
-    if (!workflow) return;
-    
-    try {
-      const exportData = exportWorkflow(workflow, format);
-      const blob = new Blob([exportData.content], { type: exportData.mimeType });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = exportData.filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error("Export Failed", error.message);
-    }
-  }, [workflow]);
+  // (removed unused handleExport function; export handled by onExportWorkflow)
 
   const onResetView = useCallback(() => {
     if (reactFlowInstance) {
@@ -465,11 +443,9 @@ const SemanticFlowBuilder = () => {
   const memoNodeTypes = useMemo(() => ({ semantic: SemanticNode95 }), []);
   const clusters = useMemo(() => getClusterSummary().sort((a,b)=>a.name.localeCompare(b.name)), []);
   const contentColumns = useMemo(() => {
-    if (showPalette && showInspector) return '300px 1fr 220px';
-    if (showPalette && !showInspector) return '300px 1fr';
-    if (!showPalette && showInspector) return '1fr 220px';
+    if (showPalette) return '300px 1fr';
     return '1fr';
-  }, [showPalette, showInspector]);
+  }, [showPalette]);
 
   // Re-fit view when layout changes so nodes stay in view
   useEffect(() => {
@@ -478,10 +454,33 @@ const SemanticFlowBuilder = () => {
       try { reactFlowInstance.fitView({ padding: 0.2 }); } catch {}
     }, 60);
     return () => clearTimeout(id);
-  }, [showPalette, showInspector, reactFlowInstance]);
+  }, [showPalette, reactFlowInstance]);
+
+  // Listen for node modal open events
+  useEffect(() => {
+    const handler = (e) => {
+      const nid = e.detail?.id;
+      if (nid) {
+        setModalNodeId(nid);
+      }
+    };
+    window.addEventListener('node:openModal', handler);
+    return () => window.removeEventListener('node:openModal', handler);
+  }, []);
+
+  const modalNode = useMemo(() => nodes.find(n => n.id === modalNodeId) || null, [modalNodeId, nodes]);
+
+  // Derive edge styling in focus mode instead of mutating base state
+  const renderedEdges = useMemo(() => {
+    if (!modalNode) return edges;
+    return edges.map(e => ({
+      ...e,
+      style: { ...(e.style||{}), opacity: (e.source === modalNode.id || e.target === modalNode.id) ? 1 : 0.15 }
+    }));
+  }, [edges, modalNode]);
 
   return (
-    <div className="w95-window" style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
+  <div className={`w95-window ${modalNode ? 'focus-mode' : ''}`} style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
 
       {/* Top Menu Bar */}
       <div className="w95-menu-bar">
@@ -516,9 +515,7 @@ const SemanticFlowBuilder = () => {
         <button className="w95-button" onClick={() => setShowPalette(v => !v)}>
           {showPalette ? 'Hide Palette' : 'Show Palette'}
         </button>
-        <button className="w95-button" onClick={() => setShowInspector(v => !v)}>
-          {showInspector ? 'Hide Inspector' : 'Show Inspector'}
-        </button>
+  {/* Inspector toggle removed */}
         <div className="w95-spacer"></div>
         <button className="w95-button" onClick={onZoomOut}>-</button>
         <button className="w95-button" onClick={onZoomIn}>+</button>
@@ -677,7 +674,7 @@ const SemanticFlowBuilder = () => {
           <div className="w95-panel-title">Canvas</div>
           <ReactFlow
             nodes={nodes}
-            edges={edges}
+            edges={renderedEdges}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
@@ -761,115 +758,7 @@ const SemanticFlowBuilder = () => {
           </ReactFlow>
         </div>
 
-        {/* Right Panel - Inspector */}
-        <div className="w95-panel w95-inspector" style={{ display: showInspector ? 'flex' : 'none' }}>
-          <div className="w95-panel-title">
-            Inspector
-            <button
-              className="w95-minimize"
-              title="Hide Inspector"
-              onClick={() => setShowInspector(false)}
-              style={{ float: 'right' }}
-            >×</button>
-          </div>
-          <div className="w95-panel-content">
-            {selectedNode ? (
-              <div className="w95-inspector-content">
-                <div className="w95-inspector-header">
-                  Selected: <span className="w95-highlight">{selectedNode.data?.label || 'Node'}</span>
-                </div>
-                
-                <div className="w95-form-group">
-                  <label>Rename</label>
-                  <input 
-                    type="text" 
-                    className="w95-input" 
-                    value={selectedNode.data?.label || ''}
-                    onChange={(e) => {
-                      updateNodeData(selectedNode.id, { label: e.target.value });
-                    }}
-                  />
-                </div>
-                
-                <div className="w95-form-group">
-                  <label>Add Field</label>
-                  <button 
-                    className="w95-button w95-block"
-                    onClick={() => {
-                      const fields = Array.isArray(selectedNode.data?.fields) ? [...selectedNode.data.fields] : [];
-                      fields.push({ name: 'New Field', type: 'text', value: '' });
-                      updateNodeData(selectedNode.id, { fields });
-                    }}
-                  >
-                    Short Text
-                  </button>
-                  <button 
-                    className="w95-button w95-block"
-                    onClick={() => {
-                      const fields = Array.isArray(selectedNode.data?.fields) ? [...selectedNode.data.fields] : [];
-                      fields.push({ name: 'Long Text', type: 'longText', value: '' });
-                      updateNodeData(selectedNode.id, { fields });
-                    }}
-                  >
-                    Long Text
-                  </button>
-                  <button 
-                    className="w95-button w95-block"
-                    onClick={() => {
-                      const fields = Array.isArray(selectedNode.data?.fields) ? [...selectedNode.data.fields] : [];
-                      fields.push({ name: 'Number', type: 'number', value: 0 });
-                      updateNodeData(selectedNode.id, { fields });
-                    }}
-                  >
-                    Number
-                  </button>
-                  <button 
-                    className="w95-button w95-block"
-                    onClick={() => {
-                      const fields = Array.isArray(selectedNode.data?.fields) ? [...selectedNode.data.fields] : [];
-                      fields.push({ name: 'Object', type: 'object', value: '{ "key": "value" }' });
-                      updateNodeData(selectedNode.id, { fields });
-                    }}
-                  >
-                    Object
-                  </button>
-                </div>
-                
-                <div className="w95-form-section">
-                  <div className="w95-section-header">Constraints</div>
-                  <div className="w95-checkbox-group">
-                    <label>Required</label>
-                    <div className={`w95-checkbox ${selectedNode.data?.required ? 'w95-checked' : ''}`}
-                      onClick={() => updateNodeData(selectedNode.id, { required: !selectedNode.data?.required })}
-                    ></div>
-                  </div>
-                  <div className="w95-checkbox-group">
-                    <label>Unique</label>
-                    <div className={`w95-checkbox ${selectedNode.data?.unique ? 'w95-checked' : ''}`}
-                      onClick={() => updateNodeData(selectedNode.id, { unique: !selectedNode.data?.unique })}
-                    ></div>
-                  </div>
-                </div>
-                
-                <div className="w95-history-section">
-                  <div className="w95-section-header">History</div>
-                  <div className="w95-history-entry">[ok] node resized</div>
-                  <div className="w95-history-entry">[ok] edge added</div>
-                  <div className="w95-history-entry">[save] workflow</div>
-                </div>
-                
-                <div className="w95-action-buttons">
-                  <button className="w95-button" onClick={onDuplicateNode}>Duplicate</button>
-                  <button className="w95-button w95-danger" onClick={onDeleteNode}>Delete</button>
-                </div>
-              </div>
-            ) : (
-              <div className="w95-inspector-empty">
-                No node selected. Click on a node to inspect its properties.
-              </div>
-            )}
-          </div>
-        </div>
+  {/* Inspector removed; right side now free for future features (timeline, logs, etc.) */}
   </div>
 
   {/* Bottom Status Bar */}
@@ -880,6 +769,16 @@ const SemanticFlowBuilder = () => {
         <span>Errors: 0</span>
         <span>Engine: React-Flow OK</span>
       </div>
+      {modalNode && (
+        <NodeModal95
+          node={modalNode}
+          edges={edges}
+          onUpdate={(id, patch) => updateNodeData(id, patch)}
+          onDuplicate={(n)=>{ setModalNodeId(null); setSelectedNode(n); onDuplicateNode(); }}
+          onDelete={(n)=>{ onDeleteNode(); setModalNodeId(null); }}
+          onClose={()=>setModalNodeId(null)}
+        />
+      )}
     </div>
   );
 };

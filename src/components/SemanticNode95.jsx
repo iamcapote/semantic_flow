@@ -1,12 +1,10 @@
-import React, { memo, useState } from 'react';
+import React, { memo } from 'react';
 import { Handle, Position } from 'reactflow';
 import { NodeResizer } from '@reactflow/node-resizer';
 import '@reactflow/node-resizer/dist/style.css';
-import { Edit3, Save, X, Play } from "lucide-react";
+import { Play } from "lucide-react";
 import { NODE_TYPES, CLUSTER_COLORS } from "@/lib/ontology";
-import FieldEditor95 from './FieldEditor95';
-import { detectFormat } from '@/lib/formatUtils';
-import { serializeFields, fieldsToRecord } from '@/lib/nodeModel';
+import { fieldsToRecord } from '@/lib/nodeModel';
 
 const styles = {
   panel: (selected) => ({
@@ -134,56 +132,16 @@ const styles = {
   }
 };
 
-const SemanticNode95 = ({ id, data, isConnectable, selected, onNodeUpdate }) => {
-  const [isEditing, setIsEditing] = useState(!!data.isNew);
-  const [fields, setFields] = useState(Array.isArray(data.fields) ? data.fields : []);
-  const rec = fieldsToRecord(fields);
+const SemanticNode95 = ({ id, data, isConnectable, selected }) => {
+  const rec = fieldsToRecord(Array.isArray(data.fields) ? data.fields : []);
   const displayTitle = rec.title ?? data.title ?? data.label ?? 'Node';
   const displayTags = Array.isArray(rec.tags) ? rec.tags : (Array.isArray(data.tags) ? data.tags : (Array.isArray(data.metadata?.tags) ? data.metadata.tags : []));
   const displayDescription = rec.description ?? data.description ?? data.metadata?.description ?? '';
   const displayContent = rec.content ?? data.content ?? '';
   const displayIcon = rec.icon ?? NODE_TYPES[data.type]?.icon ?? '📦';
-  // Everything is edited via Fields; no inline editors for core values
-  const isBlankNode = data.type === 'UTIL-BLANK';
-  const [editType, setEditType] = useState(data.type);
-  const [contentFormat, setContentFormat] = useState(data.language || detectFormat(displayContent || ''));
 
   const nodeType = NODE_TYPES[data.type];
   const clusterColor = CLUSTER_COLORS[data.metadata?.cluster] || '#6B7280';
-
-  const handleSaveEdit = () => {
-    // Sync top-level mirrors from fields so downstream code continues to work
-    const r = fieldsToRecord(fields);
-    if (typeof r.title === 'string') {
-      data.title = r.title;
-      data.label = r.title;
-    }
-    if (Array.isArray(r.tags)) {
-      data.tags = r.tags;
-      data.metadata.tags = r.tags;
-    }
-    if (typeof r.description === 'string') data.description = r.description;
-    if (typeof r.content === 'string') data.content = r.content;
-  // prefer explicit fileFormat field if present
-  data.fileFormat = r.fileFormat || contentFormat;
-  data.language = data.fileFormat || contentFormat;
-    data.fields = [...fields];
-    if (isBlankNode) {
-      data.type = editType;
-    }
-    data.metadata.updatedAt = new Date().toISOString();
-    delete data.isNew;
-    setIsEditing(false);
-    const patch = { title: data.title, label: data.label, tags: data.tags, description: data.description, content: data.content, language: contentFormat, fields: [...fields], ...(isBlankNode && { type: editType }) };
-    if (typeof data._onUpdate === 'function') data._onUpdate(id, patch);
-    else if (onNodeUpdate) onNodeUpdate(id, patch);
-  };
-
-  const handleCancelEdit = () => {
-    setFields(Array.isArray(data.fields) ? data.fields : []);
-    setContentFormat(data.language || detectFormat(displayContent || ''));
-    setIsEditing(false);
-  };
 
   const handleExecute = () => {
     console.log(`Executing node ${id} of type ${data.type}`);
@@ -191,8 +149,14 @@ const SemanticNode95 = ({ id, data, isConnectable, selected, onNodeUpdate }) => 
 
   // No inline enhancement/conversion here; FieldEditor rows handle per-field AI
 
+  const openModal = () => {
+    try {
+      window.dispatchEvent(new CustomEvent('node:openModal', { detail: { id } }));
+    } catch {}
+  };
+
   return (
-    <div data-testid="semantic-node" onDoubleClick={() => setIsEditing(true)} style={{ ...styles.panel(selected), borderLeft: `4px solid ${clusterColor}`, cursor: 'move' }}>
+  <div data-testid="semantic-node" onDoubleClick={openModal} style={{ ...styles.panel(selected), borderLeft: `4px solid ${clusterColor}`, cursor: 'move' }}>
       <NodeResizer
         color={clusterColor}
         minWidth={280}
@@ -219,9 +183,9 @@ const SemanticNode95 = ({ id, data, isConnectable, selected, onNodeUpdate }) => 
         </div>
         <div style={{ display: 'flex', gap: 2 }}>
           {data.config?.isExecutable && (
-            <button 
-              style={styles.bevelBtn} 
-              onClick={handleExecute} 
+            <button
+              style={styles.bevelBtn}
+              onClick={handleExecute}
               aria-label="Execute"
               onMouseDown={(e) => e.currentTarget.style.cssText = Object.entries(styles.bevelBtnPressed).map(([k,v]) => `${k.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${v}`).join('; ')}
               onMouseUp={(e) => e.currentTarget.style.cssText = Object.entries(styles.bevelBtn).map(([k,v]) => `${k.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${v}`).join('; ')}
@@ -230,15 +194,17 @@ const SemanticNode95 = ({ id, data, isConnectable, selected, onNodeUpdate }) => 
               <Play size={10} />
             </button>
           )}
-          <button 
-            style={isEditing ? styles.bevelBtnPressed : styles.bevelBtn} 
-            onClick={() => setIsEditing(!isEditing)} 
-            aria-label="Edit"
-            onMouseDown={(e) => !isEditing && (e.currentTarget.style.cssText = Object.entries(styles.bevelBtnPressed).map(([k,v]) => `${k.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${v}`).join('; '))}
-            onMouseUp={(e) => !isEditing && (e.currentTarget.style.cssText = Object.entries(styles.bevelBtn).map(([k,v]) => `${k.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${v}`).join('; '))}
-            onMouseLeave={(e) => !isEditing && (e.currentTarget.style.cssText = Object.entries(styles.bevelBtn).map(([k,v]) => `${k.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${v}`).join('; '))}
+          {/* Modal open hint button (optional for discoverability) */}
+          <button
+            style={styles.bevelBtn}
+            onClick={openModal}
+            aria-label="Open editor"
+            title="Open Node Modal (double-click node)"
+            onMouseDown={(e) => e.currentTarget.style.cssText = Object.entries(styles.bevelBtnPressed).map(([k,v]) => `${k.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${v}`).join('; ')}
+            onMouseUp={(e) => e.currentTarget.style.cssText = Object.entries(styles.bevelBtn).map(([k,v]) => `${k.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${v}`).join('; ')}
+            onMouseLeave={(e) => e.currentTarget.style.cssText = Object.entries(styles.bevelBtn).map(([k,v]) => `${k.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${v}`).join('; ')}
           >
-            <Edit3 size={10} />
+            •
           </button>
         </div>
       </div>
@@ -250,139 +216,19 @@ const SemanticNode95 = ({ id, data, isConnectable, selected, onNodeUpdate }) => 
             <span key={i} style={styles.tag}>{t}</span>
           ))}
         </div>
-
-        {/* Description is edited via Fields; in view we show a summary if present */}
-        {!isEditing && (
-          <div style={styles.description}>
-            {(displayDescription || nodeType?.description) && (
-              <span>{String.fromCodePoint(0x1F4A1)} {displayDescription || nodeType?.description}</span>
-            )}
+        {/* Summary description / content snippet */}
+        <div style={styles.description}>
+          {(displayDescription || displayContent || NODE_TYPES[data.type]?.description) && (
+            <span>{String.fromCodePoint(0x1F4A1)} {(displayDescription || (displayContent ? `${String(displayContent).slice(0,120)}${displayContent.length>120?'…':''}` : NODE_TYPES[data.type]?.description))}</span>
+          )}
+        </div>
+        {Array.isArray(data.fields) && data.fields.length > 0 && (
+          <div style={{ fontSize: 10, color: '#000080', background: '#E0E0FF', padding: '2px 4px', border: '1px outset #C0C0C0' }}>
+            {String.fromCodePoint(0x1F4CB)} {data.fields.length} field{data.fields.length>1?'s':''}
           </div>
         )}
 
-        {isEditing ? (
-          <div style={styles.editingArea}>
-            {isBlankNode && (
-              <div style={{ display: 'grid', gap: 6, marginBottom: 8 }}>
-                <input 
-                  type="text" 
-                  value={editType} 
-                  onChange={(e) => setEditType(e.target.value)} 
-                  placeholder="Node type (e.g. UTIL-BLANK)" 
-                  style={{ 
-                    padding: '4px 6px', 
-                    border: '1px inset #C0C0C0', 
-                    background: '#FFFFFF',
-                    fontFamily: '"MS Sans Serif", sans-serif',
-                    fontSize: '11px',
-                    boxShadow: 'inset 1px 1px 0 #808080, inset -1px -1px 0 #FFFFFF'
-                  }} 
-                />
-              </div>
-            )}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8, gap: 6 }}>
-              <div style={{ fontSize: 10, alignSelf: 'center', color: '#000080', fontWeight: 'bold' }}>Node Format</div>
-              <select 
-                value={contentFormat} 
-                onChange={(e)=>setContentFormat(e.target.value)} 
-                style={{ 
-                  padding: '4px 6px', 
-                  border: '1px inset #C0C0C0', 
-                  background: '#C0C0C0',
-                  fontFamily: '"MS Sans Serif", sans-serif',
-                  fontSize: '10px',
-                  boxShadow: 'inset 1px 1px 0 #808080, inset -1px -1px 0 #FFFFFF'
-                }}
-              >
-                {['markdown','json','yaml','xml'].map(f => (<option key={f} value={f}>{f}</option>))}
-              </select>
-            </div>
-            <div>
-              <FieldEditor95 value={fields} onChange={setFields} />
-            </div>
-
-            {/* FieldEditor now solely manages description/content/icon/custom fields */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 6, marginTop: 8, paddingTop: 6, borderTop: '1px solid #D0D0D0' }}>
-              <div style={{ display: 'flex', gap: 4 }}>
-                <button 
-                  onClick={handleCancelEdit} 
-                  style={styles.bevelBtn} 
-                  aria-label="Cancel"
-                  onMouseDown={(e) => e.currentTarget.style.cssText = Object.entries(styles.bevelBtnPressed).map(([k,v]) => `${k.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${v}`).join('; ')}
-                  onMouseUp={(e) => e.currentTarget.style.cssText = Object.entries(styles.bevelBtn).map(([k,v]) => `${k.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${v}`).join('; ')}
-                  onMouseLeave={(e) => e.currentTarget.style.cssText = Object.entries(styles.bevelBtn).map(([k,v]) => `${k.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${v}`).join('; ')}
-                >
-                  <X size={10} />
-                </button>
-                <button 
-                  onClick={handleSaveEdit} 
-                  style={{...styles.bevelBtn, background: '#90EE90', border: '1px outset #90EE90'}} 
-                  aria-label="Save"
-                  onMouseDown={(e) => e.currentTarget.style.cssText = Object.entries({...styles.bevelBtnPressed, background: '#90EE90', border: '1px inset #90EE90'}).map(([k,v]) => `${k.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${v}`).join('; ')}
-                  onMouseUp={(e) => e.currentTarget.style.cssText = Object.entries({...styles.bevelBtn, background: '#90EE90', border: '1px outset #90EE90'}).map(([k,v]) => `${k.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${v}`).join('; ')}
-                  onMouseLeave={(e) => e.currentTarget.style.cssText = Object.entries({...styles.bevelBtn, background: '#90EE90', border: '1px outset #90EE90'}).map(([k,v]) => `${k.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${v}`).join('; ')}
-                >
-                  <Save size={10} />
-                </button>
-              </div>
-              {/* Enhancement button removed; per-field AI lives inside FieldEditor rows */}
-            </div>
-          </div>
-        ) : (
-      <div style={styles.contentArea}>
-      {displayContent ? (
-              <div style={{ 
-                fontSize: '11px', 
-                color: '#000000', 
-                whiteSpace: 'pre-wrap',
-                background: '#FFFFFF',
-                border: '1px inset #C0C0C0',
-                padding: '6px',
-                borderRadius: '2px',
-                fontFamily: 'Consolas, "Courier New", monospace'
-              }}>
-        {displayContent}
-              </div>
-      ) : (
-              <div style={{ 
-                fontSize: '11px', 
-                color: '#808080', 
-                fontStyle: 'italic',
-                textAlign: 'center',
-                padding: '20px',
-                border: '1px dashed #C0C0C0'
-              }}>
-        {displayDescription || 'Double-click to edit...'}
-              </div>
-            )}
-      {Array.isArray(data.fields) && data.fields.length > 0 && (
-              <div style={{ marginTop: 8 }}>
-                <div style={{ 
-                  fontSize: '10px', 
-                  fontWeight: 'bold', 
-                  marginBottom: 4, 
-                  color: '#000080',
-                  background: '#E0E0FF',
-                  padding: '2px 4px',
-                  border: '1px outset #C0C0C0'
-                }}>
-          {String.fromCodePoint(0x1F4CB)} Fields ({data.fields.length})
-                </div>
-                <pre style={{ margin: 0, fontSize: 10, background: '#FFFFFF', border: '1px inset #C0C0C0', padding: 6, whiteSpace: 'pre-wrap', fontFamily: 'Consolas, "Courier New", monospace' }}>
-                  {(() => {
-                    try {
-            return serializeFields(data.fields, data.language || 'markdown');
-                    } catch (e) {
-            try { return JSON.stringify(Object.fromEntries((data.fields||[]).map(f=>[f.name,f.value])), null, 2); } catch { return ''; }
-                    }
-                  })()}
-                </pre>
-              </div>
-            )}
-          </div>
-        )}
-
-        {data.executionState && (
+  {data.executionState && (
           <div style={styles.status}>
             <div style={{ 
               width: 8, 
