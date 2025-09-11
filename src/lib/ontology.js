@@ -1,3 +1,4 @@
+/* eslint-disable no-dupe-keys */
 // Semantic Logic AI Workflow Builder — Ontology Definitions (deduplicated, canonical)
 // ===== Helpers =====
 export const getNodesByCluster = (clusterCode) =>

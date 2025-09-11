@@ -8,7 +8,7 @@
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "postinstall": "echo 'postinstall patch disabled'",
-    "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
+  "lint": "eslint . --ext js,jsx --max-warnings 0",
     "preview": "npm run build && node server/index.js",
     "test": "jest --setupFilesAfterEnv ./tests/setup/jest.setup.js --coverage",
     "test:unit": "jest tests/unit --setupFilesAfterEnv ./tests/setup/jest.setup.js",
