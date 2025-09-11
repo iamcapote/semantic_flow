@@ -12,6 +12,7 @@ import FieldEditor95 from './FieldEditor95';
 import yaml from 'js-yaml';
 import { XMLParser } from 'fast-xml-parser';
 import { validateWorkflow } from '@/lib/graphSchema';
+import { DEFAULT_EDGE_OPERATOR } from '@/lib/edges';
 // Win95++ tokens
 const colors = {
   desk: '#008080',
@@ -101,6 +102,21 @@ export default function IDE95() {
   const [showInspector, setShowInspector] = useState(true);
   const [history, setHistory] = useState([]);
   const [flashTerminal, setFlashTerminal] = useState(false);
+
+  // Normalize a workflow object to ensure required defaults exist (e.g., edge operator)
+  const normalizeWorkflow = useCallback((obj) => {
+    if (!obj || typeof obj !== 'object') return obj;
+    const next = JSON.parse(JSON.stringify(obj));
+    if (Array.isArray(next.edges)) {
+      next.edges = next.edges.map((e) => {
+        const data = { ...(e.data || {}) };
+        if (!data.condition) data.condition = 'follows';
+        if (!data.operator) data.operator = DEFAULT_EDGE_OPERATOR;
+        return { ...e, data };
+      });
+    }
+    return next;
+  }, []);
 
   // derived: problems list
   const problems = useMemo(() => {
@@ -371,7 +387,8 @@ export default function IDE95() {
     setTimeout(() => setFlashTerminal(false), 1200);
   }, [logToTerminal]);
 
-  const commitWorkflow = useCallback((next) => {
+  const commitWorkflow = useCallback((next0) => {
+    const next = normalizeWorkflow(next0);
     const withMeta = {
       ...next,
       metadata: {
@@ -385,7 +402,7 @@ export default function IDE95() {
     setWf(withMeta);
     try { localStorage.setItem('current-workflow', JSON.stringify(withMeta)); } catch {}
     emitWorkflowUpdate('IDE', withMeta);
-  }, [wf]);
+  }, [wf, normalizeWorkflow]);
 
   const onImportFile = useCallback((e) => {
     const file = e.target.files?.[0];
@@ -403,7 +420,7 @@ export default function IDE95() {
           if (parsed?.workflow) {
             parsed = {
               nodes: parsed.workflow.nodes?.map(n => ({ id: n.id, type: n.type, position: n.position || { x: 0, y: 0 }, data: { label: n.label, title: n.label, type: n.type, content: n.content, metadata: { cluster: n.cluster } } })) || [],
-              edges: parsed.workflow.edges?.map(e => ({ id: `${e.from}-${e.to}-${Math.random().toString(36).slice(2,8)}`, source: e.from, target: e.to, data: { condition: e.relation || 'follows' } })) || [],
+              edges: parsed.workflow.edges?.map(e => ({ id: `${e.from}-${e.to}-${Math.random().toString(36).slice(2,8)}`, source: e.from, target: e.to, data: { condition: e.relation || 'follows', operator: e.operator || DEFAULT_EDGE_OPERATOR } })) || [],
               metadata: parsed.workflow.metadata || {}
             };
           }
@@ -415,7 +432,7 @@ export default function IDE95() {
           const edges = Array.isArray(root?.edges?.edge) ? root.edges.edge : (root?.edges?.edge ? [root.edges.edge] : []);
           parsed = {
             nodes: nodes.map(n => ({ id: n.id, type: n.type || n.data?.type, position: n.position ? { x: Number(n.position.x) || 0, y: Number(n.position.y) || 0 } : { x: 0, y: 0 }, data: { label: n.label, title: n.label, type: n.type, content: n.content, metadata: { cluster: n.cluster || n.data?.metadata?.cluster } } })),
-            edges: edges.map(e => ({ id: e.id || `${e.source}-${e.target}-${Math.random().toString(36).slice(2,8)}`, source: e.source, target: e.target, data: { condition: e.relation || 'follows' } })),
+            edges: edges.map(e => ({ id: e.id || `${e.source}-${e.target}-${Math.random().toString(36).slice(2,8)}`, source: e.source, target: e.target, data: { condition: e.relation || 'follows', operator: e.operator || DEFAULT_EDGE_OPERATOR } })),
             metadata: root?.metadata || {}
           };
         } else if (name.endsWith('.dsl') || name.endsWith('.txt')) {
@@ -425,13 +442,13 @@ export default function IDE95() {
           parsed = JSON.parse(text);
         }
         if (!parsed) throw new Error('Unsupported file format');
-        const next = {
+        const next = normalizeWorkflow({
           ...(wf || {}),
           nodes: Array.isArray(parsed.nodes) ? parsed.nodes : [],
           edges: Array.isArray(parsed.edges) ? parsed.edges : [],
           metadata: parsed.metadata || wf?.metadata || { title: 'Imported' },
           viewport: parsed.viewport || wf?.viewport || { x: 0, y: 0, zoom: 1 },
-        };
+        });
         commitWorkflow(next);
       } catch (err) {
         setJsonError('Import failed: ' + (err.message || String(err)));
@@ -440,7 +457,7 @@ export default function IDE95() {
       }
     };
     reader.readAsText(file);
-  }, [wf, commitWorkflow]);
+  }, [wf, commitWorkflow, normalizeWorkflow]);
 
   const handleExport = useCallback((format) => {
     try {
@@ -463,9 +480,10 @@ export default function IDE95() {
     try {
       const saved = localStorage.getItem('current-workflow');
       const obj = saved ? JSON.parse(saved) : { nodes: [], edges: [], metadata: { title: 'Untitled Workflow' } };
-      setWf(obj);
-      setJson(JSON.stringify(obj, null, 2));
-      setDsl(stringifyDSL(obj.nodes || [], obj.edges || []));
+      const normalized = normalizeWorkflow(obj);
+      setWf(normalized);
+      setJson(JSON.stringify(normalized, null, 2));
+      setDsl(stringifyDSL(normalized.nodes || [], normalized.edges || []));
       setJsonError('');
     } catch (e) {
       setWf({ nodes: [], edges: [] });
@@ -473,7 +491,7 @@ export default function IDE95() {
       setDsl('');
       setJsonError(String(e.message || e));
     }
-  }, []);
+  }, [normalizeWorkflow]);
 
 
   const applyJson = useCallback(() => {

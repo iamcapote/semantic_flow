@@ -13,6 +13,9 @@ import 'reactflow/dist/style.css';
 // Import components
 import SemanticNode95 from './SemanticNode95';
 import NodeModal95 from './NodeModal95';
+import EdgeModal95 from './EdgeModal95';
+import { edgeTypes95 } from './Edges95';
+import { DEFAULT_EDGE_OPERATOR } from '@/lib/edges';
 import WorkflowExecutionModal95 from './WorkflowExecutionModal95';
 import { createWorkflowSchema, createNode, createEdge, generateId } from '@/lib/graphSchema';
 import { emitNodeSelected } from '@/lib/workflowBus';
@@ -23,6 +26,9 @@ import { NODE_TYPES, CLUSTER_COLORS, ONTOLOGY_CLUSTERS, getClusterSummary } from
 // Import styling
 import './win95-plus.css';
 import '../nav-fixes.css';
+import PromptingEngine from '@/lib/promptingEngine';
+import aiRouter from '@/lib/aiRouter';
+import { SecureKeyManager } from '@/lib/security';
 
 const SemanticFlowBuilder = () => {
   // Initialize workflow from localStorage or create new one
@@ -47,12 +53,15 @@ const SemanticFlowBuilder = () => {
   const [searchQuery, setSearchQuery] = useState('');
   // (removed unused showAIGenerator state)
   const [aiPrompt, setAiPrompt] = useState('');
+  const [aiRunning, setAiRunning] = useState(false);
+  const [aiError, setAiError] = useState('');
   const [openCluster, setOpenCluster] = useState({});
   const fileInputRef = useRef(null);
   const [locked, setLocked] = useState(false);
   const [toolbarOpen, setToolbarOpen] = useState(false);
   // Node modal state
   const [modalNodeId, setModalNodeId] = useState(null);
+  const [modalEdgeId, setModalEdgeId] = useState(null);
   // Sidebar visibility
   const [showPalette, setShowPalette] = useState(() => {
     try {
@@ -157,8 +166,8 @@ const SemanticFlowBuilder = () => {
 
   const onConnect = useCallback(
     (params) => {
-      const newEdge = createEdge(params.source, params.target);
-      setEdges((eds) => addEdge({ ...params, ...newEdge }, eds));
+      const newEdge = createEdge(params.source, params.target, undefined, DEFAULT_EDGE_OPERATOR);
+      setEdges((eds) => addEdge({ ...params, ...newEdge, type: 'semantic95', data: { ...(newEdge.data||{}), operator: DEFAULT_EDGE_OPERATOR } }, eds));
     },
     [setEdges]
   );
@@ -281,7 +290,11 @@ const SemanticFlowBuilder = () => {
           },
           position: n.position || { x: 0, y: 0 },
         }));
-        const importedEdges = (parsed.edges || []).map((e) => ({ ...e }));
+        const importedEdges = (parsed.edges || []).map((e) => ({
+          ...e,
+          type: 'semantic95',
+          data: { ...(e.data || {}), operator: e?.data?.operator || DEFAULT_EDGE_OPERATOR },
+        }));
 
         setNodes(importedNodes);
         setEdges(importedEdges);
@@ -399,39 +412,88 @@ const SemanticFlowBuilder = () => {
     setActiveToolId(toolId);
   }, []);
 
-  const onGenerateAINode = useCallback(() => {
-    if (!aiPrompt.trim() || !reactFlowInstance || !reactFlowWrapper.current) return;
-    
-    console.log('Generating node from AI prompt:', aiPrompt);
-    
+  const onGenerateAINode = useCallback(async () => {
+    if (!aiPrompt.trim() || !reactFlowInstance || !reactFlowWrapper.current || aiRunning) return;
+    setAiError('');
+    setAiRunning(true);
     try {
+      // Determine provider/model from Router global settings
+      const providerId = (aiRouter.getActiveProvider && aiRouter.getActiveProvider()) || (typeof window !== 'undefined' ? sessionStorage.getItem('active_provider') : null) || 'openai';
+      const model = (typeof window !== 'undefined' ? sessionStorage.getItem(`default_model_${providerId}`) : null) || 'gpt-4o';
+      const key = providerId === 'internal' ? 'internal-managed' : (SecureKeyManager.getApiKey(providerId) || '');
+      if (providerId !== 'internal' && !key) {
+        throw new Error(`Missing API key for provider "${providerId}". Configure in Router/Providers.`);
+      }
+
+      // Run Text→Workflow via PromptingEngine
+      const engine = new PromptingEngine('builder');
+      const result = await engine.convertTextToWorkflow(aiPrompt, key, providerId, model, {
+        includeOntology: true,
+        ontologyMode: 'force_framework',
+        selectedOntologies: [],
+      });
+
+      if (!result?.success) {
+        throw new Error(result?.error || 'AI conversion failed');
+      }
+
+      const gen = result.workflow || {};
+      const genNodes = Array.isArray(gen.nodes) ? gen.nodes : [];
+      const genEdges = Array.isArray(gen.edges) ? gen.edges : [];
+
+      if (genNodes.length === 0 && genEdges.length === 0) {
+        throw new Error('AI returned no nodes or edges.');
+      }
+
+      // Compute canvas center in flow coords
       const bounds = reactFlowWrapper.current.getBoundingClientRect();
-      
-      // Use the viewport center coordinates (client space)
-      const viewportCenterClient = {
-        x: bounds.left + bounds.width / 2,
-        y: bounds.top + bounds.height / 2
-      };
-      
-      // Convert to flow coordinates
-      const position = reactFlowInstance.screenToFlowPosition(viewportCenterClient);
-      
-      const node = createNode('UTIL-BLANK', position);
-      node.type = 'semantic';
-      node.data.type = 'UTIL-BLANK';
-      node.data.label = 'AI Generated';
-      node.data.content = aiPrompt;
-      node.data._onUpdate = (nodeId, patch) => updateNodeData(nodeId, patch);
-      
-      setNodes((nds) => nds.concat(node));
-      setSelectedNode(node);
+      const centerClient = { x: bounds.left + bounds.width / 2, y: bounds.top + bounds.height / 2 };
+      const centerFlow = reactFlowInstance.screenToFlowPosition(centerClient);
+
+      // Map incoming nodes to our semantic node shape
+      const idMap = new Map();
+      const mappedNodes = genNodes.map((n, idx) => {
+        const id = n.id || generateId();
+        idMap.set(n.id || id, id);
+        const pos = n.position && typeof n.position.x === 'number' && typeof n.position.y === 'number'
+          ? n.position
+          : { x: centerFlow.x + (idx % 3) * 60 - 60, y: centerFlow.y + Math.floor(idx / 3) * 60 - 60 };
+        const semanticType = n.data?.type || n.type || 'UTIL-BLANK';
+        return {
+          ...n,
+          id,
+          position: pos,
+          type: 'semantic',
+          data: {
+            ...(n.data || {}),
+            type: semanticType,
+            _onUpdate: (nodeId, patch) => updateNodeData(nodeId, patch),
+          },
+        };
+      });
+
+      const mappedEdges = genEdges
+        .filter(e => e && (e.source || e.from) && (e.target || e.to))
+        .map((e) => {
+          const src = idMap.get(e.source || e.from) || e.source || e.from;
+          const tgt = idMap.get(e.target || e.to) || e.target || e.to;
+          const newEdge = createEdge(src, tgt);
+          return { ...newEdge, id: e.id || `${src}→${tgt}` , type: 'semantic95'};
+        });
+
+      setNodes((nds) => nds.concat(mappedNodes));
+      if (mappedEdges.length) setEdges((eds) => eds.concat(mappedEdges));
+
+      // Select first of inserted nodes and clear input
+      if (mappedNodes[0]) setSelectedNode(mappedNodes[0]);
       setAiPrompt('');
-      
-      console.log("Added AI node at position", position);
-    } catch (error) {
-      console.error("Failed to create AI node:", error);
+    } catch (err) {
+      console.error('AI Generate failed:', err);
+      setAiError(err?.message || String(err));
+    } finally {
+      setAiRunning(false);
     }
-  }, [aiPrompt, reactFlowInstance, updateNodeData, setNodes]);
+  }, [aiPrompt, aiRunning, reactFlowInstance, updateNodeData, setNodes, setEdges]);
 
   const onDragStart = useCallback((e, code) => {
     e.dataTransfer.setData('application/reactflow', code);
@@ -468,6 +530,18 @@ const SemanticFlowBuilder = () => {
     return () => window.removeEventListener('node:openModal', handler);
   }, []);
 
+  // Listen for edge modal open events (from NodeModal or elsewhere)
+  useEffect(() => {
+    const handler = (e) => {
+      const eid = e.detail?.id;
+      if (eid) {
+        setModalEdgeId(eid);
+      }
+    };
+    window.addEventListener('edge:openModal', handler);
+    return () => window.removeEventListener('edge:openModal', handler);
+  }, []);
+
   const modalNode = useMemo(() => nodes.find(n => n.id === modalNodeId) || null, [modalNodeId, nodes]);
 
   // Derive edge styling in focus mode instead of mutating base state
@@ -480,47 +554,19 @@ const SemanticFlowBuilder = () => {
   }, [edges, modalNode]);
 
   return (
-  <div className={`w95-window ${modalNode ? 'focus-mode' : ''}`} style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
+  <div className={`w95-window ${modalNode ? 'focus-mode' : ''}`} style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', position: 'relative' }}>
 
-      {/* Top Menu Bar */}
-      <div className="w95-menu-bar">
-        <WorkflowExecutionModal95
-          workflow={workflow}
-          trigger={
-            <button className="w95-button" disabled={isExecuting}>
-              {isExecuting ? 'Executing...' : 'Execute…'}
-            </button>
-          }
-        />
-        <button className="w95-button" onClick={onSaveWorkflow}>
-          Save
-        </button>
-        <button className="w95-button" onClick={onImportClick}>
-          Import
-        </button>
-        <button className="w95-button" onClick={onExportWorkflow}>
-          Export
-        </button>
-        {/* Hidden file input for Import */}
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="application/json,.json"
-          style={{ display: 'none' }}
-          onChange={onImportFile}
-        />
-        <button className="w95-button" onClick={onResetView}>
-          Reset View
-        </button>
-        <button className="w95-button" onClick={() => setShowPalette(v => !v)}>
-          {showPalette ? 'Hide Palette' : 'Show Palette'}
-        </button>
-  {/* Inspector toggle removed */}
-        <div className="w95-spacer"></div>
-        <button className="w95-button" onClick={onZoomOut}>-</button>
-        <button className="w95-button" onClick={onZoomIn}>+</button>
-        <div className="w95-zoom-display">{`Zoom ${zoomLevel}%`}</div>
-      </div>
+      {/* Palette restore tab (appears only when palette hidden) */}
+      {!showPalette && (
+        <div
+          role="button"
+          tabIndex={0}
+          className="w95-palette-tab"
+          title="Show Palette"
+          onClick={() => setShowPalette(true)}
+          onKeyDown={(e)=>{ if(e.key==='Enter' || e.key===' ') { e.preventDefault(); setShowPalette(true);} }}
+        >Palette</div>
+      )}
 
       {/* Main Content Area */}
       <div className="w95-content-area" style={{ gridTemplateColumns: contentColumns }}>
@@ -544,65 +590,101 @@ const SemanticFlowBuilder = () => {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
             
-            {/* Tool Selection */}
+            {/* Functional Tool Grid (replaces placeholder tools) */}
             <div className="w95-tools-section">
               <div className="w95-tools-grid">
-                <button 
-                  className={`w95-tool-button ${activeToolId === 'select' ? 'w95-active' : ''}`}
-                  onClick={() => onSelectTool('select')}
-                >Select</button>
-                <button 
-                  className={`w95-tool-button ${activeToolId === 'connect' ? 'w95-active' : ''}`}
-                  onClick={() => onSelectTool('connect')}
-                >Connect</button>
-                <button 
-                  className={`w95-tool-button ${activeToolId === 'group' ? 'w95-active' : ''}`}
-                  onClick={() => onSelectTool('group')}
-                >Group</button>
-                <button 
-                  className={`w95-tool-button ${activeToolId === 'frame' ? 'w95-active' : ''}`}
-                  onClick={() => onSelectTool('frame')}
-                >Frame</button>
-                <button 
-                  className={`w95-tool-button ${activeToolId === 'text' ? 'w95-active' : ''}`}
-                  onClick={() => onSelectTool('text')}
-                >Text</button>
-                <button 
-                  className={`w95-tool-button ${activeToolId === 'comment' ? 'w95-active' : ''}`}
-                  onClick={() => onSelectTool('comment')}
-                >Comment</button>
-                <button 
-                  className={`w95-tool-button ${activeToolId === 'probe' ? 'w95-active' : ''}`}
-                  onClick={() => onSelectTool('probe')}
-                >Probe</button>
-                <button 
-                  className={`w95-tool-button ${activeToolId === 'measure' ? 'w95-active' : ''}`}
-                  onClick={() => onSelectTool('measure')}
-                >Measure</button>
+                <WorkflowExecutionModal95
+                  workflow={workflow}
+                  trigger={
+                    <button
+                      className="w95-tool-button"
+                      disabled={isExecuting}
+                      title="Execute Workflow"
+                    >{isExecuting ? 'Exec…' : 'Execute'}</button>
+                  }
+                />
+                <button
+                  className="w95-tool-button"
+                  onClick={onSaveWorkflow}
+                  title="Save Workflow"
+                >Save</button>
+                <button
+                  className="w95-tool-button"
+                  onClick={onImportClick}
+                  title="Import Workflow JSON"
+                >Import</button>
+                <button
+                  className="w95-tool-button"
+                  onClick={onExportWorkflow}
+                  title="Export Workflow JSON"
+                >Export</button>
+                <button
+                  className="w95-tool-button"
+                  onClick={onResetView}
+                  title="Reset / Fit View"
+                >Reset</button>
+                {/* Fit View (replaces previous Hide toggle; use the X on panel title to hide) */}
+                <button
+                  className="w95-tool-button"
+                  onClick={onResetView}
+                  title="Fit View"
+                >Fit</button>
+                <button
+                  className="w95-tool-button"
+                  onClick={onZoomOut}
+                  title="Zoom Out"
+                >−</button>
+                <button
+                  className="w95-tool-button"
+                  onClick={onZoomIn}
+                  title="Zoom In"
+                >+</button>
               </div>
+              {/* Hidden file input for Import */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="application/json,.json"
+                style={{ display: 'none' }}
+                onChange={onImportFile}
+              />
+              <div className="w95-zoom-display" style={{ marginTop: '8px' }}>Zoom {zoomLevel}%</div>
             </div>
 
-            {/* Blank Node Button */}
-            <button className="w95-button w95-block" onClick={onAddBlankNode}>
-              + Blank Node
-            </button>
+            {/* Create / Import Section (grouped for clarity) */}
+            <div className="w95-group w95-create-group">
+              <div className="w95-group-title">Create / Import Nodes</div>
+              <div className="w95-group-body">
+                {/* Blank Node Button */}
+                <button className="w95-button w95-block" onClick={onAddBlankNode} title="Insert a blank node at canvas center">
+                  + Blank Node
+                </button>
 
-            {/* AI Text-to-Node */}
-            <div className="w95-ai-section">
-              <div className="w95-section-header">AI Generate Node</div>
-              <textarea 
-                className="w95-textarea"
-                placeholder="Describe the node you want to create..."
-                value={aiPrompt}
-                onChange={(e) => setAiPrompt(e.target.value)}
-              ></textarea>
-              <button 
-                className="w95-button w95-generate"
-                onClick={onGenerateAINode}
-                disabled={!aiPrompt.trim()}
-              >
-                Generate
-              </button>
+                {/* AI Text→Workflow */}
+                <div className="w95-ai-section" aria-live="polite">
+                  <div className="w95-section-header" style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                    <span>AI Generate (Text→Workflow)</span>
+                    {aiRunning && <span className="w95-spinner" title="Generating…" />}
+                  </div>
+                  <textarea 
+                    className="w95-textarea"
+                    placeholder="Describe nodes or a process…"
+                    value={aiPrompt}
+                    onChange={(e) => setAiPrompt(e.target.value)}
+                    disabled={aiRunning}
+                  />
+                  <button 
+                    className="w95-button w95-generate"
+                    onClick={onGenerateAINode}
+                    disabled={!aiPrompt.trim() || aiRunning}
+                    title="Convert text into one or more workflow nodes"
+                  >
+                    {aiRunning ? 'Generating…' : 'Generate'}
+                  </button>
+                  <div className="w95-inline-hint">Uses active Router provider/model & global ontology settings.</div>
+                  {aiError && <div className="w95-error-hint" role="alert">{aiError}</div>}
+                </div>
+              </div>
             </div>
 
             {/* Semantic Ontology Swatches */}
@@ -682,7 +764,9 @@ const SemanticFlowBuilder = () => {
             onDrop={onDrop}
             onDragOver={onDragOver}
             nodeTypes={memoNodeTypes}
+            edgeTypes={edgeTypes95}
             onNodeClick={onNodeClick}
+            onEdgeClick={(e, ed) => { e.stopPropagation(); setModalEdgeId(ed?.id); }}
             nodesDraggable={true}
             elementsSelectable={true}
             selectNodesOnDrag={false}
@@ -777,6 +861,17 @@ const SemanticFlowBuilder = () => {
           onDuplicate={(n)=>{ setModalNodeId(null); setSelectedNode(n); onDuplicateNode(); }}
           onDelete={(n)=>{ onDeleteNode(); setModalNodeId(null); }}
           onClose={()=>setModalNodeId(null)}
+        />
+      )}
+      {modalEdgeId && (
+        <EdgeModal95
+          edge={edges.find(e=>e.id===modalEdgeId)}
+          nodes={nodes}
+          onUpdate={(edgeId, patch) => {
+            setEdges((eds) => eds.map(e => e.id === edgeId ? { ...e, ...patch } : e));
+            setModalEdgeId(null);
+          }}
+          onClose={() => setModalEdgeId(null)}
         />
       )}
     </div>

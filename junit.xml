@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="jest tests" tests="59" failures="0" errors="0" time="21.499">
+  <testsuite name="Edge creation defaults" errors="0" failures="0" skipped="0" timestamp="2025-09-11T18:06:30" time="2.45" tests="2">
+    <testcase classname="Edge creation defaults createEdge sets default operator and label" name="Edge creation defaults createEdge sets default operator and label" time="0.003">
+    </testcase>
+    <testcase classname="Edge creation defaults createEdge allows overriding operator" name="Edge creation defaults createEdge allows overriding operator" time="0">
+    </testcase>
+  </testsuite>
+  <testsuite name="server basic routes" errors="0" failures="0" skipped="1" timestamp="2025-09-11T18:06:33" time="1.523" tests="1">
+    <testcase classname="server basic routes health" name="server basic routes health" time="0">
+      <skipped/>
+    </testcase>
+  </testsuite>
+  <testsuite name="ClearSessionButton" errors="0" failures="0" skipped="0" timestamp="2025-09-11T18:06:34" time="8.96" tests="3">
+    <testcase classname="ClearSessionButton renders and clears sessionStorage on click" name="ClearSessionButton renders and clears sessionStorage on click" time="0.171">
+    </testcase>
+    <testcase classname="NodePalette renders search input and clusters" name="NodePalette renders search input and clusters" time="0.411">
+    </testcase>
+    <testcase classname="SemanticNode renders with edit state for new node" name="SemanticNode renders with edit state for new node" time="0.581">
+    </testcase>
+  </testsuite>
+  <testsuite name="TopNav95Plus Navigation" errors="0" failures="0" skipped="0" timestamp="2025-09-11T18:06:43" time="0.779" tests="5">
+    <testcase classname="TopNav95Plus Navigation renders title and all navigation tabs" name="TopNav95Plus Navigation renders title and all navigation tabs" time="0.113">
+    </testcase>
+    <testcase classname="TopNav95Plus Navigation marks active tab correctly" name="TopNav95Plus Navigation marks active tab correctly" time="0.022">
+    </testcase>
+    <testcase classname="TopNav95Plus Navigation calls onSelect when tab is clicked" name="TopNav95Plus Navigation calls onSelect when tab is clicked" time="0.015">
+    </testcase>
+    <testcase classname="TopNav95Plus Navigation has proper ARIA structure" name="TopNav95Plus Navigation has proper ARIA structure" time="0.011">
+    </testcase>
+    <testcase classname="TopNav95Plus Navigation navigation has correct CSS classes and structure" name="TopNav95Plus Navigation navigation has correct CSS classes and structure" time="0.014">
+    </testcase>
+  </testsuite>
+  <testsuite name="server sso + proxy" errors="0" failures="0" skipped="0" timestamp="2025-09-11T18:06:44" time="2.694" tests="6">
+    <testcase classname="server sso + proxy health + public config" name="server sso + proxy health + public config" time="0.026">
+    </testcase>
+    <testcase classname="server sso + proxy me unauthenticated returns 401" name="server sso + proxy me unauthenticated returns 401" time="0.004">
+    </testcase>
+    <testcase classname="server sso + proxy sso login redirects to Discourse provider" name="server sso + proxy sso login redirects to Discourse provider" time="0.006">
+    </testcase>
+    <testcase classname="server sso + proxy sso callback sets session and redirects to /discourse" name="server sso + proxy sso callback sets session and redirects to /discourse" time="0.006">
+    </testcase>
+    <testcase classname="server sso + proxy proxy latest + topic (mocked)" name="server sso + proxy proxy latest + topic (mocked)" time="0.007">
+    </testcase>
+    <testcase classname="server sso + proxy logout requires CSRF and clears cookies" name="server sso + proxy logout requires CSRF and clears cookies" time="0.019">
+    </testcase>
+  </testsuite>
+  <testsuite name="Desktop-only viewport guard" errors="0" failures="0" skipped="0" timestamp="2025-09-11T18:06:47" time="0.8" tests="2">
+    <testcase classname="Desktop-only viewport guard renders BlueScreen when width &lt; 1024" name="Desktop-only viewport guard renders BlueScreen when width &lt; 1024" time="0.017">
+    </testcase>
+    <testcase classname="Desktop-only viewport guard renders app when width &gt;= 1024" name="Desktop-only viewport guard renders app when width &gt;= 1024" time="0.058">
+    </testcase>
+  </testsuite>
+  <testsuite name="graphSchema.js" errors="0" failures="0" skipped="0" timestamp="2025-09-11T18:06:48" time="0.078" tests="4">
+    <testcase classname="graphSchema.js validates a correct node" name="graphSchema.js validates a correct node" time="0.001">
+    </testcase>
+    <testcase classname="graphSchema.js invalidates an incorrect node" name="graphSchema.js invalidates an incorrect node" time="0">
+    </testcase>
+    <testcase classname="graphSchema.js validates a correct workflow" name="graphSchema.js validates a correct workflow" time="0">
+    </testcase>
+    <testcase classname="graphSchema.js invalidates an incorrect workflow" name="graphSchema.js invalidates an incorrect workflow" time="0.001">
+    </testcase>
+  </testsuite>
+  <testsuite name="DiscoursePage" errors="0" failures="0" skipped="0" timestamp="2025-09-11T18:06:48" time="0.16" tests="1">
+    <testcase classname="DiscoursePage shows CTA when unauthenticated" name="DiscoursePage shows CTA when unauthenticated" time="0.06">
+    </testcase>
+  </testsuite>
+  <testsuite name="WorkflowExecutionEngine" errors="0" failures="0" skipped="0" timestamp="2025-09-11T18:06:48" time="0.179" tests="4">
+    <testcase classname="WorkflowExecutionEngine should not execute empty workflow" name="WorkflowExecutionEngine should not execute empty workflow" time="0.026">
+    </testcase>
+    <testcase classname="WorkflowExecutionEngine should prepare node input" name="WorkflowExecutionEngine should prepare node input" time="0.001">
+    </testcase>
+    <testcase classname="WorkflowExecutionEngine should get execution order" name="WorkflowExecutionEngine should get execution order" time="0">
+    </testcase>
+    <testcase classname="WorkflowExecutionEngine should test single node" name="WorkflowExecutionEngine should test single node" time="0.001">
+    </testcase>
+  </testsuite>
+  <testsuite name="PromptingEngine" errors="0" failures="0" skipped="0" timestamp="2025-09-11T18:06:48" time="0.079" tests="1">
+    <testcase classname="PromptingEngine converts text to workflow" name="PromptingEngine converts text to workflow" time="0.001">
+    </testcase>
+  </testsuite>
+  <testsuite name="SECURITY_CONFIG" errors="0" failures="0" skipped="0" timestamp="2025-09-11T18:06:48" time="0.073" tests="3">
+    <testcase classname="SECURITY_CONFIG should use session storage and encryption" name="SECURITY_CONFIG should use session storage and encryption" time="0">
+    </testcase>
+    <testcase classname="SECURITY_CONFIG should not store API keys in database" name="SECURITY_CONFIG should not store API keys in database" time="0">
+    </testcase>
+    <testcase classname="SECURITY_CONFIG should clear API keys on logout" name="SECURITY_CONFIG should clear API keys on logout" time="0">
+    </testcase>
+  </testsuite>
+  <testsuite name="GraphSchema" errors="0" failures="0" skipped="0" timestamp="2025-09-11T18:06:48" time="0.071" tests="2">
+    <testcase classname="GraphSchema should define schema version" name="GraphSchema should define schema version" time="0.001">
+    </testcase>
+    <testcase classname="GraphSchema should define port types" name="GraphSchema should define port types" time="0.001">
+    </testcase>
+  </testsuite>
+  <testsuite name="discourseApi" errors="0" failures="0" skipped="0" timestamp="2025-09-11T18:06:49" time="0.062" tests="2">
+    <testcase classname="discourseApi getLatest ok" name="discourseApi getLatest ok" time="0.001">
+    </testcase>
+    <testcase classname="discourseApi getTopic ok" name="discourseApi getTopic ok" time="0.001">
+    </testcase>
+  </testsuite>
+  <testsuite name="exportUtils" errors="0" failures="0" skipped="0" timestamp="2025-09-11T18:06:49" time="0.091" tests="4">
+    <testcase classname="exportUtils exports workflow as JSON" name="exportUtils exports workflow as JSON" time="0.001">
+    </testcase>
+    <testcase classname="exportUtils exports workflow as Markdown" name="exportUtils exports workflow as Markdown" time="0.017">
+    </testcase>
+    <testcase classname="exportUtils exports workflow as YAML" name="exportUtils exports workflow as YAML" time="0.001">
+    </testcase>
+    <testcase classname="utils cn merges class names" name="utils cn merges class names" time="0.002">
+    </testcase>
+  </testsuite>
+  <testsuite name="ontology.js" errors="0" failures="0" skipped="0" timestamp="2025-09-11T18:06:49" time="0.054" tests="2">
+    <testcase classname="ontology.js maps node types to clusters" name="ontology.js maps node types to clusters" time="0.001">
+    </testcase>
+    <testcase classname="ontology.js handles error nodes" name="ontology.js handles error nodes" time="0">
+    </testcase>
+  </testsuite>
+  <testsuite name="Ontology" errors="0" failures="0" skipped="0" timestamp="2025-09-11T18:06:49" time="0.056" tests="1">
+    <testcase classname="Ontology should define semantic node types" name="Ontology should define semantic node types" time="0.001">
+    </testcase>
+  </testsuite>
+  <testsuite name="server routes (static analysis)" errors="0" failures="0" skipped="0" timestamp="2025-09-11T18:06:49" time="0.067" tests="1">
+    <testcase classname="server routes (static analysis) server/app.js declares expected endpoints" name="server routes (static analysis) server/app.js declares expected endpoints" time="0.001">
+    </testcase>
+  </testsuite>
+  <testsuite name="sanitizer lib (unit)" errors="0" failures="0" skipped="0" timestamp="2025-09-11T18:06:49" time="0.079" tests="2">
+    <testcase classname="sanitizer lib (unit) stripWorkflow returns minimal structure" name="sanitizer lib (unit) stripWorkflow returns minimal structure" time="0.002">
+    </testcase>
+    <testcase classname="sanitizer lib (unit) serializeNodeForAI outputs string for formats" name="sanitizer lib (unit) serializeNodeForAI outputs string for formats" time="0.001">
+    </testcase>
+  </testsuite>
+  <testsuite name="sanitizer utilities" errors="0" failures="0" skipped="0" timestamp="2025-09-11T18:06:49" time="0.069" tests="2">
+    <testcase classname="sanitizer utilities stripWorkflow removes empty fields and preserves core node data" name="sanitizer utilities stripWorkflow removes empty fields and preserves core node data" time="0.001">
+    </testcase>
+    <testcase classname="sanitizer utilities serializeNodeForAI respects json and xml formats" name="sanitizer utilities serializeNodeForAI respects json and xml formats" time="0.001">
+    </testcase>
+  </testsuite>
+  <testsuite name="nodeModel helpers" errors="0" failures="0" skipped="0" timestamp="2025-09-11T18:06:49" time="0.067" tests="2">
+    <testcase classname="nodeModel helpers fieldsToRecord converts array to map" name="nodeModel helpers fieldsToRecord converts array to map" time="0">
+    </testcase>
+    <testcase classname="nodeModel helpers upsertField adds and updates fields" name="nodeModel helpers upsertField adds and updates fields" time="0">
+    </testcase>
+  </testsuite>
+  <testsuite name="auth helpers" errors="0" failures="0" skipped="0" timestamp="2025-09-11T18:06:49" time="0.169" tests="2">
+    <testcase classname="auth helpers getCSRFCookie returns empty when missing" name="auth helpers getCSRFCookie returns empty when missing" time="0.001">
+    </testcase>
+    <testcase classname="auth helpers getCSRFCookie parses cookie" name="auth helpers getCSRFCookie parses cookie" time="0">
+    </testcase>
+  </testsuite>
+  <testsuite name="exportUtils.js" errors="0" failures="0" skipped="0" timestamp="2025-09-11T18:06:49" time="0.066" tests="4">
+    <testcase classname="exportUtils.js exports workflow as JSON" name="exportUtils.js exports workflow as JSON" time="0">
+    </testcase>
+    <testcase classname="exportUtils.js exports workflow as YAML" name="exportUtils.js exports workflow as YAML" time="0">
+    </testcase>
+    <testcase classname="exportUtils.js exports workflow as Markdown" name="exportUtils.js exports workflow as Markdown" time="0">
+    </testcase>
+    <testcase classname="exportUtils.js exports workflow as XML" name="exportUtils.js exports workflow as XML" time="0.001">
+    </testcase>
+  </testsuite>
+  <testsuite name="env-config" errors="0" failures="0" skipped="0" timestamp="2025-09-11T18:06:50" time="0.071" tests="1">
+    <testcase classname="env-config should set window.ENV variables" name="env-config should set window.ENV variables" time="0">
+    </testcase>
+  </testsuite>
+  <testsuite name="provider routing placeholder" errors="0" failures="0" skipped="0" timestamp="2025-09-11T18:06:50" time="0.059" tests="1">
+    <testcase classname="provider routing placeholder placeholder" name="provider routing placeholder placeholder" time="0">
+    </testcase>
+  </testsuite>
+  <testsuite name="aiRouter basic" errors="0" failures="0" skipped="0" timestamp="2025-09-11T18:06:50" time="0.059" tests="1">
+    <testcase classname="aiRouter basic getHeaders includes Authorization when apiKey provided" name="aiRouter basic getHeaders includes Authorization when apiKey provided" time="0.001">
+    </testcase>
+  </testsuite>
+</testsuites>

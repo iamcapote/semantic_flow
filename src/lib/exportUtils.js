@@ -56,7 +56,8 @@ export const exportWorkflowAsMarkdown = (workflow) => {
       const sourceNode = nodes.find(n => n.id === edge.source);
       const targetNode = nodes.find(n => n.id === edge.target);
       content += `${index + 1}. **${sourceNode?.data.label}** → **${targetNode?.data.label}**\n`;
-      content += `   - Relation: ${edge.data?.condition || 'follows'}\n\n`;
+      content += `   - Relation: ${edge.data?.condition || 'follows'}\n`;
+      content += `   - Operator: ${edge.data?.operator || 'related'}\n\n`;
     });
   }
   content += `---\n*Exported from Semantic-Logic AI Workflow Builder*\n`;
@@ -89,7 +90,8 @@ export const exportWorkflowAsYAML = (workflow) => {
       edges: workflow.edges.map(edge => ({
         from: edge.source,
         to: edge.target,
-        relation: edge.data?.condition || 'follows'
+        relation: edge.data?.condition || 'follows',
+        operator: edge.data?.operator || 'related'
       }))
     }
   };
@@ -114,8 +116,9 @@ ${yamlData.workflow.nodes.map(node => `    - id: "${node.id}"
         y: ${node.position.y}`).join('\n\n')}
   edges:
 ${yamlData.workflow.edges.map(edge => `    - from: "${edge.from}"
-      to: "${edge.to}"
-      relation: "${edge.relation}"`).join('\n')}
+  to: "${edge.to}"
+  relation: "${edge.relation}"
+  operator: "${edge.operator}"`).join('\n')}
 `;
   return {
     content: yamlContent,
@@ -163,6 +166,7 @@ export const exportWorkflowAsXML = (workflow) => {
   workflow.edges.forEach(edge => {
     xml += `    <edge id="${edge.id}" source="${edge.source}" target="${edge.target}">
       <relation>${edge.data?.condition || 'follows'}</relation>
+      <operator>${edge.data?.operator || 'related'}</operator>
     </edge>
 `;
   });

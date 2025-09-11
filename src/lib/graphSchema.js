@@ -85,7 +85,8 @@ export const createEdgeSchema = () => ({
   targetHandle: '', // Target port ID
   type: 'smoothstep', // React Flow edge type
   data: {
-    condition: '', // Edge condition from EDGE_CONDITIONS
+    condition: '', // Logical condition (IMPLIES/SUPPORTS/etc.)
+    operator: 'related', // Semantic operator (see edges.js)
     weight: 1.0, // Connection strength (0.0 - 1.0)
     metadata: {
       label: '', // Optional edge label
@@ -190,6 +191,7 @@ export const validateEdge = (edge) => {
   if (!edge.source) errors.push('Edge source is required');
   if (!edge.target) errors.push('Edge target is required');
   if (!edge.data?.condition) errors.push('Edge condition is required');
+  if (!edge.data?.operator) errors.push('Edge operator is required');
   
   return {
     isValid: errors.length === 0,
@@ -282,7 +284,7 @@ export const createNode = (type, position, content = '') => {
   };
 };
 
-export const createEdge = (sourceId, targetId, condition = EDGE_CONDITIONS.FOLLOWS) => {
+export const createEdge = (sourceId, targetId, condition = EDGE_CONDITIONS.FOLLOWS, operator = 'related') => {
   const edgeSchema = createEdgeSchema();
   
   return {
@@ -293,6 +295,7 @@ export const createEdge = (sourceId, targetId, condition = EDGE_CONDITIONS.FOLLO
     data: {
       ...edgeSchema.data,
       condition,
+      operator,
       metadata: {
         ...edgeSchema.data.metadata,
         createdAt: new Date().toISOString()

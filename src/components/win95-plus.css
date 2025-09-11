@@ -72,6 +72,27 @@
   gap: 10px;
 }
 
+/* Vertical palette restore tab */
+.w95-palette-tab {
+  position: absolute;
+  top: 64px; /* below any future top nav/title */
+  left: 0;
+  z-index: 20;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  transform: rotate(180deg); /* so text reads top-to-bottom */
+  background: var(--w95-face);
+  border: 2px solid var(--w95-shadow);
+  box-shadow: inset 1px 1px 0 var(--w95-highlight), inset -1px -1px 0 var(--w95-dark-shadow);
+  padding: 8px 4px 10px 4px;
+  font-size: 12px;
+  cursor: pointer;
+  user-select: none;
+  letter-spacing: 0.5px;
+}
+.w95-palette-tab:focus { outline: 1px dotted #000080; outline-offset: 2px; }
+.w95-palette-tab:active { box-shadow: inset -1px -1px 0 var(--w95-highlight), inset 1px 1px 0 var(--w95-dark-shadow); }
+
 .w95-button {
   background-color: var(--w95-face);
   border: 1px solid var(--w95-shadow);
@@ -197,6 +218,33 @@
   padding: 8px;
   margin-bottom: 10px;
 }
+
+/* Grouped sections */
+.w95-group {
+  border: 2px solid var(--w95-shadow);
+  box-shadow: inset 1px 1px 0 var(--w95-highlight), inset -1px -1px 0 var(--w95-dark-shadow);
+  margin-bottom: 10px;
+  background: var(--w95-face);
+}
+.w95-group-title {
+  background: linear-gradient(#dcdcdc, #c6c6c6);
+  padding: 4px 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #000;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.w95-group-body { padding: 8px; }
+
+.w95-inline-hint { font-size: 11px; color: #222; opacity: .85; margin-top: 6px; }
+.w95-error-hint { margin-top: 6px; padding: 6px 8px; border: 1px solid #a33; background: #fff3f3; color: #900; font-size: 12px; }
+.w95-spinner {
+  width: 14px; height: 14px; border: 2px solid #666; border-top-color: transparent; border-radius: 50%; display: inline-block;
+  animation: w95spin 0.9s linear infinite;
+}
+@keyframes w95spin { to { transform: rotate(360deg); } }
 
 .w95-section-header {
   font-size: 13px;
@@ -632,16 +680,13 @@
 
 
 /* For smaller screens (disabled; app enforces desktop-only) */
-/*
-@media (max-width: 1200px) {
-  .w95-content-area { grid-template-columns: 250px 1fr 200px; }
-  .w95-palette { min-width: 250px; }
-  .w95-inspector { width: 200px; }
+@media (max-width: 1320px) {
+  .w95-content-area { grid-template-columns: 260px 1fr; }
+  .w95-palette { min-width: 240px; }
 }
 
-@media (max-width: 992px) {
-  .w95-content-area { grid-template-columns: 200px 1fr; }
-  .w95-palette { min-width: 200px; }
-  .w95-inspector { display: none; }
+@media (max-width: 980px) {
+  .w95-content-area { grid-template-columns: 1fr; }
+  .w95-palette { position: relative; min-width: unset; }
+  .w95-panel.w95-canvas { order: 2; }
 }
-*/

@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import FieldEditor95 from './FieldEditor95';
 import { fieldsToRecord, serializeFields } from '@/lib/nodeModel';
 import { NODE_TYPES, CLUSTER_COLORS } from '@/lib/ontology';
+import { EDGE_OPERATORS, getOperatorMeta } from '@/lib/edges';
 
 // Win95 modal styling (leans on existing CSS variables)
 const sx = {
@@ -52,6 +53,10 @@ export default function NodeModal95({ node, edges, onUpdate, onDuplicate, onDele
 
   const inbound = useMemo(() => edges.filter(e => e.target === node.id), [edges, node?.id]);
   const outbound = useMemo(() => edges.filter(e => e.source === node.id), [edges, node?.id]);
+
+  const openEdgeEditor = (edgeId) => {
+    try { window.dispatchEvent(new CustomEvent('edge:openModal', { detail: { id: edgeId } })); } catch {}
+  };
 
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') onClose(); };
@@ -127,12 +132,30 @@ export default function NodeModal95({ node, edges, onUpdate, onDuplicate, onDele
               <div style={sx.sectionTitle}><span>Connections</span></div>
               <div style={{ fontSize: 10, marginBottom: 4 }}>Inbound ({inbound.length})</div>
               <ul style={sx.connectionList}>
-                {inbound.map(e => (<li key={e.id} style={sx.connectionItem}>{e.source} → {e.target}</li>))}
+                {inbound.map(e => {
+                  const op = e.data?.operator || 'related';
+                  const meta = getOperatorMeta(op);
+                  return (
+                    <li key={e.id} style={{ ...sx.connectionItem, alignItems: 'center', gap: 6 }} onClick={() => openEdgeEditor(e.id)} title={`Edit edge ${e.id}`}>
+                      <span style={{ flex: 1 }}>{e.source} → {e.target}</span>
+                      <span title={meta.description} style={{ fontSize: 10, border: '1px inset #C0C0C0', padding: '0 4px', background: '#E0E0E0' }}>{meta.icon} {meta.label}</span>
+                    </li>
+                  );
+                })}
                 {inbound.length === 0 && <li style={{ fontSize: 10, opacity: 0.6 }}>None</li>}
               </ul>
               <div style={{ fontSize: 10, margin: '8px 0 4px' }}>Outbound ({outbound.length})</div>
               <ul style={sx.connectionList}>
-                {outbound.map(e => (<li key={e.id} style={sx.connectionItem}>{e.source} → {e.target}</li>))}
+                {outbound.map(e => {
+                  const op = e.data?.operator || 'related';
+                  const meta = getOperatorMeta(op);
+                  return (
+                    <li key={e.id} style={{ ...sx.connectionItem, alignItems: 'center', gap: 6 }} onClick={() => openEdgeEditor(e.id)} title={`Edit edge ${e.id}`}>
+                      <span style={{ flex: 1 }}>{e.source} → {e.target}</span>
+                      <span title={meta.description} style={{ fontSize: 10, border: '1px inset #C0C0C0', padding: '0 4px', background: '#E0E0E0' }}>{meta.icon} {meta.label}</span>
+                    </li>
+                  );
+                })}
                 {outbound.length === 0 && <li style={{ fontSize: 10, opacity: 0.6 }}>None</li>}
               </ul>
             </div>
