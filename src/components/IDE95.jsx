@@ -12,7 +12,8 @@ import FieldEditor95 from './FieldEditor95';
 import yaml from 'js-yaml';
 import { XMLParser } from 'fast-xml-parser';
 import { validateWorkflow } from '@/lib/graphSchema';
-import { DEFAULT_EDGE_OPERATOR } from '@/lib/edges';
+import { DEFAULT_EDGE_OPERATOR, EDGE_OPERATORS, getOperatorMeta } from '@/lib/edges';
+import { EDGE_CONDITIONS } from '@/lib/graphSchema';
 // Win95++ tokens
 const colors = {
   desk: '#008080',
@@ -519,6 +520,19 @@ export default function IDE95() {
 
   const copy = async (text) => { try { await navigator.clipboard.writeText(text); } catch {} };
 
+  // Update a single edge by id and re-commit workflow
+  const updateEdge = useCallback((edgeId, patch) => {
+    try {
+      const edges = (wf?.edges || []).map((e) => {
+        if (e.id !== edgeId) return e;
+        const nextData = { ...(e.data || {}), ...(patch.data || {}) };
+        return { ...e, ...patch, data: nextData };
+      });
+      const next = { ...(wf || {}), edges };
+      commitWorkflow(next);
+    } catch {}
+  }, [wf, commitWorkflow]);
+
   useEffect(() => { refresh(); }, [refresh]);
 
   useEffect(() => {
@@ -981,6 +995,94 @@ export default function IDE95() {
                                   value={selectedNode.data?.fields || []}
                                   onChange={(fields) => updateNode(selectedNode.id, { fields })}
                                 />
+                              </div>
+                              {/* Connections editor (parity with Builder EdgeModal) */}
+                              <div style={{ display: 'grid', gap: 6 }}>
+                                <div style={{ fontWeight: 700 }}>Connections</div>
+                                {(() => {
+                                  const connected = (wf?.edges || []).filter(e => e.source === selectedNode.id || e.target === selectedNode.id);
+                                  if (connected.length === 0) return <div style={{ fontSize: 12, opacity: 0.8 }}>No connected edges.</div>;
+                                  return (
+                                    <div style={{ display: 'grid', gap: 6 }}>
+                                      {connected.map((e) => {
+                                        const outgoing = e.source === selectedNode.id;
+                                        const otherId = outgoing ? e.target : e.source;
+                                        const other = (wf?.nodes || []).find(n => n.id === otherId);
+                                        const op = e?.data?.operator || DEFAULT_EDGE_OPERATOR;
+                                        const cond = e?.data?.condition || 'follows';
+                                        const label = e?.data?.metadata?.label || '';
+                                        const weight = typeof e?.data?.weight === 'number' ? e.data.weight : 1.0;
+                                        const meta = getOperatorMeta(op);
+                                        return (
+                                          <div key={e.id} style={{ display: 'grid', gap: 4, padding: 6, background: '#F3F4F6', border: '1px solid #000', boxShadow: 'inset 1px 1px 0 #FFFFFF, inset -1px -1px 0 #404040' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
+                                              <span title="Edge direction" style={{ width: 8, height: 8, border: '1px solid #000', background: meta.color }} />
+                                              <strong>{outgoing ? 'Out' : 'In'}</strong>
+                                              <span style={{ opacity: 0.8 }}>↔</span>
+                                              <span title={other?.id || otherId} style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{other?.data?.label || other?.data?.title || otherId}</span>
+                                            </div>
+                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                                              <div style={{ display: 'grid', gap: 2 }}>
+                                                <label style={{ fontSize: 11 }}>Operator</label>
+                                                <select
+                                                  value={op}
+                                                  onChange={(ev) => {
+                                                    const nextOp = ev.target.value;
+                                                    const color = getOperatorMeta(nextOp)?.color;
+                                                    updateEdge(e.id, { data: { ...e.data, operator: nextOp }, style: { ...(e.style || {}), stroke: color } });
+                                                  }}
+                                                  style={{ ...ui.input }}
+                                                >
+                                                  {Object.keys(EDGE_OPERATORS).map((k) => (
+                                                    <option key={k} value={k}>{EDGE_OPERATORS[k].icon} {EDGE_OPERATORS[k].label}</option>
+                                                  ))}
+                                                </select>
+                                              </div>
+                                              <div style={{ display: 'grid', gap: 2 }}>
+                                                <label style={{ fontSize: 11 }}>Condition</label>
+                                                <select
+                                                  value={cond}
+                                                  onChange={(ev) => updateEdge(e.id, { data: { ...e.data, condition: ev.target.value } })}
+                                                  style={{ ...ui.input }}
+                                                >
+                                                  {Object.values(EDGE_CONDITIONS).map((c) => (
+                                                    <option key={c} value={c}>{c}</option>
+                                                  ))}
+                                                </select>
+                                              </div>
+                                            </div>
+                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 100px', gap: 6 }}>
+                                              <div style={{ display: 'grid', gap: 2 }}>
+                                                <label style={{ fontSize: 11 }}>Label (optional)</label>
+                                                <input
+                                                  value={label}
+                                                  onChange={(ev) => updateEdge(e.id, { data: { ...e.data, metadata: { ...(e.data?.metadata || {}), label: ev.target.value } } })}
+                                                  placeholder="Edge label"
+                                                  style={{ ...ui.input }}
+                                                />
+                                              </div>
+                                              <div style={{ display: 'grid', gap: 2 }}>
+                                                <label style={{ fontSize: 11 }}>Weight</label>
+                                                <input
+                                                  type="number"
+                                                  step="0.1"
+                                                  min="0"
+                                                  max="1"
+                                                  value={weight}
+                                                  onChange={(ev) => {
+                                                    const val = Math.max(0, Math.min(1, parseFloat(ev.target.value) || 0));
+                                                    updateEdge(e.id, { data: { ...e.data, weight: val } });
+                                                  }}
+                                                  style={{ ...ui.input }}
+                                                />
+                                              </div>
+                                            </div>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  );
+                                })()}
                               </div>
                               <div style={{ display: 'flex', gap: 6 }}>
                                 <button style={ui.button} onClick={() => duplicateNode(selectedNode.id)}>Duplicate</button>
