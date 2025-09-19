@@ -2,6 +2,11 @@
 
 Use this page to go from zero to a working workflow in minutes.
 
+## Prerequisites
+- Modern browser (Chrome/Firefox/Edge)
+- Optional: Accounts/API keys for your preferred AI provider (e.g., OpenAI)
+- Optional: Discourse instance and SSO secret if you want Discourse-backed features
+
 ## 1. Add a Provider Key
 Open any page header “Settings” / key modal. Paste an API key (e.g. OpenAI). Provider becomes active. You can switch providers later without losing the canvas.
 
@@ -37,6 +42,9 @@ Iterate: Add nodes for roles, constraints, evaluation checks, data shapes, examp
 
 ## Persistence
 Current workflow auto-saves locally. Clearing session removes volatile state (provider selection, system message) but not the saved workflow unless you manually clear storage.
+
+> Note
+> AI provider keys are stored only in your browser session (encrypted). SSO (if enabled) is cookie-based and never stores your provider keys.
 
 ## When to Use Text → Workflow
 If you have a raw paragraph spec, feed it through the Text → Workflow feature (where available). It drafts an initial structure you refine manually.

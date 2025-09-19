@@ -484,7 +484,7 @@ Built with ∞❤️∞ for the future of context engineering and AI reasoning
 
 [back-to-top]: https://img.shields.io/badge/-BACK_TO_TOP-151515?style=flat-square
 [repo-link]: https://github.com/iamcapote/semantic_flow
-[docs]: ./docs/info.md
+[docs]: ./docs/README.md
 [changelog]: ./CHANGELOG.md
 [issues]: https://github.com/iamcapote/semantic_flow/issues
 [license-link]: ./LICENSE
@@ -517,3 +517,72 @@ Built with ∞❤️∞ for the future of context engineering and AI reasoning
 [coverage-link]: https://github.com/iamcapote/semantic_flow/actions
 [repocloud-button]: https://d16t0pc4846x52.cloudfront.net/deploylobe.svg
 [repocloud-link]: https://repocloud.io/
+
+---
+
+## 👩‍💻 Developer Guide (Quick)
+
+This repo contains a React/Vite client and a small Express server. The server serves the SPA and implements Discourse SSO/proxies/SSE; all AI provider calls are BYOK from the browser.
+
+- Client path alias: `@/*` → `src/*` (see `jsconfig.json`).
+- Port: `8081` by default (Node server + Vite dev middleware).
+- Start dev server:
+
+```bash
+npm install
+npm run dev
+# open http://localhost:8081
+```
+
+### Environment Variables
+
+Create a `.env` from `.env.example` (if present) or set variables in your environment. Defaults work for local preview when Discourse features are not used.
+
+| Variable | Required | Description | Example |
+|---|:--:|---|---|
+| `APP_BASE_URL` | Yes | Base URL of this app | `http://localhost:8081` |
+| `DISCOURSE_BASE_URL` | No | Your Discourse base URL | `https://hub.bitwiki.org` |
+| `DISCOURSE_SSO_SECRET` | No | Enables SSO login flow | `change-me` |
+| `DISCOURSE_WEBHOOK_SECRET` | No | Verifies inbound webhooks | `change-me` |
+| `API_KEY` | No | Optional admin key for Discourse write proxies | `change-me` |
+
+When unset, Discourse-specific routes will return 5xx/501 as appropriate; the client handles these gracefully.
+
+### Testing
+
+```bash
+npm run test           # unit/integration (Jest + jsdom)
+npm run test:e2e       # E2E (Playwright)
+npm run test:all       # both suites
+```
+
+### Linting & Type Hints
+
+```bash
+npm run lint
+```
+
+The codebase uses standard ESLint React rules. TypeScript is not enforced; some files include inline JSDoc/types.
+
+### Build & Preview
+
+```bash
+npm run build
+npm run preview
+# open http://localhost:8081
+```
+
+### Directory Ref
+
+- `src/components/*`: Canvas, nodes, modals, Discourse panels
+- `src/lib/*`: `graphSchema`, `ontology`, `exportUtils`, `promptingEngine`, `security`
+- `server/*`: Express app and index (mounts Vite in dev, serves `dist/` in prod)
+- `docs/*`: User/developer documentation rendered under `/learn/docs`
+
+### Security Notes
+
+- Never proxy user provider keys; keys live in `sessionStorage` encrypted (BYOK).
+- HttpOnly cookie session for SSO; CSRF token on logout.
+- Webhook HMAC verification for Discourse.
+
+For precise contracts, see `AGENTS.md`.

@@ -38,3 +38,21 @@ What it does not do:
 - “Enhance” = Ask the model to rewrite a node’s content with a chosen style (improve, simplify, etc.).
 
 Proceed to [Getting Started →](getting-started.md)
+
+---
+
+## Developer Notes
+
+- Run locally: `npm install && npm run dev` then open `http://localhost:8081`.
+- Docs render in-app at `/learn/docs`; external viewers can read this folder directly on GitHub.
+- Contracts and data shapes live in `AGENTS.md` (root). Architecture overviews: `docs/architecture/*`.
+- BYOK only for AI providers: keys are stored encrypted in `sessionStorage` client-side.
+
+### Quick Links
+
+- Graph contracts: `src/lib/graphSchema.js`
+- Execution engine: `src/lib/WorkflowExecutionEngine.js`
+- Prompting: `src/lib/promptingEngine.js`
+- Providers (UI): `src/components/ProviderSetup.jsx`
+- Security helpers: `src/lib/security.js`
+- Server (SSO/proxy/SSE): `server/app.js`
