@@ -82,6 +82,13 @@ export class PromptingEngine {
         ],
         headers: {},
       },
+      {
+        providerId: 'reisearch',
+        name: 'REI Network',
+        baseURL: 'https://api.reisearch.box/v1',
+        models: ['[default]'],
+        headers: {},
+      },
     ];
   }
 

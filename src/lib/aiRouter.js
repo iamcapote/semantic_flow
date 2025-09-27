@@ -26,6 +26,10 @@ const DEFAULTS = {
     base: 'https://api.mor.org/api/v1',
     headers: {},
   },
+  reisearch: {
+    base: 'https://api.reisearch.box/v1',
+    headers: {},
+  },
 };
 
 // Default system/user prompt templates for AI Functions (editable by user via Router UI)
@@ -231,6 +235,14 @@ function adaptBodyAndPath(providerId, body, explicitPath) {
     if (Array.isArray(body?.messages)) return { path: '/chat/completions', payload: body };
     if (body?.prompt) return { path: '/completions', payload: body };
     return { path: '/chat/completions', payload: body };
+  }
+
+  if (providerId === 'reisearch') {
+    const { model, unit, ...rest } = body || {};
+    const payload = { ...rest };
+    if (unit) payload.unit = unit;
+    else if (model && model !== '[default]' && model !== 'default') payload.unit = model;
+    return { path: '/chat/completions', payload };
   }
 
   // Fallback

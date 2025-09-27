@@ -4,11 +4,11 @@ Use this page to go from zero to a working workflow in minutes.
 
 ## Prerequisites
 - Modern browser (Chrome/Firefox/Edge)
-- Optional: Accounts/API keys for your preferred AI provider (e.g., OpenAI)
+- Optional: Accounts/API keys for your preferred AI provider (e.g., OpenAI, REI Network unit secret)
 - Optional: Discourse instance and SSO secret if you want Discourse-backed features
 
 ## 1. Add a Provider Key
-Open any page header “Settings” / key modal. Paste an API key (e.g. OpenAI). Provider becomes active. You can switch providers later without losing the canvas.
+Open any page header “Settings” / key modal. Paste an API key (e.g. OpenAI, REI Network unit/agent secret). Provider becomes active. You can switch providers later without losing the canvas.
 
 ## 2. Open the Builder
 Navigate to the Builder (tab or direct route `/builder`). You now see:

@@ -128,7 +128,7 @@ export default function LandingPage({ onApiKeySet }) {
               <>
                 <div style={{ background:'#f7f7f7', border:'1px solid #808080', padding:8, marginBottom:10, fontSize:12, lineHeight:1.45 }}>
                   <div style={{ fontWeight:700, marginBottom:4 }}>Local provider control</div>
-                  Add API keys for OpenAI, OpenRouter, Venice, Nous, Morpheus (and more) to drive AI assist, conversions, and execution. Keys are encrypted & session‑only (cleared on refresh/logout). Mix SSO context with BYOK models—or run fully offline from local storage.
+                  Add API keys for OpenAI, OpenRouter, Venice, Nous, Morpheus, REI Network (and more) to drive AI assist, conversions, and execution. Keys are encrypted & session‑only (cleared on refresh/logout). Mix SSO context with BYOK models—or run fully offline from local storage.
                   <div style={{ marginTop:6, fontSize:11, opacity:0.85 }}>Supports: multi‑provider switching • custom models • prompt templates.</div>
                 </div>
                 <div style={win98.field}>

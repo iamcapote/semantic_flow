@@ -67,6 +67,13 @@ const defaultProviders = [
     ],
     isActive: false,
   },
+  {
+    providerId: 'reisearch',
+    name: 'REI Network',
+    baseURL: 'https://api.reisearch.box/v1',
+    models: ['[default]'],
+    isActive: false,
+  },
 ];
 
 const ProviderSetup = ({ userId, onComplete }) => {
@@ -154,7 +161,34 @@ const ProviderSetup = ({ userId, onComplete }) => {
         toast({ title: "API Key Missing", description: "Please enter an API key for this provider.", variant: "destructive" });
         return;
       }
+      const providerConfig = providers.find(p => p.providerId === providerId);
+      const baseURL = (providerConfig?.baseURL || '').replace(/\/$/, '');
+      const resolveBase = (fallback) => (baseURL || fallback);
       let response, data;
+      if (providerId === 'reisearch') {
+        const url = `${resolveBase('https://api.reisearch.box/v1')}/chat/completions`;
+        response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            messages: [
+              { role: 'user', content: 'Hello, this is a test prompt to verify the connection.' }
+            ]
+          })
+        });
+        data = await response.json();
+        if (!response.ok) throw new Error(data.error?.details || data.error || response.statusText);
+        toast({
+          title: 'Test Successful',
+          description: `REI Network responded: "${data.choices?.[0]?.message?.content?.substring(0, 50) || 'No response'}..."`
+        });
+        // eslint-disable-next-line no-console
+        console.log('[ProviderSetup][REI Network] Response:', data);
+        return;
+      }
       if (providerId === 'openrouter') {
         response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
           method: 'POST',
@@ -397,7 +431,7 @@ const ProviderSetup = ({ userId, onComplete }) => {
                   </div>
 
                   <div>
-                    <Label className="text-white">Available Models</Label>
+                    <Label className="text-white">{provider.providerId === 'reisearch' ? 'Available Units' : 'Available Models'}</Label>
                     <div className="flex flex-wrap gap-2 mt-2">
                       {provider.models.map(model => (
                         <Badge key={model} variant="outline" className="flex items-center gap-1 text-white border-white/20">
@@ -414,6 +448,9 @@ const ProviderSetup = ({ userId, onComplete }) => {
                         </Badge>
                       ))}
                     </div>
+                    {provider.providerId === 'reisearch' && (
+                      <p className="mt-2 text-xs text-white/70">REI Network unit tokens already target a specific agent. Custom unit overrides are not required.</p>
+                    )}
                   </div>
 
                   {apiKeys[provider.providerId] && (

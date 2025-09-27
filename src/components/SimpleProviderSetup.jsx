@@ -98,6 +98,16 @@ const SimpleProviderSetup = ({ userId, onComplete }) => {
       apiKey: '',
       isActive: false,
       description: 'Gateway for fast chat/completions with popular open models'
+    },
+    {
+      providerId: 'reisearch',
+      name: 'REI Network',
+      baseURL: 'https://api.reisearch.box/v1',
+      models: ['[default]'],
+      defaultModel: '[default]',
+      apiKey: '',
+      isActive: false,
+      description: 'REI Network unit endpoints that respond to OpenAI-style chat payloads'
     }
   ];
 
@@ -136,6 +146,7 @@ const SimpleProviderSetup = ({ userId, onComplete }) => {
   };
 
   const handleAddCustomModel = (providerId) => {
+    if (providerId === 'reisearch') return;
     const customModel = customModels[providerId];
     if (customModel && customModel.trim() !== '') {
       setProviders(prev => prev.map(p => 
@@ -148,6 +159,7 @@ const SimpleProviderSetup = ({ userId, onComplete }) => {
   };
 
   const handleCustomModelChange = (providerId, value) => {
+    if (providerId === 'reisearch') return;
     setCustomModels(prev => ({ ...prev, [providerId]: value }));
   };
 
@@ -263,6 +275,7 @@ const SimpleProviderSetup = ({ userId, onComplete }) => {
             const provider = providers.find(p => p.providerId === selectedProviderId);
             if (!provider) return null;
             const status = getProviderStatus(provider);
+            const isRei = provider.providerId === 'reisearch';
             return (
               <div style={{ ...win95.group }}>
                 <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom: 8 }}>
@@ -307,32 +320,40 @@ const SimpleProviderSetup = ({ userId, onComplete }) => {
                 </div>
 
                 <div style={{ marginTop: 8 }}>
-                  <div style={win95.label}>Default Model</div>
+                  <div style={win95.label}>{isRei ? 'Default Unit' : 'Default Model'}</div>
                   <select style={win95.select} value={provider.defaultModel}
-                    onChange={(e)=>handleProviderUpdate(provider.providerId, 'defaultModel', e.target.value)}>
+                    onChange={(e)=>handleProviderUpdate(provider.providerId, 'defaultModel', e.target.value)}
+                    disabled={isRei}>
                     {provider.models.map(model => (<option key={model} value={model}>{model}</option>))}
                   </select>
+                  {isRei && (
+                    <div style={{ fontSize: 11, marginTop: 4, opacity: 0.75 }}>
+                      REI Network unit tokens already point at a specific agent; no override is needed.
+                    </div>
+                  )}
                 </div>
 
-                <div style={{ marginTop: 8 }}>
-                  <div style={win95.label}>Add Custom Model</div>
-                  <div style={{ display:'flex', gap:6 }}>
-                    <input
-                      style={win95.input}
-                      value={customModels[provider.providerId] || ''}
-                      onChange={(e) => handleCustomModelChange(provider.providerId, e.target.value)}
-                      placeholder="e.g., gpt-4o-2024-08-06"
-                    />
-                    <button
-                      style={win95.btn}
-                      onClick={() => handleAddCustomModel(provider.providerId)}
-                      disabled={!customModels[provider.providerId]?.trim()}
-                      title="Add model"
-                    >
-                      <Plus className="h-4 w-4" />
-                    </button>
+                {!isRei && (
+                  <div style={{ marginTop: 8 }}>
+                    <div style={win95.label}>Add Custom Model</div>
+                    <div style={{ display:'flex', gap:6 }}>
+                      <input
+                        style={win95.input}
+                        value={customModels[provider.providerId] || ''}
+                        onChange={(e) => handleCustomModelChange(provider.providerId, e.target.value)}
+                        placeholder="e.g., gpt-4o-2024-08-06"
+                      />
+                      <button
+                        style={win95.btn}
+                        onClick={() => handleAddCustomModel(provider.providerId)}
+                        disabled={!customModels[provider.providerId]?.trim()}
+                        title="Add model"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
-                </div>
+                )}
 
                 <div style={{ display:'flex', gap:8, marginTop: 10, paddingTop: 8, borderTop: '1px solid #808080' }}>
                   {provider.apiKey && (

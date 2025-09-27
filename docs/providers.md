@@ -23,10 +23,16 @@ Morpheus
 - Mix of llama / qwen style web-tuned models.
 - Good for: quick iterative edits when latency matters.
 
+REI Network
+- Uses "units" instead of model IDs. Most integrations work with the built-in `[default]` unit.
+- Good for: tapping REI Network agents with OpenAI-compatible chat payloads.
+- Key types: use a **unit/agent secret** (Bearer token) for completions; user/account secrets are for management APIs and won't answer chat.
+
 ## Selecting a Provider
 1. Open Settings / Provider selector.
 2. Paste the key for the provider you want to activate.
 3. Choose a default model if offered (fallback is the first listed model).
+		- REI Network exposes units; keep `[default]` unless you have a specific unit name from REI.
 4. Run a small test (e.g. enhance a short node) to confirm connectivity.
 
 ## Switching Models Mid-Session
@@ -50,6 +56,7 @@ Use a lighter / faster model for:
 
 ## If Something Fails
 - Check the active provider actually has a key entered.
+- For REI Network, confirm you're using a unit/agent secret and that the request body doesn't override the unit unless instructed.
 - Try a simpler model (some free endpoints rate limit aggressively).
 - Re-run a single small node enhancement to isolate network vs content issues.
 

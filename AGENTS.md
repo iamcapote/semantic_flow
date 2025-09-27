@@ -1,249 +1,240 @@
-## AGENTS.md — Code interaction guide for automated agents
+# AGENTS
 
-Purpose: exact contracts, data shapes, and invariants. Write and modify code safely; integrate without guessing.
+Pragmatic guidance for building, extending, and maintaining the semantic_flow workspace. Keep changes safe, explicit, and easy to verify.
 
----
+## Core principles
 
-## 1) Architecture and trust boundaries
+- Contract first: define inputs, outputs, error modes, and performance budgets before coding.
+- One intent per change: keep slices small, cohesive, and reversible; wire new capabilities behind clear seams.
+- Start with the simplest viable step, then climb the complexity stack only when needed.
+- Separate concerns: isolate UI, orchestration, data shaping, and IO so that one module owns one role.
+- Favor composition over inheritance: build small pieces and wire them for new behavior.
+- Guard boundaries: validate early, normalize data, and treat external input as immutable on entry and exit.
+- Verify behavior: test observable outcomes (happy path, boundary, failure) instead of implementation details.
+- Immutability at boundaries: copy on input/output; prevent cross-module mutation leaks.
+- Improve code health with every change: better names, docs, tests, and structure.
+- Story-first code: read top-down (Guard → Do → Verify) so the flow is obvious.
+- Scalability by design: leave room for future growth without rewrites; lean on configuration and feature flags.
+- Keep files lean: target 300–500 LOC per file (soft ceiling 500) and split earlier if clarity improves.
+- Agents should stay auto-poietic, independent, and self-evolving; always hunt for min-max opportunities within safety rails.
 
-- Client (React/Vite, `src/`): renders the canvas, manages workflows, and calls AI providers directly (BYOK).
-- Server (Express, `server/`): Discourse SSO/webhooks/proxy and static serving. No provider-key handling.
-- External: AI providers (OpenAI/OpenRouter/Venice) and Discourse.
+## Architecture & trust boundaries
+
+- Client (`src/`, React + Vite): renders the workflow canvas, manages nodes, and calls AI providers directly from the browser (bring-your-own-key).
+- Server (`server/`, Express): handles Discourse SSO, proxies Discourse REST/SSE traffic, and serves the SPA. Provider keys never transit the server.
+- External systems: AI providers (OpenAI, OpenRouter, Venice, etc.) and Discourse.
 
 Data flow
-- Browser → Providers: POST /chat/completions with Bearer key from sessionStorage (never proxied).
-- Browser ↔ Server → Discourse: REST, SSO redirects; events via SSE.
-- Discourse → Server: webhooks (HMAC) → Server → Browser: SSE broadcast.
+- Browser → Providers: `POST /chat/completions` with `Authorization: Bearer <key>` pulled from `sessionStorage`.
+- Browser ↔ Server ↔ Discourse: Discourse REST/SSO via fetch with `credentials: 'include'`; server forwards data and SSE events.
+- Discourse → Server → Browser: Webhooks arrive with HMAC signatures; server dedupes and rebroadcasts as SSE `webhook` events.
 
----
+## Composition over inheritance
 
-## 2) Module map (where to look)
+- Prefer small functions and pipelines (e.g., execution pipeline = prepare → call provider → verify → persist).
+- Use higher-order helpers to inject logging, caching, throttling, or retries without coupling core logic to infrastructure.
+- Separate side-effectful wiring from pure logic; pure modules live in `src/lib/*` and stay lean for testing.
 
-- Canvas & nodes: `src/components/LabCanvas.jsx`, `src/components/SemanticNode.jsx`, `src/components/NodePalette.jsx`
-- Provider setup: `src/components/ProviderSetup.jsx`, `src/components/ProviderSettings.jsx`
-- Execute UI: `src/components/WorkflowExecutionModal.jsx`, `src/components/TextToWorkflow.jsx`
-- Orchestration: `src/lib/promptingEngine.js`
-- Execution engine: `src/lib/WorkflowExecutionEngine.js`
-- Discourse client: `src/lib/discourseApi.js`
-- Graph: `src/lib/graphSchema.js`
-- Ontology: `src/lib/ontology.js`
-- Export: `src/lib/exportUtils.js`
-- Security: `src/lib/security.js`
-- Server: `server/app.js`, `server/index.js`
+## Modularity & file size
 
----
+- 300–500 LOC per file is the comfortable zone; if a file creeps past ~400 lines, split by responsibility.
+- Keep public surfaces tight: export only what downstream callers need.
+- Compose features from `controller → service → adapter → schema` seams when functionality grows.
+- Pure helpers live in `src/lib` or `src/utils`; components handle rendering only, and server files wire HTTP + adapters.
 
-## 3) Client-side contracts (APIs you can call)
+## Repository conventions
 
-Graph schema (`src/lib/graphSchema.js`)
-- Constants: `GRAPH_SCHEMA_VERSION = "1.0.0"`, `PORT_TYPES`, `EDGE_CONDITIONS`, `EXECUTION_STATES`.
-- Factories
-  - `createNodeSchema() -> NodeSchema`
-  - `createEdgeSchema() -> EdgeSchema`
-  - `createWorkflowSchema() -> WorkflowSchema`
-  - `createConfigSchema() -> ModelConfig`
-  - `createExecutionResultSchema() -> ExecutionResult`
-- Helpers
-  - `generateId() -> string`
-  - `createNode(type, position, content='') -> Node`
-  - `createEdge(sourceId, targetId, condition=EDGE_CONDITIONS.FOLLOWS) -> Edge`
-- Validators
-  - `validateNode(node) -> { isValid:boolean, errors:string[] }`
-  - `validateEdge(edge) -> { isValid:boolean, errors:string[] }`
-  - `validateWorkflow(workflow) -> { isValid:boolean, errors:string[] }`
+- Tooling: Vite for the client, Express for the server, Jest + jsdom for unit/integration tests, Playwright for E2E, TailwindCSS for styling.
+- Directory roles:
+  - `src/components/*`: UI components; keep them focused and reusable.
+  - `src/lib/*`: orchestration, graph schema, execution engine, providers, utilities.
+  - `server/*`: Express app wiring, Discourse adapters, SSE hub.
+  - `docs/*`: end-user and contributor documentation.
+  - `tests/*`: Jest unit/integration tests; `tests/e2e` for Playwright flows.
+- Preferred module style: use ES modules where supported; configuration files may remain CommonJS (`*.cjs`). Avoid default exports in new code.
+- Assets: keep static files under `public/`; import via Vite when needed.
 
-Ontology (`src/lib/ontology.js`)
-- `ONTOLOGY_CLUSTERS`, `NODE_TYPES`, `CLUSTER_COLORS`
-- `getNodesByCluster(clusterCode) -> Array<{code,label,...}>`
-- `getClusterSummary() -> Array<{code,name,color,nodeCount}>`
+## Contract-first design
 
-Prompting engine (`src/lib/promptingEngine.js`)
-- Class: `PromptingEngine(userId)`
-- Methods
-  - `callProvider(providerId, model, apiKey, messages) -> Promise<ChatCompletionJSON>`
-  - `convertTextToWorkflow(text, apiKey, providerId='openai', model='gpt-4o') -> { success, workflow?, error?, metadata? }`
-  - `executeWorkflowWithFormat(workflow, outputFormat='json', executionSettings) -> { success, execution?, error? }`
-  - `enhanceNode(node, enhancementType='improve', context) -> { success, enhancement?, error? }`
-  - `getAvailableProviders() -> Promise<Array<{providerId, name, baseURL, models, headers, isActive}>>`
-  - `getRecommendedModels(taskType) -> string[]` (advisory only)
-- Notes
-  - `parseWorkflowFromAIResponse` extracts the first JSON block via regex; malformed JSON returns `{nodes:[],edges:[],error}`.
-  - Provider lists include OpenAI/OpenRouter/Venice; headers for OpenRouter add Referer/X-Title.
+Describe the contract at the top of each module and in tests before implementation. Capture types, invariants, and performance budgets.
 
-Workflow execution (`src/lib/WorkflowExecutionEngine.js`)
-- Class: `WorkflowExecutionEngine(userId, toast)`
-- Methods
-  - `executeWorkflow(workflow, onProgress?) -> Promise<{ success, results, nodeStates, totalNodes, completedNodes, provider }>`
-    - Progress callbacks: emits `{type:'start'|'node_start'|'node_complete'|'node_error'|'complete', ...}`.
-    - Active provider: from `sessionStorage.active_provider` or first from `getAvailableProviders()`; model = provider.models[0].
-  - `testSingleNode(nodeId, nodeType, content, providerId, model, apiKey) -> { success, result?, error?, provider, model, usage }`
-  - Internals: `prepareNodeInput(node, nodeStates, workflow)`, `getExecutionOrder(workflow)` (current: sequential order by nodes array).
-- Error modes
-  - Missing nodes → throws 'Workflow is empty'.
-  - No active provider or missing key → throws user-facing error.
-  - Provider HTTP error → caught; marks node error and continues.
+```
+/**
+ * Contract
+ * Inputs:
+ *   - input: TextToWorkflowRequest { text: string; providerId?: string; model?: string }
+ *   - execution?: ExecutionSettings { format?: 'json'|'markdown'; signal?: AbortSignal }
+ * Outputs:
+ *   - WorkflowResponse { success: boolean; workflow?: WorkflowSchema; error?: string; metadata?: object }
+ * Error modes:
+ *   - ValidationError, MissingProviderError, ProviderRateLimitError, UpstreamError
+ * Performance:
+ *   - time: soft 2s, hard 5s; memory: <50 MB peak
+ * Side effects:
+ *   - Calls PromptingEngine.callProvider; may emit toast notifications; logs via console.warn/error
+ */
+```
 
-Discourse client (`src/lib/discourseApi.js`)
-- `getLatest(page=0) -> Promise<json>`
-- `getTopic(id) -> Promise<json>`
-- `getPMInbox(username) -> Promise<json>`
-- `subscribeEvents(onMessage) -> unsubscribe()`; listens to SSE `/api/events`, event `webhook` with JSON payload.
-- `aiSearch(payload) -> Promise<json>`
-- `aiStream(payload, onEvent) -> cancel()`; streams raw server-sent chunks.
+Contracts should cover inputs/outputs, error discriminants, time/memory budgets, side effects (IO, storage, SSE), and telemetry (logs, metrics, correlation IDs).
 
-Export utilities (`src/lib/exportUtils.js`)
-- `exportWorkflowAsJSON(workflow) -> { content, filename, mimeType }`
-- `exportWorkflowAsMarkdown(workflow) -> { content, filename, mimeType }`
-- `exportWorkflowAsYAML(workflow) -> { content, filename, mimeType }`
-- `exportWorkflowAsXML(workflow) -> { content, filename, mimeType }`
-- `exportWorkflow(workflow, format) -> { content, filename, mimeType }`
+## Guard → Do → Verify pattern
 
-Security (`src/lib/security.js`)
-- `SecureKeyManager`
-  - `storeApiKey(provider, key)` stores `api_key_{provider}` in sessionStorage (AES via CryptoJS, static key `semantic-workflow-secure`).
-  - `getApiKey(provider) -> key|null`
-  - `clearAllKeys()` removes all `api_key_*` entries.
-- `SESSION_SECURITY.setupSessionClearance()` clears keys on `beforeunload` (optional tab-hide hook present but disabled).
+Write public functions so the execution path reads clearly:
 
-Provider setup (`src/components/ProviderSetup.jsx`)
-- Defaults for OpenAI/OpenRouter/Venice; persists `base_url_{provider}`, sets `active_provider`, and stores keys via SecureKeyManager.
-- Also sets `openai_api_key` for the active provider (legacy convenience key).
+```
+export async function executeWorkflow(workflow, options = {}) {
+  // Guard
+  const normalized = requireValidWorkflow(workflow);
+  const { signal, onProgress } = normalizeOptions(options);
 
----
+  // Do
+  const result = await runSequentialExecution(normalized, { signal, onProgress });
 
-## 4) Server API contracts (Discourse integration)
+  // Verify
+  assertExecutionResult(result);
+  return Object.freeze(result);
+}
+```
 
-Auth and cookies
-- `sf_session` (HttpOnly): HMAC-signed token (header.payload.sig) using `API_KEY` env as secret, 7-day expiry.
-- `sf_csrf` (readable): CSRF cookie for double-submit; echo as `x-csrf-token` on POST to `/api/logout`.
-- `sf_sso_nonce` (HttpOnly, short-lived): SSO nonce during login.
+- Guard: validate inputs, apply defaults, set up context (signals, loggers, correlation IDs).
+- Do: perform the core logic with composable helpers; keep side-effect boundaries explicit.
+- Verify: assert invariants before returning; freeze or clone outputs that cross module boundaries.
 
-Routes (method path → contract)
-- GET `/api/health` → `{ ok:boolean, env:string }`
-- GET `/api/config` → `{ discourseBaseUrl, ssoProvider:boolean, appBaseUrl }`
-- GET `/api/sso/login` → 302 redirect to Discourse SSO; sets `sf_sso_nonce`.
-- GET `/api/sso/callback?sso&sig` → verifies HMAC, validates nonce, sets `sf_session`+`sf_csrf`, 302 to `/discourse`.
-- POST `/api/logout` headers: `x-csrf-token` must match `sf_csrf`. Clears cookies.
-- GET `/api/me` (cookie: `sf_session`) → `{ user }` or 401.
+## Client module contracts
 
-Discourse proxies
-- GET `/api/discourse/latest?page=` → passthrough of `/latest.json`.
-- GET `/api/discourse/topic/:id` → passthrough of `/t/:id.json`.
-- GET `/api/discourse/pm/:username` → passthrough of PM inbox.
-- POST `/api/discourse/seed` body: `{ title, category_id, tags?, raw?, idempotencyKey? }` → creates topic; 501 when admin key missing.
-- POST `/api/discourse/seed/:seedTopicId/attach` body: `{ pm_topic_id }` → replies into PM with link.
-- GET `/api/discourse/seeds?category_id=&tags=a,b` → `{ topics }` filtered by tags.
+### Graph schema (`src/lib/graphSchema.js`)
+- Factories: `createNodeSchema`, `createEdgeSchema`, `createWorkflowSchema`, `createConfigSchema`, `createExecutionResultSchema`.
+- Helpers: `generateId`, `createNode`, `createEdge` (defaults to `EDGE_CONDITIONS.FOLLOWS`).
+- Validators: `validateNode`, `validateEdge`, `validateWorkflow` returning `{ isValid, errors }`.
+- Constants: `GRAPH_SCHEMA_VERSION`, `PORT_TYPES`, `EDGE_CONDITIONS`, `EXECUTION_STATES`.
 
-Discourse AI plugin
-- POST `/api/ai/search` body: any JSON → upstream JSON or 502 on failure.
-- POST `/api/ai/stream` body: any JSON → SSE piping; emits upstream stream or `event:error` on failure.
-- GET `/api/ai/personas` → `{ personas: [{id,name,description?}] }` best-effort from multiple endpoints; fallback list provided.
+### Ontology (`src/lib/ontology.js`)
+- Data: `ONTOLOGY_CLUSTERS`, `NODE_TYPES`, `CLUSTER_COLORS`.
+- Queries: `getNodesByCluster(clusterCode)`, `getClusterSummary()`.
 
-Webhooks and events
-- POST `/api/webhooks/discourse` headers: `x-discourse-event`, `x-discourse-event-type`, `x-discourse-event-signature = sha256=<hmac>` with shared secret; body is raw JSON.
-- Dedupe: body hash TTL ~2m. Success always `{ ok:true, deduped?:true }`.
-- Broadcast to SSE `/api/events` as `event:webhook` with payload:
-  `{ event, type, ts, postId?, topicId?, userId?, categoryId? }`.
-- GET `/api/events` (SSE): emits `open`, `ping` every 15s, and `webhook` events as above.
+### Prompting engine (`src/lib/promptingEngine.js`)
+- Class `PromptingEngine(userId)` with methods:
+  - `callProvider(providerId, model, apiKey, messages)` → `Promise<ChatCompletionJSON>`.
+  - `convertTextToWorkflow(text, apiKey, providerId = 'openai', model = 'gpt-4o')` → `{ success, workflow?, error?, metadata? }`.
+  - `executeWorkflowWithFormat(workflow, outputFormat = 'json', executionSettings)` → execution result discriminant.
+  - `enhanceNode(node, enhancementType = 'improve', context)` → enhancement discriminant.
+  - `getAvailableProviders()` → active provider list with base URLs, headers, models.
+  - `getRecommendedModels(taskType)` → advisory model names.
+- Notes: `parseWorkflowFromAIResponse` extracts the first JSON block; malformed JSON yields empty graphs with error strings. OpenRouter requires `Referer` + `X-Title` headers.
 
-Dev/prod serving
-- Dev: Vite middleware mounted on Express; HTML transformed for SPA routing.
-- Prod: serves `dist/` and falls back to `index.html` for SPA routes; API under `/api/*`.
+### Workflow execution (`src/lib/WorkflowExecutionEngine.js`)
+- Class `WorkflowExecutionEngine(userId, toast)`:
+  - `executeWorkflow(workflow, onProgress?)` → `{ success, results, nodeStates, totalNodes, completedNodes, provider }` with progress events `start`, `node_start`, `node_complete`, `node_error`, `complete`.
+  - `testSingleNode(nodeId, nodeType, content, providerId, model, apiKey)` → `{ success, result?, error?, provider, model, usage }`.
+- Internals: `prepareNodeInput`, `getExecutionOrder` (current order = array order; no topological sort).
+- Error modes: empty workflow, missing provider/key, provider HTTP failures continue execution but mark node errors.
 
----
+### Discourse client (`src/lib/discourseApi.js`)
+- REST: `getLatest(page)`, `getTopic(id)`, `getPMInbox(username)`.
+- SSE: `subscribeEvents(onMessage)` returning `unsubscribe()`; events under `event:webhook`.
+- AI proxy: `aiSearch(payload)` and `aiStream(payload, onEvent)` with cancel handle.
 
-## 5) Storage, headers, and keys (ground truth)
+### Export utilities (`src/lib/exportUtils.js`)
+- `exportWorkflow(workflow, format)` dispatches to JSON/Markdown/YAML/XML exporters returning `{ content, filename, mimeType }`.
 
-sessionStorage
-- `api_key_{provider}`: encrypted key via `SecureKeyManager`.
-- `base_url_{provider}`: provider base URL override.
-- `active_provider`: currently selected providerId.
-- `openai_api_key`: legacy convenience for active provider (used by some components).
+### Security (`src/lib/security.js`)
+- `SecureKeyManager`: encrypts provider keys in `sessionStorage` using AES (key `semantic-workflow-secure`).
+- `SESSION_SECURITY.setupSessionClearance()`: optional tab lifecycle hook to clear stored keys on unload.
 
-Cookies
-- `sf_session` (HttpOnly), `sf_csrf` (readable), `sf_sso_nonce` (short-lived).
+## Server API contracts (`server/app.js`)
 
-Headers
-- Provider calls: `Authorization: Bearer <key>`, `Content-Type: application/json`.
-- OpenRouter extras: `HTTP-Referer`, `X-Title`.
-- CSRF: `x-csrf-token: <sf_csrf>` on `/api/logout` (only endpoint enforcing CSRF today).
+Auth & cookies
+- `sf_session` (HttpOnly) signed with `API_KEY`; 7-day expiry.
+- `sf_csrf` (readable) paired with double-submit header `x-csrf-token` on logout.
+- `sf_sso_nonce` (HttpOnly) for SSO round-trips.
 
----
+Routes
+- `GET /api/health` → `{ ok, env }`.
+- `GET /api/config` → `{ discourseBaseUrl, ssoProvider, appBaseUrl }`.
+- `GET /api/sso/login` → redirect + sets `sf_sso_nonce`.
+- `GET /api/sso/callback?sso&sig` → validates HMAC + nonce, sets session cookies, redirects to `/discourse`.
+- `POST /api/logout` (requires `x-csrf-token`) → clears cookies.
+- `GET /api/me` (requires `sf_session`) → `{ user }` or 401.
+- Discourse proxies: `/api/discourse/latest`, `/api/discourse/topic/:id`, `/api/discourse/pm/:username` pass through JSON.
+- Seed endpoints: `POST /api/discourse/seed`, `POST /api/discourse/seed/:seedTopicId/attach`; return 501 if admin key missing.
+- Lists: `GET /api/discourse/seeds?category_id=&tags=` → `{ topics }`.
+- AI plugin: `POST /api/ai/search`, `POST /api/ai/stream`, `GET /api/ai/personas`.
+- Webhooks: `POST /api/webhooks/discourse` expects HMAC header `x-discourse-event-signature = sha256=<hmac>`; dedupes bodies for ~2 minutes and emits SSE `webhook` payloads `{ event, type, ts, postId?, topicId?, userId?, categoryId? }`.
+- SSE hub: `GET /api/events` emits `open`, `ping` every 15s, and `webhook` events.
 
-## 6) Execution flow (end-to-end)
+Serving
+- Dev mode: Express mounts Vite middleware; SPA served with live transformations.
+- Production: Express serves `dist/` assets, falling back to `index.html` for SPA routes; API stays under `/api/*`.
 
-1) User configures providers in `ProviderSetup.jsx` → keys stored with `SecureKeyManager`, base URLs and `active_provider` set.
-2) Orchestration uses `PromptingEngine.callProvider(...)` with the active provider and chosen model.
-3) `WorkflowExecutionEngine.executeWorkflow(...)` iterates nodes sequentially, composes input from upstream node outputs, and records results.
-4) UI exports via `exportWorkflow(...)` in desired format.
-5) If Discourse features are used, UI fetches `/api/me`, lists content via `/api/discourse/*`, subscribes to `/api/events` for webhook-driven updates.
+## Storage & security
 
----
+- `sessionStorage` keys: `api_key_{provider}` (encrypted), `base_url_{provider}`, `active_provider`, `openai_api_key` (legacy convenience).
+- Cookies: `sf_session`, `sf_csrf`, `sf_sso_nonce`.
+- Headers: provider calls require `Authorization` + `Content-Type: application/json`; OpenRouter also needs `Referer` + `X-Title`.
+- Never proxy provider keys through the server or log them. Clear keys on logout or unload when possible.
 
-## 7) Edge cases and error modes
+## Execution flow (end to end)
 
-Providers
-- 401/403/429 from providers → surface message; do not retry automatically on client.
-- Model missing/unsupported → provider returns error; ensure model exists in ProviderSetup defaults.
-- `convertTextToWorkflow` JSON parsing fails → returns empty graph with `error` string.
+1. User configures providers in `ProviderSetup.jsx`; keys stored via `SecureKeyManager`, base URLs tracked per provider, `active_provider` set.
+2. `PromptingEngine.callProvider` uses the active provider/model to fulfill conversions, enhancements, or execution requests.
+3. `WorkflowExecutionEngine.executeWorkflow` runs nodes sequentially, composes inputs from prior outputs, and streams progress events to the UI.
+4. Results can be exported through `exportWorkflow(...)` in JSON/Markdown/YAML/XML.
+5. Discourse integrations fetch `/api/me`, list content via `/api/discourse/*`, and subscribe to `/api/events` for webhook updates.
 
-Graph/Execution
-- Invalid nodes/edges → `validate*` returns errors; enforce before export/execute.
-- Execution order is naive (nodes array). No topological sort yet; data dependencies may be out-of-order.
-- Node execution continues after failures; errors recorded per node.
+## Edge cases & error modes
 
-Server/Discourse
-- `/api/discourse/*` retries upstream 3x with exponential backoff on 429/5xx.
-- `/api/discourse/seed*` returns 501 when `API_KEY` not configured; client must handle.
-- Webhook dedupe prevents duplicate SSE within ~2m TTL.
-- `/api/logout` requires CSRF header; others do not enforce CSRF today.
+- Provider errors: surface 401/403/429 with actionable messages; no automatic retries client-side.
+- Model availability: ensure provider defaults list supported models; handle unsupported-model responses gracefully.
+- Parsing: `convertTextToWorkflow` returns empty graphs with an error when AI output lacks valid JSON.
+- Execution ordering: current engine respects array order only; document and guard against missing dependencies until topological sort is implemented.
+- Server retries: Discourse proxy routes retry up to three times on 429/5xx with exponential backoff.
+- Logout: only endpoint enforcing CSRF header; calling without `x-csrf-token` returns 403.
+- Webhook dedupe: repeated payloads within TTL set `deduped: true` in SSE events.
+- Encryption: AES key is static; protects against casual inspection but not XSS. Treat client as semi-trusted.
 
-Security
-- AES key for browser encryption is static; protects against casual inspection, not XSS or a fully compromised client.
-- Keys cleared on unload if `SESSION_SECURITY` is initialized.
+## Testing
 
----
+- Jest unit/integration tests (jsdom): focus on components, BYOK workflows, lib logic. Avoid importing `server/*` in jsdom suites.
+- Playwright E2E: cover provider setup, canvas rendering, Discourse tabs, workflow execution smoke.
+- Add tests alongside features; include fixtures or mocks for provider responses without real keys.
+- Test contract coverage: valid input, boundary case, representative failure.
 
-## 8) Extension playbooks
+## Observability & logging
 
-Add a provider
-- ProviderSetup: add to `defaultProviders` (id, baseURL, models). Save base URL under `base_url_{id}`. Store key via `SecureKeyManager.storeApiKey(id, key)`.
-- PromptingEngine: ensure provider entry with headers if needed; reuse `callProvider` (expects `/chat/completions`).
-- UI: allow selection and testing; never proxy keys.
+- Use structured logs (`{ level, module, msg, correlationId, ...context }`) where logging is necessary.
+- Never log secrets or full provider payloads without redaction; prefer summarizing metadata.
+- Thread correlation IDs through async flows when possible (especially across PromptingEngine and WorkflowExecutionEngine hooks).
 
-Improve execution ordering
-- Implement topological sort in `WorkflowExecutionEngine.getExecutionOrder` using edges; ensure cycles handled (detect/report).
+## Execution playbook
 
-Streamed execution
-- For streamed models, add a streaming path alongside `callProvider`; consider using `ReadableStream` to accumulate partials.
+- Preparation: trace the call graph (UI → lib → server) and confirm contracts before editing.
+- Principle: first, do no harm—identify the smallest viable change, keep it reversible, and prefer isolation over rewrites.
+- Operation: ship one intent per change, prefer additive wiring, and apply Guard → Do → Verify in every public function.
+- Safety nets: wrap new capabilities behind feature flags or toggles, respect AbortSignal timeouts, cap retries with jitter, maintain idempotency for external side effects, and add backpressure/rate limits where needed.
+- Logging: emit structured, non-sensitive context (`{ module, level, correlationId, ... }`) and avoid drive-by logs.
+- Blast radius: isolate risky work behind well-defined seams; keep a reversible path (feature flag, revertible commit, or clear rollback steps).
 
-Ontology
-- Add types/clusters in `ontology.js`; update palette rendering if new clusters or colors introduced.
+## Change management
 
----
+- Keep pull requests scoped to a single concern; update docs/tests alongside code.
+- Preferred commit prefixes: `feat(scope):`, `fix(scope):`, `refactor(scope):` with motivation, approach, and risks.
+- Review checklist: contract documented, tests cover success/boundary/failure, logs redacted, file size within guidance, no circular dependencies.
+- Rollback plan: default toggles off until validated, document kill switches, and ensure new data writes are reversible.
 
-## 9) Tests (scope)
+## Documentation & comments
 
-- Unit/integration (Jest + jsdom): components, lib logic, BYOK behavior. Avoid importing `server/*` in jsdom environment.
-- E2E (Playwright): user flows (provider config, canvas render, discourse tabs, basic execution).
-- Do not check real keys into tests or fixtures.
+- Keep examples and fixtures updated and runnable alongside the code they illustrate.
+- Summarize architecture and behavior in comments; keep them concise, precise, and timeless.
+- Never leave TODOs or meta-notes in production paths; track follow-ups in issues or docs instead.
 
----
+## Performance budgets
 
-## 10) Invariants (do/don't)
+- Define soft/hard timeouts for provider and Discourse requests; honor `AbortSignal` for cancellation.
+- Prefer streaming or incremental processing over buffering large payloads; keep peak memory under 50 MB for typical workflows.
+- Aim for O(n) execution with respect to workflow nodes; document hotspots if higher complexity is unavoidable.
 
-- Do: keep provider keys in sessionStorage (encrypted). Do not log secrets.
-- Do: include `credentials: 'include'` for Discourse endpoints that rely on cookies.
-- Do: validate workflows before execution/export.
-- Don’t: send provider keys to `/api/*` or introduce proxies for provider calls.
-- Don’t: persist workflows server-side.
+## Run context
 
----
-
-Run context
-- Dev: `npm run dev` (SPA + API on one port, default 8081).
-- Build/preview: `npm run build` then `npm run preview` (served by Node server).
-
-Use this file as the contract index when reading or changing code. The sections above are sourced directly from the current modules and server routes.
-
-
+- Development: `npm run dev` (default port 8081, SPA + API).
+- Build: `npm run build` followed by `npm run preview` for production-like serving.
+- Tests: `npm run test` (Jest), `npm run test:e2e` (Playwright). Run fast smoke tests before shipping.

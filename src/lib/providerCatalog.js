@@ -54,6 +54,11 @@ export const PROVIDER_CATALOG = {
       'mistral-31-24b-web'
     ],
     defaultModel: 'llama-3.3-70b'
+  },
+  reisearch: {
+    name: 'REI Network',
+    models: ['[default]'],
+    defaultModel: '[default]'
   }
 };
 

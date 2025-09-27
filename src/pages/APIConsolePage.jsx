@@ -24,6 +24,7 @@ const providers = [
   { id: 'venice', name: 'Venice AI' },
   { id: 'nous', name: 'Nous Research' },
   { id: 'morpheus', name: 'Morpheus' },
+  { id: 'reisearch', name: 'REI Network' },
   { id: 'discourse', name: 'Discourse AI' },
 ];
 
@@ -280,11 +281,12 @@ export default function APIConsolePage() {
     { label: 'svc-venice', lastUsed: '' },
   { label: 'svc-nous', lastUsed: '' },
   { label: 'svc-morph', lastUsed: '' },
+  { label: 'svc-rei', lastUsed: '' },
   ]);
   const [activeKey, setActiveKey] = useState('');
   const [keyManagerOpen, setKeyManagerOpen] = useState(false);
-  const [keyInputs, setKeyInputs] = useState({ openai: '', openrouter: '', venice: '', nous: '', morpheus: '' });
-  const [showKeyFields, setShowKeyFields] = useState({ openai: false, openrouter: false, venice: false, nous: false, morpheus: false });
+  const [keyInputs, setKeyInputs] = useState({ openai: '', openrouter: '', venice: '', nous: '', morpheus: '', reisearch: '' });
+  const [showKeyFields, setShowKeyFields] = useState({ openai: false, openrouter: false, venice: false, nous: false, morpheus: false, reisearch: false });
 
   // Pipeline
   const [pipelineLog, setPipelineLog] = useState('');
@@ -340,7 +342,11 @@ export default function APIConsolePage() {
   const aiSelectAllClusters = (checked) => setAiSelectedClusters(checked ? Object.keys(ONTOLOGY_CLUSTERS) : []);
   const providerModels = useMemo(() => (availableProviders.find(p => p.providerId === activeProvider)?.models) || [], [availableProviders, activeProvider]);
   const [customModel, setCustomModel] = useState('');
-  const effectiveModel = useMemo(() => (customModel && customModel.trim()) ? customModel.trim() : model, [customModel, model]);
+  const disableCustomModel = activeProvider === 'reisearch';
+  const effectiveModel = useMemo(() => {
+    if (disableCustomModel) return model;
+    return (customModel && customModel.trim()) ? customModel.trim() : model;
+  }, [customModel, model, disableCustomModel]);
   // Enhance: choose node+field from saved workflow
   const [aiWf, setAiWf] = useState(null);
   const [selNodeId, setSelNodeId] = useState('');
@@ -376,6 +382,9 @@ export default function APIConsolePage() {
     ],
     morpheus: [
       { label: 'Chat Completions', method: 'POST', base: 'https://api.mor.org/api/v1', path: '/chat/completions', streaming: true },
+    ],
+    reisearch: [
+      { label: 'Chat Completions (Unit)', method: 'POST', base: 'https://api.reisearch.box/v1', path: '/chat/completions', streaming: false },
     ],
     discourse: [
       { label: 'Personas (proxy)', method: 'GET', base: 'https://hub.bitwiki.org/api', path: '/discourse_ai/personas' },
@@ -435,6 +444,12 @@ export default function APIConsolePage() {
     load();
   }, [engine, activeProvider]);
 
+  useEffect(() => {
+    if (disableCustomModel && customModel) {
+      setCustomModel('');
+    }
+  }, [disableCustomModel, customModel]);
+
   // Keep local copy of prompt templates in sync with storage on mount
   useEffect(() => {
     try {
@@ -449,13 +464,24 @@ export default function APIConsolePage() {
       const body = JSON.parse(bodyContent || '{}');
       if (body && typeof body === 'object') {
         const next = { ...body };
-        if (model) next.model = model;
+        if (activeProvider === 'reisearch') {
+          if (effectiveModel && effectiveModel !== '[default]') {
+            next.unit = effectiveModel;
+          } else {
+            delete next.unit;
+          }
+          delete next.model;
+        } else {
+          if (effectiveModel) next.model = effectiveModel;
+          else delete next.model;
+        }
         if (typeof streaming === 'boolean') next.stream = streaming;
+        else delete next.stream;
         setBodyContent(JSON.stringify(next, null, 2));
       }
     } catch { /* ignore invalid JSON */ }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [model, streaming]);
+  }, [effectiveModel, streaming, activeProvider]);
 
   // publish settings whenever base/model/streaming change so all pages share the router settings
   useEffect(() => {
@@ -533,6 +559,7 @@ export default function APIConsolePage() {
       venice: SecureKeyManager.getApiKey('venice') || '',
       nous: SecureKeyManager.getApiKey('nous') || '',
       morpheus: SecureKeyManager.getApiKey('morpheus') || '',
+      reisearch: SecureKeyManager.getApiKey('reisearch') || '',
     });
     setKeyManagerOpen(true);
   };
@@ -601,7 +628,26 @@ export default function APIConsolePage() {
 
       // Prepare request inspector info
       let parsedBody = {};
-      try { parsedBody = method !== 'GET' ? JSON.parse(bodyContent) : {}; } catch {}
+      let requestBody = method !== 'GET' ? bodyContent : undefined;
+      let parsedOk = false;
+      try {
+        if (method !== 'GET') {
+          parsedBody = JSON.parse(bodyContent);
+          parsedOk = true;
+        }
+      } catch {}
+      if (method !== 'GET' && activeProvider === 'reisearch' && parsedOk) {
+        try {
+          const sanitized = parsedBody && typeof parsedBody === 'object' ? { ...parsedBody } : {};
+          if (sanitized.model && sanitized.model !== '[default]') {
+            sanitized.unit = sanitized.unit || sanitized.model;
+          }
+          delete sanitized.model;
+          if (sanitized.unit === '[default]') delete sanitized.unit;
+          requestBody = JSON.stringify(sanitized);
+          parsedBody = sanitized;
+        } catch {}
+      }
       const requestInfo = {
         provider: activeProvider,
         method,
@@ -614,10 +660,10 @@ export default function APIConsolePage() {
         body: parsedBody,
       };
 
-  const response = await fetch(`${apiBase}${path}`, {
+      const response = await fetch(`${apiBase}${path}`, {
         method,
         headers,
-        body: method !== 'GET' ? bodyContent : undefined,
+        body: requestBody,
       });
 
       const endTime = Date.now();
@@ -828,7 +874,7 @@ export default function APIConsolePage() {
   };
 
   const testAllProviders = async () => {
-  for (const p of ['openai', 'openrouter', 'venice', 'nous', 'morpheus']) {
+  for (const p of ['openai', 'openrouter', 'venice', 'nous', 'morpheus', 'reisearch']) {
       // eslint-disable-next-line no-await-in-loop
       await testProvider(p);
     }
@@ -1197,7 +1243,13 @@ export default function APIConsolePage() {
                     <div className="grid grid-cols-2 gap-2 mb-3 text-sm">
                       <div>
                         <div className="mb-1">Custom model (optional)</div>
-                        <input value={customModel} onChange={(e)=>setCustomModel(e.target.value)} placeholder="override model id" className={`${win95.inset} ${win95.inputField} w-full text-sm`} />
+                        <input
+                          value={customModel}
+                          onChange={(e)=>setCustomModel(e.target.value)}
+                          placeholder={disableCustomModel ? 'unit overrides disabled' : 'override model id'}
+                          disabled={disableCustomModel}
+                          className={`${win95.inset} ${win95.inputField} w-full text-sm ${disableCustomModel ? 'opacity-60 cursor-not-allowed' : ''}`}
+                        />
                       </div>
                       <div className="text-[11px] opacity-70 flex items-end">If set, custom model overrides suggested list.</div>
                     </div>
@@ -1538,7 +1590,7 @@ export default function APIConsolePage() {
             <div className={`${win95.panel} ${win95.outset} w-full max-w-lg bg-[#c0c0c0]`}>
               <div className={win95.title}>Manage Provider Keys</div>
               <div className="p-3 space-y-3">
-                {['openai','openrouter','venice','nous','morpheus'].map((pid) => (
+                {['openai','openrouter','venice','nous','morpheus','reisearch'].map((pid) => (
                   <div key={pid} className={`${win95.panel} ${win95.outset}`}>
                     <div className={win95.title + ' text-xs'}>{pid.toUpperCase()}</div>
                     <div className={`${win95.inset} p-2`}>

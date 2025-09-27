@@ -163,7 +163,7 @@ Build **schemas that act like agents** by composing:
 
 ## 🔌 Providers, BYOK, and Discourse
 
-* **Providers**: OpenAI, OpenRouter, Venice AI, Nous, Morpheus. Switch easily; per‑session keys.
+* **Providers**: OpenAI, OpenRouter, Venice AI, Nous, Morpheus, REI Network (unit/agent secrets). Switch easily; per‑session keys.
 * **BYOK**: Keys live **only** in browser sessionStorage (encrypted). No server‑side persistence.
 * **Discourse SSO**: Sign‑in unlocks topic/PM browse, seed creation, and persona leverage via secure proxy.
 
