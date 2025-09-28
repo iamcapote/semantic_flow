@@ -343,6 +343,8 @@ export default function APIConsolePage() {
   const providerModels = useMemo(() => (availableProviders.find(p => p.providerId === activeProvider)?.models) || [], [availableProviders, activeProvider]);
   const [customModel, setCustomModel] = useState('');
   const disableCustomModel = activeProvider === 'reisearch';
+  const streamingLocked = activeProvider === 'reisearch';
+  const effectiveStreaming = streamingLocked ? false : streaming;
   const effectiveModel = useMemo(() => {
     if (disableCustomModel) return model;
     return (customModel && customModel.trim()) ? customModel.trim() : model;
@@ -450,6 +452,12 @@ export default function APIConsolePage() {
     }
   }, [disableCustomModel, customModel]);
 
+  useEffect(() => {
+    if (streamingLocked && streaming) {
+      setStreaming(false);
+    }
+  }, [streamingLocked, streaming]);
+
   // Keep local copy of prompt templates in sync with storage on mount
   useEffect(() => {
     try {
@@ -471,22 +479,26 @@ export default function APIConsolePage() {
             delete next.unit;
           }
           delete next.model;
+          delete next.stream;
         } else {
           if (effectiveModel) next.model = effectiveModel;
           else delete next.model;
+          if (typeof effectiveStreaming === 'boolean') next.stream = effectiveStreaming;
+          else delete next.stream;
         }
-        if (typeof streaming === 'boolean') next.stream = streaming;
-        else delete next.stream;
-        setBodyContent(JSON.stringify(next, null, 2));
+        const serialized = JSON.stringify(next, null, 2);
+        if (serialized !== bodyContent) {
+          setBodyContent(serialized);
+        }
       }
     } catch { /* ignore invalid JSON */ }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [effectiveModel, streaming, activeProvider]);
+  }, [effectiveModel, effectiveStreaming, activeProvider]);
 
   // publish settings whenever base/model/streaming change so all pages share the router settings
   useEffect(() => {
-    publishAIRouterSettings({ activeProvider, base: apiBase, model, streaming });
-  }, [activeProvider, apiBase, model, streaming]);
+    publishAIRouterSettings({ activeProvider, base: apiBase, model, streaming: effectiveStreaming });
+  }, [activeProvider, apiBase, model, effectiveStreaming]);
 
   const toggleEndpoint = (endpointId) => {
     setActiveEndpoints((prev) =>
@@ -602,7 +614,7 @@ export default function APIConsolePage() {
 
   const sendRequest = async () => {
     try {
-      setPipelineLog(`plan> ${method} ${path}  provider=${activeProvider}  stream=${streaming}`);
+      setPipelineLog(`plan> ${method} ${path}  provider=${activeProvider}  stream=${effectiveStreaming}`);
       setResponseStatus('');
       setResponseTime('');
       setResponseContent('');
@@ -643,9 +655,17 @@ export default function APIConsolePage() {
             sanitized.unit = sanitized.unit || sanitized.model;
           }
           delete sanitized.model;
+          if ('stream' in sanitized) delete sanitized.stream;
           if (sanitized.unit === '[default]') delete sanitized.unit;
           requestBody = JSON.stringify(sanitized);
           parsedBody = sanitized;
+        } catch {}
+      } else if (method !== 'GET' && parsedOk) {
+        try {
+          const normalized = parsedBody && typeof parsedBody === 'object' ? { ...parsedBody } : {};
+          normalized.stream = effectiveStreaming;
+          requestBody = JSON.stringify(normalized);
+          parsedBody = normalized;
         } catch {}
       }
       const requestInfo = {
@@ -655,7 +675,7 @@ export default function APIConsolePage() {
         base: apiBase,
         path,
         model,
-        streaming,
+        streaming: effectiveStreaming,
         headers: sanitizeHeaders(headers),
         body: parsedBody,
       };
@@ -698,7 +718,7 @@ export default function APIConsolePage() {
         return;
       }
 
-      if (streaming && path.includes('completions') && response.body?.getReader) {
+  if (effectiveStreaming && path.includes('completions') && response.body?.getReader) {
         let inTokens = 0;
         let outTokens = 0;
         try {
@@ -883,24 +903,25 @@ export default function APIConsolePage() {
   const clearRequest = () => {
     setPath('/v1/chat/completions');
     setMethod('POST');
-    setBodyContent(
-      JSON.stringify(
-        {
-          model: 'gpt-4o-mini',
-          temperature: 0.2,
-          stream: true,
-          messages: [{ role: 'user', content: 'Hello' }],
-        },
-        null,
-        2,
-      ),
-    );
+    const baseBody = {
+      temperature: 0.2,
+      messages: [{ role: 'user', content: 'Hello' }],
+    };
+    if (activeProvider === 'reisearch') {
+      if (effectiveModel && effectiveModel !== '[default]') {
+        baseBody.unit = effectiveModel;
+      }
+    } else {
+      baseBody.model = effectiveModel || model || 'gpt-4o-mini';
+      baseBody.stream = effectiveStreaming;
+    }
+    setBodyContent(JSON.stringify(baseBody, null, 2));
   };
 
   const savePreset = () => {
     const name = window.prompt('Save request as… name:');
     if (!name) return;
-    const preset = { name, provider: activeProvider, base: apiBase, method, path, model, streaming, body: bodyContent };
+    const preset = { name, provider: activeProvider, base: apiBase, method, path, model, streaming: effectiveStreaming, body: bodyContent };
     const next = [preset, ...presets.filter(p => p.name !== name)].slice(0, 50);
     setPresets(next);
     localStorage.setItem('api_presets_v1', JSON.stringify(next));
@@ -912,7 +933,7 @@ export default function APIConsolePage() {
     setMethod(p.method);
     setPath(p.path);
     setModel(p.model);
-    setStreaming(p.streaming);
+  setStreaming(p.provider === 'reisearch' ? false : !!p.streaming);
     setBodyContent(p.body);
   };
 
@@ -984,7 +1005,15 @@ export default function APIConsolePage() {
 
                   <div className="mt-2">
                     <div className="mb-1 text-sm">Streaming</div>
-                    <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={streaming} onChange={()=>setStreaming(!streaming)} /> Enable streaming by default for this provider</label>
+                    <label className="flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={effectiveStreaming}
+                        disabled={streamingLocked}
+                        onChange={() => { if (!streamingLocked) setStreaming(!streaming); }}
+                      />
+                      {streamingLocked ? 'Streaming is disabled for REI Network (responses are non-streaming).' : 'Enable streaming by default for this provider'}
+                    </label>
                   </div>
 
                   {/* Keys compact */}

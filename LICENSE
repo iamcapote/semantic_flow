@@ -1,92 +1,112 @@
-# GNU Affero General Public License v3.0 (AGPL-3.0)
+Semantic Flow License (SFL) v1.1
+SPDX-License-Identifier: Semantic-Flow-1.1
 
-Copyright (C) 2025 Semantic Logic AI Workflow Builder
+Version: 1.1
+Date: 2025-09-28
+Licensor: The Semantic Flow authors (led by iamcapote)
 
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU Affero General Public License as
-published by the Free Software Foundation, either version 3 of the
-License, or (at your option) any later version.
+Non‑normative summary (for convenience only; the legal terms below control):
+- Internal Business Use (self‑hosted, for your own org only): free, source‑available.
+- Customer‑Facing Use (SaaS/managed service/public API/etc.): two simultaneous obligations are required:
+	(1) Paid Enterprise/Commercial License from Licensor; and
+	(2) Open‑source the complete “Service Source Code” you use to offer the service (SSPL‑style obligation).
+- Only entities that both pay the fee and comply with the Service Source Code obligation are eligible to host Semantic Flow for third parties (“Authorized Hosting Eligibility”).
+- No commercial redistribution (selling/licensing distributions) without a commercial license.
+- Source‑available “fair‑code”; NOT an OSI‑approved open source license.
+- Patents: protective patent grant with termination on patent aggression.
 
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-GNU Affero General Public License for more details.
+1. Definitions
+1.1 “Software” means the Semantic Flow codebase and associated files in this repository, including any Derivative Works you create.
+1.2 “Licensor” means the copyright holders of the Software, identified above.
+1.3 “You” (or “Your”) means the individual or legal entity exercising permissions under this License.
+1.4 “Derivative Works” means any works based on or incorporating the Software, in whole or in part, with or without modification.
+1.5 “Internal Business Use” means use of the Software solely by Your employees and individual contractors acting on Your behalf, for Your internal business purposes, without making the Software or its functionality available to third parties outside Your organization.
+1.6 “Customer‑Facing Use” means making the Software’s functionality available to any third party outside Your organization, whether directly or indirectly, including without limitation via software‑as‑a‑service (SaaS), hosted/managed services, multi‑tenant services, platform services, or public/private APIs.
+1.7 “Commercial Redistribution” means selling, licensing, sublicensing, or otherwise distributing the Software or Derivative Works for consideration, or including the Software or Derivative Works in a product or service that is sold or licensed for consideration (other than as Customer‑Facing Use).
+1.8 “Service Source Code” means the complete source code of all programs, tooling, scripts, interfaces, and configuration that You use to make the functionality of the Software available to third parties as a service, including (without limitation): Your modifications to the Software; microservices, plugins, connectors, adapters, user interfaces, orchestration; management, monitoring, metering, billing, deployment and provisioning systems; infrastructure‑as‑code templates; and all build, test, and release recipes necessary to reproduce and run substantially the same service. “Service Source Code” excludes: (a) secrets and credentials; (b) proprietary third‑party software You are not permitted to disclose; and (c) generic cloud provider services and platform code not specific to providing the Software’s functionality.
+1.9 “Hosting and Security Guidelines” means the documentation published by the Licensor specifying minimum safety, disclosure, and anti‑fraud practices for public deployments of the Software (see docs/Hosting-Guidelines.md or successor location).
+1.10 “Enterprise/Commercial License” means a separate written agreement with the Licensor that authorizes Customer‑Facing Use and/or Commercial Redistribution, and may include pricing, support, and additional rights.
+1.11 “Authorized Host” means a party that (i) has a current Enterprise/Commercial License, (ii) is in compliance with the Service Source Code obligations in Section 5, and (iii) meets the Hosting and Security Guidelines.
 
-You should have received a copy of the GNU Affero General Public License
-along with this program. If not, see <https://www.gnu.org/licenses/>.
+2. Grant of Rights for Internal Business Use (no fee)
+Subject to Your compliance with this License:
+2.1 You are granted a worldwide, royalty‑free, non‑exclusive, non‑transferable, non‑sublicensable license to:
+		(a) use, reproduce, display, perform, and modify the Software for Internal Business Use; and
+		(b) create, use, and maintain Derivative Works for Internal Business Use; and
+		(c) non‑commercially redistribute unmodified source copies of the Software solely for non‑commercial, non‑customer‑facing purposes, provided You retain this License and all notices.
+2.2 Any rights not expressly granted in Section 2 are reserved by the Licensor.
 
----
+3. Customer‑Facing Use and Commercial Redistribution (eligibility and paid license)
+3.1 You may not engage in Customer‑Facing Use or Commercial Redistribution of the Software or any Derivative Works unless and until You are an Authorized Host.
+3.2 To become an Authorized Host, You must: (i) obtain and maintain a current Enterprise/Commercial License; (ii) comply with Section 5 (Service Source Code obligations); and (iii) comply with Section 6 (Hosting and Security Guidelines and disclosures).
+3.3 Examples (non‑exhaustive):
+		- OK (no fee): Self‑hosted internal analytics for Your employees; internal demos that do not serve external users.
+		- Requires authorization (paid + open source): Public SaaS built on Semantic Flow; managed hosting for customers; exposing APIs powered by Semantic Flow to external users; bundling Semantic Flow into a paid product.
 
-## Attribution Requirement
+4. No Commercial Redistribution by Default
+Outside of an Enterprise/Commercial License, You may not commercially redistribute the Software or Derivative Works, including without limitation:
+		(a) selling access, licenses, or subscriptions that include or rely upon the Software; or
+		(b) offering paid consulting or integration that results in ongoing third‑party access to the Software’s functionality; or
+		(c) re‑licensing or sublicensing the Software or Derivative Works for consideration.
 
-If you use this software, you must give appropriate credit, provide a link to the license, and indicate if changes were made. You may do so in any reasonable manner, but not in any way that suggests the licensor endorses you or your use.
+5. Service Source Code obligation for Customer‑Facing Use (SSPL‑style)
+5.1 Condition. As a condition to any Customer‑Facing Use, You must make the complete, corresponding Service Source Code publicly available under this same License (SFL) at no charge.
+5.2 Timing. You must publish the Service Source Code:
+		(a) within 30 days of first making the service available to any third party; and
+		(b) within 30 days of any material change thereafter.
+5.3 Completeness. The Service Source Code must be sufficient for a skilled person to build, deploy, and run a service that is functionally equivalent to the one You make available, excluding only the items in Section 1.8(a)–(c).
+5.4 Location and Notices. Host the Service Source Code in a publicly accessible source repository and include: (i) this License text; (ii) a NOTICE file identifying Your changes; and (iii) clear instructions to build and operate the service.
+5.5 License for contributions. Service Source Code You publish must be licensed under SFL; You may not impose further restrictions that would prevent others from exercising rights granted by this License.
+5.6 Interoperation. Publishing the Service Source Code does not waive the requirement to maintain a current Enterprise/Commercial License for Customer‑Facing Use.
 
----
+6. Hosting and Security Guidelines; anti‑fraud disclosures
+6.1 Compliance. Authorized Hosts must follow the Hosting and Security Guidelines published by the Licensor, including minimum security, transparency, and user protection standards intended to prevent scams and misuse.
+6.2 Deployment disclosures. Authorized Hosts must provide users with: (a) a link to the source repository for the Service Source Code; (b) a link to the official Semantic Flow repository and documentation; and (c) a clear statement whether the host is “Official” (authorized by Licensor to use Licensor trademarks for this purpose) or “Unofficial”.
+6.3 “Official” claims. You may not claim to be “official,” “certified,” or similar unless expressly authorized in writing by the Licensor. Trademark use is governed by Section 9.
 
-## Intellectual Property Protection
+7. Modifications and Contributions
+7.1 You may create Derivative Works for Internal Business Use under Section 2.
+7.2 If You publicly distribute Derivative Works in source form on a non‑commercial basis, You must retain this License, copyright notices, and a NOTICE file identifying changes, and license such Derivative Works under this same License (SFL) with no additional restrictions.
+7.3 Customer‑Facing Use or commercial distribution of Derivative Works requires Authorized Host status.
 
-This license ensures that all modifications and derivative works remain open source and are distributed under the same license terms. It protects the intellectual property of the original authors while fostering collaboration and innovation.
+8. Patent Grant and Termination (Apache‑style)
+8.1 Subject to this License, the Licensor grants You a perpetual, worldwide, non‑exclusive, no‑charge, royalty‑free, irrevocable (except as stated here) patent license to make, have made, use, offer to sell, sell, import, and otherwise transfer the Software, for Internal Business Use only.
+8.2 If You or Your affiliate initiate patent litigation (including a cross‑claim or counterclaim) alleging that the Software or a Derivative Work infringes a patent, then any patent licenses granted to You under this License terminate as of the date such litigation is filed.
 
----
+9. Trademarks and “Official” status
+9.1 This License does not grant permission to use the Licensor’s trade names, trademarks, service marks, or product names, except as required for reasonable and customary use in describing the origin of the Software and reproducing the NOTICE file.
+9.2 Use of “Semantic Flow,” related marks, or “Official”/“Certified” designations in connection with hosting or services requires a separate written authorization from the Licensor.
 
-For more information, visit <https://www.gnu.org/licenses/agpl-3.0.html>.
+10. Relationship to Open Source; SSPL/Apache inspiration
+10.1 This License is a source‑available “fair‑code” license and is not approved by the Open Source Initiative (OSI).
+10.2 It is not the Apache License 2.0 nor the Server Side Public License (SSPL). It is inspired by Apache 2.0’s permissive internal‑use terms and by SSPL’s focus on network/service deployments. Unlike SSPL, this License additionally requires a paid Enterprise/Commercial License for Customer‑Facing Use.
 
----
+11. Eligibility; verification
+11.1 Eligibility to host. Only Authorized Hosts may offer Customer‑Facing Use of the Software.
+11.2 Attestation. At the Licensor’s reasonable request, You will provide a written attestation of Your current usage model (internal vs. customer‑facing), a link to Your published Service Source Code (if applicable), and confirmation of Hosting and Security Guidelines compliance.
+11.3 Audit. Licensor may verify compliance by reviewing publicly available materials. Licensor will not request confidential information beyond what is reasonably necessary to confirm compliance.
 
-## Additional Licenses and Acknowledgments
+12. Termination; cure
+12.1 This License automatically terminates if You materially breach it and fail to cure within thirty (30) days of receiving written notice from the Licensor.
+12.2 Upon termination, the rights granted in Sections 2 and 8 cease immediately. Provisions that by their nature should survive (including Sections 6–16) shall survive termination.
+12.3 The Licensor may reinstate Your rights upon adequate cure at its discretion.
 
-This project includes components from the following open source projects:
+13. Disclaimer of Warranty
+THE SOFTWARE IS PROVIDED “AS IS” AND “AS AVAILABLE,” WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF TITLE, NON‑INFRINGEMENT, MERCHANTABILITY, AND FITNESS FOR A PARTICULAR PURPOSE. YOU ASSUME ALL RISKS ASSOCIATED WITH ITS USE.
 
-### React Flow
-- License: MIT
-- Copyright (c) 2019-present xyflow
-- Used for the visual workflow canvas
+14. Limitation of Liability
+TO THE MAXIMUM EXTENT PERMITTED BY LAW, IN NO EVENT SHALL THE LICENSOR OR CONTRIBUTORS BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, EXEMPLARY, OR PUNITIVE DAMAGES, OR ANY LOSS OF PROFITS, REVENUE, DATA, OR GOODWILL, ARISING OUT OF OR RELATED TO THIS LICENSE OR THE USE OF THE SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES. THE AGGREGATE LIABILITY OF THE LICENSOR FOR DIRECT DAMAGES SHALL NOT EXCEED ONE HUNDRED U.S. DOLLARS (US$100).
 
-### shadcn/ui
-- License: MIT
-- Copyright (c) 2023 shadcn
-- Used for UI components
+15. Indemnity
+You will indemnify and hold harmless the Licensor from and against any third‑party claims arising from Your Customer‑Facing Use or Commercial Redistribution performed in violation of this License.
 
-### Tailwind CSS
-- License: MIT
-- Copyright (c) Tailwind Labs, Inc.
-- Used for styling
+16. Governing Law; Venue
+Unless otherwise required by law, this License is governed by the laws of the jurisdiction of the Licensor’s principal place of business, excluding its conflict‑of‑law rules. The exclusive venue for disputes shall be the courts located in that jurisdiction.
 
-### Radix UI
-- License: MIT
-- Copyright (c) 2022 WorkOS
-- Used for accessible UI primitives
+17. New versions
+The Licensor may publish new versions of this License with a new version number; unless You agree otherwise, Your existing rights continue under the version in effect when You obtained the Software.
 
-### tRPC
-- License: MIT
-- Copyright (c) 2020 Alex Johansson
-- Used for type-safe API communication
+18. Commercial licensing contact
+For Enterprise/Commercial License inquiries (required for Customer‑Facing Use or Commercial Redistribution), contact the repository maintainers via GitHub Issues or profile email.
 
-### Prisma
-- License: Apache 2.0
-- Copyright (c) 2016-present Prisma Data, Inc.
-- Used for database ORM
-
----
-
-## Security Notice
-
-This software implements a "Bring Your Own Key" (BYOK) security model. API keys are:
-- Never stored in the database
-- Only held in browser session storage
-- Cleared when the browser session ends
-- Never transmitted to our servers except for direct API calls to AI providers
-
-Users are responsible for:
-- Securing their own API keys
-- Complying with AI provider terms of service
-- Ensuring appropriate use of AI models
-- Maintaining data privacy and security standards
-
----
-
-## Disclaimer
-
-This software is designed for research, educational, and professional use. Users are responsible for ensuring their use complies with applicable laws, regulations, and AI provider terms of service.
-
-The contributors make no warranties about the accuracy, reliability, or suitability of AI model outputs generated through this software.
+END OF TERMS (See <attachments> above for file contents. You may not need to search or read the file again.)

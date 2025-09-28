@@ -347,13 +347,35 @@ const ChatPage = ({ embedded = false }) => {
         model: resolveModel(provider, model || sessionStorage.getItem(`default_model_${provider}`) || ''),
         temperature,
         messages: assembledMessages,
-        stream: true
       };
+      const supportsStreaming = provider !== 'reisearch';
+      if (supportsStreaming) payload.stream = true;
       setLastPayload(payload);
+      const requestKey = SecureKeyManager.getApiKey(provider) || apiKey;
+
+      if (!supportsStreaming) {
+        const data = await aiRouter.chatCompletion(provider, requestKey, payload);
+        const content = data?.choices?.[0]?.message?.content || '';
+        const assistantMessage = { role: 'assistant', content };
+        setConversations(prev => {
+          const upd = [...prev];
+          upd[currentConversationIndex].messages.push(assistantMessage);
+          return upd;
+        });
+        if (autoTitle && conversations[currentConversationIndex].title === 'New Chat') {
+          const newTitle = await generateTitle([userMessage, assistantMessage]);
+          setConversations(prev => {
+            const upd = [...prev];
+            upd[currentConversationIndex].title = newTitle;
+            return upd;
+          });
+        }
+        return;
+      }
+
       const controller = new AbortController();
       abortControllerRef.current = controller;
-    const requestKey = SecureKeyManager.getApiKey(provider) || apiKey;
-    const response = await fetchChatCompletionRaw(provider, requestKey, payload);
+      const response = await fetchChatCompletionRaw(provider, requestKey, payload);
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
@@ -366,7 +388,7 @@ const ChatPage = ({ embedded = false }) => {
       });
 
       while (true) {
-        const { done, value } = await reader.read();
+  const { done, value } = await reader.read();
         if (done) break;
 
         const chunk = decoder.decode(value);
