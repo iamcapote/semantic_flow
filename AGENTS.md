@@ -23,6 +23,7 @@ Pragmatic guidance for building, extending, and maintaining the semantic_flow wo
 - Client (`src/`, React + Vite): renders the workflow canvas, manages nodes, and calls AI providers directly from the browser (bring-your-own-key).
 - Server (`server/`, Express): handles Discourse SSO, proxies Discourse REST/SSE traffic, and serves the SPA. Provider keys never transit the server.
 - External systems: AI providers (OpenAI, OpenRouter, Venice, etc.) and Discourse.
+- External agents: treat remote collaborators as expert partners with limited visibility. Assume they cannot read workspace files or execution results unless explicitly shared, and that their knowledge may lag current dates. Provide full, current context with every request and emphasize verification of fast-changing facts.
 
 Data flow
 - Browser → Providers: `POST /chat/completions` with `Authorization: Bearer <key>` pulled from `sessionStorage`.
@@ -198,6 +199,7 @@ Serving
 - Playwright E2E: cover provider setup, canvas rendering, Discourse tabs, workflow execution smoke.
 - Add tests alongside features; include fixtures or mocks for provider responses without real keys.
 - Test contract coverage: valid input, boundary case, representative failure.
+- After material changes, run the pertinent tests or builds yourself, note pass/fail status succinctly, and map each explicit requirement to Done or Deferred before handoff.
 
 ## Observability & logging
 
@@ -213,6 +215,9 @@ Serving
 - Safety nets: wrap new capabilities behind feature flags or toggles, respect AbortSignal timeouts, cap retries with jitter, maintain idempotency for external side effects, and add backpressure/rate limits where needed.
 - Logging: emit structured, non-sensitive context (`{ module, level, correlationId, ... }`) and avoid drive-by logs.
 - Blast radius: isolate risky work behind well-defined seams; keep a reversible path (feature flag, revertible commit, or clear rollback steps).
+- Tool discipline: request external research only for rapidly evolving topics, require multiple distinct searches when deep investigation is unavoidable, and prefer local repository context before consulting outside sources.
+- Communication cues: open with a concise acknowledgement tied to the task, avoid flattery, keep responses skimmable, and ask only one focused clarification question at a time while mirroring user emoji usage rather than initiating it.
+
 
 ## Change management
 
